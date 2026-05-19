@@ -1,0 +1,192 @@
+version: "1.0"
+
+# Coffee Pocket — Semantic Layer v1.0
+# 定義 LLM 如何理解一間咖啡廳的標準化標籤。
+# 詳見 SPEC.md / AGENTS.md。
+
+platform_tags:
+
+  socket_available:
+    display_name:
+      zh: "有插座"
+      en: "Socket Available"
+    type: boolean
+    confidence_rules:
+      minimum_confidence: 0.7
+      minimum_sources: 2
+    source_mapping:
+      cafe_nomad:
+        direct_fields:
+          socket:
+            yes: true
+            maybe: partial
+            no: false
+      google_reviews:
+        positive_keywords:
+          - "有插座"
+          - "插座很多"
+          - "每桌都有插座"
+          - "可以充電"
+          - "適合帶電腦"
+        negative_keywords:
+          - "沒有插座"
+          - "插座很少"
+      instagram_posts:
+        positive_keywords:
+          - "插座"
+          - "帶電腦"
+          - "工作"
+          - "充電"
+    llm_interpretation_rules:
+      positive_conditions:
+        - "mentions_socket"
+        - "mentions_charging"
+        - "mentions_laptop_usage"
+      negative_conditions:
+        - "mentions_no_socket"
+
+  study_friendly:
+    display_name:
+      zh: "適合讀書辦公"
+      en: "Study Friendly"
+    type: score
+    score_range:
+      min: 0
+      max: 100
+    confidence_rules:
+      minimum_confidence: 0.75
+    semantic_conditions:
+      strong_positive:
+        - "quiet_environment"
+        - "large_table"
+        - "socket_available"
+        - "people_using_laptops"
+        - "long_stay_possible"
+      weak_positive:
+        - "wifi_available"
+        - "spacious_seating"
+      negative:
+        - "too_crowded"
+        - "music_too_loud"
+        - "time_limit_short"
+        - "high_turnover"
+    source_mapping:
+      cafe_nomad:
+        derived_logic:
+          - condition:
+              quiet: ">= 4"
+              socket: "yes"
+            score_bonus: 30
+          - condition:
+              limited_time: "no"
+            score_bonus: 20
+      google_reviews:
+        positive_keywords:
+          - "適合讀書"
+          - "適合工作"
+          - "很多人用電腦"
+          - "安靜"
+          - "桌子大"
+        negative_keywords:
+          - "很吵"
+          - "不好久坐"
+          - "限時"
+          - "音樂太大聲"
+
+  discussion_friendly:
+    display_name:
+      zh: "適合討論"
+      en: "Discussion Friendly"
+    type: score
+    score_range:
+      min: 0
+      max: 100
+    semantic_conditions:
+      strong_positive:
+        - "conversation_allowed"
+        - "moderate_noise"
+        - "group_friendly"
+        - "large_table"
+      negative:
+        - "too_quiet"
+        - "study_focused_environment"
+        - "strict_silence"
+    source_mapping:
+      cafe_nomad:
+        derived_logic:
+          - condition:
+              quiet: "2~3"
+            score_bonus: 20
+      google_reviews:
+        positive_keywords:
+          - "適合聊天"
+          - "聚會"
+          - "聊天"
+          - "朋友聚餐"
+        negative_keywords:
+          - "太安靜"
+          - "不適合講話"
+
+  time_limit:
+    display_name:
+      zh: "限時規則"
+      en: "Time Limit"
+    type: structured
+    schema:
+      status:
+        enum:
+          - unlimited
+          - conditional
+          - limited
+      duration_minutes:
+        type: integer
+        nullable: true
+      conditions:
+        type: string
+        nullable: true
+    source_mapping:
+      cafe_nomad:
+        direct_fields:
+          limited_time:
+            yes:
+              status: limited
+            maybe:
+              status: conditional
+            no:
+              status: unlimited
+      google_reviews:
+        extraction_patterns:
+          - "限時90分鐘"
+          - "客滿限時兩小時"
+          - "假日限時"
+          - "不限時"
+      instagram_posts:
+        extraction_patterns:
+          - "不限時"
+          - "久坐"
+          - "客滿限時"
+    llm_extraction_rules:
+      duration_detection:
+        enabled: true
+      normalize_rules:
+        - input: "兩小時"
+          output_minutes: 120
+        - input: "90分鐘"
+          output_minutes: 90
+
+# 共通輔助欄位（每個標籤實例都應附帶）
+evidence_schema:
+  evidence:
+    - source: google_review | cafe_nomad | instagram | community
+      text: string
+      confidence: float  # 0.0 – 1.0
+      review_id: uuid    # nullable
+  confidence_score: float
+  last_verified_at: date
+
+# 來源優先順序（衝突仲裁）
+source_priority:
+  - community
+  - google_reviews_recent
+  - instagram
+  - cafe_nomad

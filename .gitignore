@@ -1,0 +1,27 @@
+.env
+.env.local
+*.pem
+*.key
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.uv/
+.python-version
+
+# OS
+.DS_Store
+
+# Local scraped data (reviews JSON per cafe)
+data/reviews/
+
+# Saved browser auth state (Google login cookies for scraper)
+data/.auth/
+
+
+# Supabase
+
+supabase/.temp

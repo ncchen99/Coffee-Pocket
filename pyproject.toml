@@ -1,0 +1,23 @@
+[project]
+name = "coffee-pocket"
+version = "0.1.0"
+description = "Coffee Pocket data pipeline — Tainan cafe semantic layer"
+requires-python = ">=3.11"
+dependencies = [
+    "httpx>=0.27",
+    "pydantic>=2.7",
+    "pydantic-settings>=2.3",
+    "supabase>=2.5",
+    "python-dotenv>=1.0",
+    "playwright>=1.45",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/coffee_pocket"]
+
+[tool.uv]
+package = true
