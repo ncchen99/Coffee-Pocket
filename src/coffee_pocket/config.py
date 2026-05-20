@@ -13,6 +13,9 @@ class Settings(BaseSettings):
     openrouter_api_key: str = ""
     openrouter_model: str = "google/gemini-3-flash-preview"
 
+    openai_api_key: str = ""
+    openai_model: str = "gpt-4o-mini"
+
     # Cloudflare R2 (S3-compatible) — cafe hero images
     r2_endpoint: str = ""
     r2_bucket: str = ""

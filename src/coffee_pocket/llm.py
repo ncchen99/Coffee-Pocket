@@ -1,4 +1,4 @@
-"""OpenRouter chat helper — DeepSeek by default, JSON-only outputs."""
+"""OpenAI chat helper — gpt-4o-mini by default, JSON-only outputs."""
 
 from __future__ import annotations
 
@@ -13,7 +13,7 @@ from .config import settings
 
 logger = logging.getLogger(__name__)
 
-OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
+OPENAI_URL = "https://api.openai.com/v1/chat/completions"
 
 
 class LLMError(RuntimeError):
@@ -28,13 +28,13 @@ def chat_json(
     max_retries: int = 2,
     timeout: float = 90.0,
 ) -> dict[str, Any]:
-    """Call OpenRouter and parse a JSON object from the response.
+    """Call OpenAI and parse a JSON object from the response.
 
     Retries on transport / JSON-parse failure. Raises LLMError on final failure.
     """
-    model = model or settings.openrouter_model
+    model = model or settings.openai_model
     headers = {
-        "Authorization": f"Bearer {settings.openrouter_api_key}",
+        "Authorization": f"Bearer {settings.openai_api_key}",
         "Content-Type": "application/json",
     }
     payload: dict[str, Any] = {
@@ -51,11 +51,11 @@ def chat_json(
     for attempt in range(max_retries + 1):
         try:
             with httpx.Client(timeout=timeout) as client:
-                resp = client.post(OPENROUTER_URL, headers=headers, json=payload)
+                resp = client.post(OPENAI_URL, headers=headers, json=payload)
                 if resp.status_code == 429:
-                    # Exponential backoff for free-tier rate limits
+                    # Exponential backoff for rate limits
                     sleep_s = 5 * (2**attempt)
-                    logger.warning("OpenRouter 429 — sleeping %ds", sleep_s)
+                    logger.warning("OpenAI 429 — sleeping %ds", sleep_s)
                     time.sleep(sleep_s)
                     last_err = httpx.HTTPStatusError(
                         "429", request=resp.request, response=resp

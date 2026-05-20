@@ -4,7 +4,7 @@ runs LLM signal extraction.
 Pipeline:
   1. Scan data/reviews/*.json (produced by google_scraper).
   2. For each cafe's reviews: upsert into reviews_raw (source_id='google_places').
-  3. Chunk reviews (≤ CHUNK_SIZE) → OpenRouter (Gemini Flash) JSON extraction.
+  3. Chunk reviews (≤ CHUNK_SIZE) → OpenAI (gpt-4o-mini) JSON extraction.
   4. Validate against pydantic schema; failures → dead_letter.
   5. Stamp reviews_raw.processed_at + extracted_signals on success.
 

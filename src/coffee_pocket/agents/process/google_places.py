@@ -5,7 +5,7 @@ Flow (per specs/AGENTS.md §2.2):
   1. Pick cafes lacking google_place_id (subject to --limit)
   2. Places Text Search by "<name> <address>" → google_place_id
   3. Place Details with `reviews` field → upsert into reviews_raw
-  4. Chunk reviews ≤ 20 → OpenRouter (DeepSeek) JSON extraction
+  4. Chunk reviews ≤ 20 → OpenAI (gpt-4o-mini) JSON extraction
   5. Validate against pydantic schema; failures → dead_letter
   6. Stamp reviews_raw.processed_at on success
 """
@@ -78,12 +78,12 @@ type 對應的 value 規則：
 - pet_friendly：value = true / false / null；polarity 必填。判斷店家是否歡迎或允許攜帶寵物（狗、貓等）入內。
 - noise_level / wifi_quality / seating_availability：value = 1~5 整數。
 
-語意提示（繁中關鍵字示意，不是窮舉）：
-- 插座：「有插座/每桌都有/可以充電/沒有插座」
-- 讀書辦公：「適合讀書/工作/安靜/桌子大/位置寬」 vs 「很吵/限時/不適合久坐」
+語意提示（包含繁中關鍵字與表情符號示意，不是窮舉）：
+- 插座：「有插座/每桌都有/可以充電/沒有插座」或符號 🔌
+- 讀書辦公：「適合讀書/工作/安靜/桌子大/位置寬」或符號 📖、📚、💻 vs 「很吵/限時/不適合久坐」
 - 聊天聚會：「適合聊天/朋友聚餐/聚會/熱鬧」 vs 「太安靜/不能講話」
-- 限時：「限時 90 分鐘」「假日限時」「不限時」
-- 寵物友善：「可以帶狗/寵物友善/歡迎毛小孩/有店狗店貓」 vs 「謝絕寵物/不能帶寵物入內」
+- 限時：「限時 90 分鐘」「假日限時」「不限時」或時鐘符號 ⏳、⏰
+- 寵物友善：「可以帶狗/寵物友善/歡迎毛小孩/有店狗店貓」或動物符號 🐶、🐱、🐾 vs 「謝絕寵物/不能帶寵物入內」
 
 範例輸出（給定兩則評論 id=r1, r2）：
 {"signals":[
