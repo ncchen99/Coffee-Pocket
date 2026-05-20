@@ -1,0 +1,267 @@
+[DRY-RUN] re-resolving 255 cafes (of 344 total)
+
+  [1/255] ✗ not_found: '頑童主義咖啡Stand-Up Shop'
+  [2/255] ↻ renamed: '橋上看書(bRidge+)' → '橋上看書bRidge+'  [name='橋上看書bRidge+']
+  [3/255] ✗ not_found: '黑羊咖啡'
+  [4/255] ↻ renamed: 'FOR YOU espresso 為你·煮咖啡' → 'For you espresso 為你·煮咖啡'  [name='For you espresso 為你·煮咖啡']
+  [5/255] ✗ not_found: ' 1982 de glacée 法式冰淇淋'
+  [6/255] ✗ not_found: '貓門Cafe Moment'
+  [7/255] ↻ renamed: '豐咖啡 安平店' → '唯享咖啡（原豐咖啡 安平店）'  [name='唯享咖啡（原豐咖啡 安平店）']
+  [8/255] ✗ not_found: '大風堂'
+  [9/255] ✗ not_found: '路易莎咖啡永康分店'
+  [10/255] ✓ resolved: '街頭咖啡Street Cafe 民生店 ' → '街頭咖啡 Street Cafe 民生店 中西區 咖啡'  [google_place_id='ChIJ14yxhGN2bjQRjDSRX37kJjI', google_maps_url='https://maps.google.com/?cid=3613826982431765644&g_mp=Cidnb29nbGUubWFwcy5wbGFjZXMudjEuUGxhY2VzLlNlYXJjaFRleHQQAhgEIAA', name='街頭咖啡 Street Cafe 民生店 中西區 咖啡', business_status='permanently_closed']
+  [11/255] ↻ renamed: "Lefty's Cafe 左撇子咖啡吧" → "Lefty's Cafe左撇子外帶咖啡吧"  [name="Lefty's Cafe左撇子外帶咖啡吧"]
+  [12/255] = unchanged: 'Bobosa Coffee'
+  [13/255] ↻ renamed: "歐塔克ottag caf'e手作烘焙咖啡館" → '歐塔克手作咖啡烘焙館'  [name='歐塔克手作咖啡烘焙館']
+  [14/255] ✗ not_found: '鉄工咖啡館/千層蛋糕'
+  [15/255] ✓ resolved: '金鑛咖啡台南永華店' → '金鑛咖啡 台南永華門市'  [google_place_id='ChIJVSOiUnF2bjQR-6vEgp00AYw', google_maps_url='https://maps.google.com/?cid=10088402491395058683&g_mp=Cidnb29nbGUubWFwcy5wbGFjZXMudjEuUGxhY2VzLlNlYXJjaFRleHQQAhgEIAA', name='金鑛咖啡 台南永華門市', business_status='permanently_closed']
+  [16/255] = unchanged: '安徒生咖啡館'
+  [17/255] ✓ resolved: '月光咖啡廳' → '月光咖啡館/蔬食'  [google_place_id='ChIJ42hH6CB0bjQR2xyINGXkb5o', google_maps_url='https://maps.google.com/?cid=11128364327579950299&g_mp=Cidnb29nbGUubWFwcy5wbGFjZXMudjEuUGxhY2VzLlNlYXJjaFRleHQQAhgEIAA', name='月光咖啡館/蔬食', business_status='permanently_closed']
+  [18/255] ↻ renamed: 'A WEEK' → 'A WEEK pancake 乳酪小鬆餅 & 美式鬆餅.早午餐'  [name='A WEEK pancake 乳酪小鬆餅 & 美式鬆餅.早午餐']
+  [19/255] ✓ resolved: 'More Cafe, 摩爾咖啡. 摩爾先生咖啡館' → 'More Cafe'  [google_place_id='ChIJo2hCqWF2bjQRNNIl3BeBi40', google_maps_url='https://maps.google.com/?cid=10199387720588317236&g_mp=Cidnb29nbGUubWFwcy5wbGFjZXMudjEuUGxhY2VzLlNlYXJjaFRleHQQAhgEIAA', name='More Cafe', business_status='permanently_closed']
+  [20/255] ✗ not_found: '深作咖啡'
+  [21/255] ✓ resolved: '橘舍' → '橘舍三食'  [google_place_id='ChIJA5h_nBIDaTQRjnAqEoKpOso', google_maps_url='https://maps.google.com/?cid=14572145920426274958&g_mp=Cidnb29nbGUubWFwcy5wbGFjZXMudjEuUGxhY2VzLlNlYXJjaFRleHQQAhgEIAA', name='橘舍三食', business_status='operational']
+  [22/255] ✓ resolved: 'Season Cafe' → 'Season Café'  [google_place_id='ChIJlWQDhYZ2bjQRplvhUaAn0Nw', google_maps_url='https://maps.google.com/?cid=15911261053021936550&g_mp=Cidnb29nbGUubWFwcy5wbGFjZXMudjEuUGxhY2VzLlNlYXJjaFRleHQQAhgEIAA', name='Season Café', business_status='permanently_closed']
+  [23/255] ✓ resolved: 'M2 coffee shop 崇德店' → 'MINI.D COFFEE 崇德館'  [google_place_id='ChIJHSd_fBF1bjQR2roSktc4BGY', google_maps_url='https://maps.google.com/?cid=7351062990295317210&g_mp=Cidnb29nbGUubWFwcy5wbGFjZXMudjEuUGxhY2VzLlNlYXJjaFRleHQQAhgEIAA', name='MINI.D COFFEE 崇德館']
+  [24/255] ✓ resolved: '猛男咖啡' → '猛男咖啡 大成精品店'  [google_place_id='ChIJUZ-DhtR1bjQR-jDF8z9096Y', google_maps_url='https://maps.google.com/?cid=12031212747565117690&g_mp=Cidnb29nbGUubWFwcy5wbGFjZXMudjEuUGxhY2VzLlNlYXJjaFRleHQQAhgEIAA', name='猛男咖啡 大成精品店', business_status='permanently_closed']
+  [25/255] ✗ not_found: 'James Cofa'
+  [26/255] ✗ not_found: 'CHEFFRESH cafe (南門)'
+  [27/255] ↻ renamed: '村有熊' → '村有熊咖啡'  [name='村有熊咖啡']
+  [28/255] ↻ renamed: 'Coffee Concept 隱初' → 'Coffee Concept |隱初'  [name='Coffee Concept |隱初']
+  [29/255] ✗ not_found: '歸旅咖啡＠台南安平＠早午餐＠民宿＠Guei Cafe'
+  [30/255] ✗ not_found: "am's food and goods"
+  [31/255] ↻ renamed: '順風號' → '順風號 Sūn Hong Hō'  [name='順風號 Sūn Hong Hō']
+  [32/255] ✗ not_found: '正興咖啡館'
+  [33/255] ✗ not_found: "Coffee Cafe' 咖啡珈琲"
+  [34/255] ↻ renamed: '席瑪朵珈琲烘焙棧(立賢店)' → '席瑪朵珈琲烘焙棧'  [name='席瑪朵珈琲烘焙棧']
+  [35/255] ✓ resolved: '穎可達Incosda Coffee' → '穎可達Incosda Coffee 關廟服務區店-單品咖啡、水果咖啡、咖啡禮盒'  [google_place_id='ChIJHzaQyb1tbjQRtGiN07VK3_k', google_maps_url='https://maps.google.com/?cid=18005191980049328308&g_mp=Cidnb29nbGUubWFwcy5wbGFjZXMudjEuUGxhY2VzLlNlYXJjaFRleHQQAhgEIAA', name='穎可達Incosda Coffee 關廟服務區店-單品咖啡、水果咖啡、咖啡禮盒']
+  [36/255] ↻ renamed: '咖啡基因 Espresso Bar & Specialty Coffee' → '基因咖啡 Espresso Bar & Specialty Coffee'  [name='基因咖啡 Espresso Bar & Specialty Coffee']
+  [37/255] ✓ resolved: '艾登咖啡館' → '艾登咖啡館 Café IDEN'  [google_place_id='ChIJQV1vD2d2bjQR1yjMuXnZdZo', google_maps_url='https://maps.google.com/?cid=11130041170947483863&g_mp=Cidnb29nbGUubWFwcy5wbGFjZXMudjEuUGxhY2VzLlNlYXJjaFRleHQQAhgEIAA', name='艾登咖啡館 Café IDEN', business_status='permanently_closed']
+  [38/255] ⊕ dup-by-place_id: '鹿耳' → '鹿耳晚晚早餐｜鹿耳夜間部' (canonical 17298312-d348-43a2-84b0-39b2a7e816be)
+  [39/255] = unchanged: 'KOS CAFE'
+  [40/255] = unchanged: '福米cafe'
+  [41/255] ⊕ dup-by-name: 'ICI Cafe' → 'IZZY CAFE' (canonical 93628605-5c9f-48e6-9334-e023d111ddd6)
+  [42/255] ↻ renamed: "日澗咖啡 Day Stream Caf'e" → '日澗咖啡'  [name='日澗咖啡']
+  [43/255] ↻ renamed: 'K30 COFFEE' → 'K30 COFFEE (精品咖啡 專門店)'  [name='K30 COFFEE (精品咖啡 專門店)']
+  [44/255] ↻ renamed: 'BORN 2 HER Cafe 她她咖啡' → 'Born 2 her cafe'  [name='Born 2 her cafe']
+  [45/255] = unchanged: '朋友的朋友咖啡店'
+  [46/255] ↻ renamed: '裁縫師深夜咖啡館 coffee bar' → '裁縫師深夜咖啡館bar｜裁縫師咖啡'  [name='裁縫師深夜咖啡館bar｜裁縫師咖啡']
+  [47/255] ⊕ dup-by-place_id: '魚羊鮮豆' → '魚羊鮮豆 東豐店' (canonical ac8dd099-352a-44e5-bb61-f4f6f15cf318)
+  [48/255] ✓ resolved: 'For coffee' → 'For Coffee為了咖啡'  [google_place_id='ChIJ8X9HRiF3bjQRyaghSUoMqmQ', google_maps_url='https://maps.google.com/?cid=7253623663027661001&g_mp=Cidnb29nbGUubWFwcy5wbGFjZXMudjEuUGxhY2VzLlNlYXJjaFRleHQQAhgEIAA', name='For Coffee為了咖啡', business_status='permanently_closed']
+  [49/255] ⊕ dup-by-place_id: '金礦咖啡-台南中華門市' → '金鑛咖啡台南央廚' (canonical 83ebd097-0b48-4b59-a86a-31bcc483a362)
+  [50/255] ⊕ dup-by-place_id: '花樓follow_coffee' → '花樓咖啡 Follow Coffee 二店' (canonical c0ce8fc6-b9b3-4f5f-ae2c-22a1e27acdbb)
+  [51/255] ✓ resolved: '有緣人 Yuan Coffee' → 'THE YUAN 安和店｜COFFEE 咖啡'  [google_place_id='ChIJW64YcpZ3bjQR44Z9VVX184A', google_maps_url='https://maps.google.com/?cid=9292040203050780387&g_mp=Cidnb29nbGUubWFwcy5wbGFjZXMudjEuUGxhY2VzLlNlYXJjaFRleHQQAhgEIAA', name='THE YUAN 安和店｜COFFEE 咖啡', business_status='operational']
+  [52/255] = unchanged: '寮國咖啡'
+  [53/255] ✗ not_found: '樂享學'
+  [54/255] ✗ not_found: '神榕147'
+  [55/255] ✓ resolved: 'Django 決哥手烘咖啡吧-勝利店' → 'Django決哥手烘咖啡吧-裕農店'  [google_place_id='ChIJIXtRpNd3bjQRDjkz3mC8myg', google_maps_url='https://maps.google.com/?cid=2926139507138050318&g_mp=Cidnb29nbGUubWFwcy5wbGFjZXMudjEuUGxhY2VzLlNlYXJjaFRleHQQAhgEIAA', name='Django決哥手烘咖啡吧-裕農店', business_status='operational']
+  [56/255] = unchanged: '南十三咖啡'
+  [57/255] = unchanged: '榮寓冰室'
+  [58/255] ↻ renamed: '旅享所在' → '旅享所在咖啡｜甜點｜咖哩｜早午餐｜旅遊講座｜空間合作 （每週三四公休）'  [name='旅享所在咖啡｜甜點｜咖哩｜早午餐｜旅遊講座｜空間合作 （每週三四公休）']
+  [59/255] = unchanged: '甘谷咖啡'
+  [60/255] ✗ not_found: '花樓二店'
+  [61/255] ↻ renamed: '台南艾咖啡 ALFEE Coffee' → 'ALFEE Coffee 台南艾咖啡'  [name='ALFEE Coffee 台南艾咖啡']
+  [62/255] ✗ not_found: '路咖啡/ROAD CAFE'
+  [63/255] = unchanged: '道南館 自家烘焙咖啡館'
+  [64/255] ✗ not_found: 'Lure Late Late Breakfast 鹿耳晚晚早餐'
+  [65/255] ↻ renamed: 'Cheng10誠十咖啡' → 'cheng10coffee｜誠十咖啡台南旗艦店'  [name='cheng10coffee｜誠十咖啡台南旗艦店']
+  [66/255] ↻ renamed: 'mumu小客廳' → 'Mumu小客廳'  [name='Mumu小客廳']
+  [67/255] ✗ not_found: "加比萊瑟思 License.CAF'E"
+  [68/255] ✓ resolved: '私人藏豆 Coffellection' → '私人藏豆'  [google_place_id='ChIJ-fN4bp52bjQRJzMAqU_vIUs', google_maps_url='https://maps.google.com/?cid=5413871352492864295&g_mp=Cidnb29nbGUubWFwcy5wbGFjZXMudjEuUGxhY2VzLlNlYXJjaFRleHQQAhgEIAA', name='私人藏豆', business_status='operational']
+  [69/255] ✗ not_found: '圻圻。嚴選咖啡'
+  [70/255] ⊕ dup-by-place_id: '哈本咖啡(隨行吧) Happen Coffee' → '哈本咖啡 | Happen Coffee' (canonical c9086f6c-66d3-44b8-adc7-6176dbf10480)
+  [71/255] ✗ not_found: '喝起來 Bottoms Up'
+  [72/255] ⊕ dup-by-place_id: '極萃咖啡Kaffuns Brew Coffee' → 'kaffuns brew coffee 極萃咖啡' (canonical 00bd0411-8cbd-4f7b-a06c-44c59d78b58e)
+  [73/255] ↻ renamed: 'David yang cafe' → '大衛洋咖啡DAVIDYANG COFFEE'  [name='大衛洋咖啡DAVIDYANG COFFEE']
+  [74/255] ↻ renamed: "St.1 Cafe' / Work Room 一街咖啡" → "St.1 Cafe' 一街咖啡"  [name="St.1 Cafe' 一街咖啡"]
+  [75/255] ↻ renamed: '萃行咖啡館 Atelier Pure' → '萃行咖啡館'  [name='萃行咖啡館']
+  [76/255] ✗ not_found: 'Lu.CY Coffee Roast & Brew'
+  [77/255] ↻ renamed: "L'esprit café" → "L'esprit café 初衷咖啡 @lespritcafe_tainan"  [name="L'esprit café 初衷咖啡 @lespritcafe_tainan"]
+  [78/255] ✓ resolved: '咖啡森活' → '新森活'  [google_place_id='ChIJZ4NWoNt1bjQRpTZyWT6PPdE', google_maps_url='https://maps.google.com/?cid=15077364625457690277&g_mp=Cidnb29nbGUubWFwcy5wbGFjZXMudjEuUGxhY2VzLlNlYXJjaFRleHQQAhgEIAA', name='新森活']
+  [79/255] ✗ not_found: '代謝俱楽部'
+  [80/255] ↻ renamed: 'PIANO,PIANO' → 'PIANO，PIANO'  [name='PIANO，PIANO']
+  [81/255] = unchanged: '聶樓'
+  [82/255] = unchanged: '沒有咖啡'
+  [83/255] = unchanged: '悠豆咖啡'
+  [84/255] ✗ not_found: '尚品咖啡 (南門店)'
+  [85/255] ↻ renamed: 'Louisa Coffee 路易．莎咖啡(台南大同門市)' → 'Louisa Coffee 路易莎咖啡(台南大同門市)'  [name='Louisa Coffee 路易莎咖啡(台南大同門市)']
+  [86/255] = unchanged: '曉咖啡'
+  [87/255] ↻ renamed: '旺德實驗室' → '旺德實驗室（已停業'  [name='旺德實驗室（已停業']
+  [88/255] ↻ renamed: '甘單咖啡' → '甘單咖啡館'  [name='甘單咖啡館']
+  [89/255] ↻ renamed: ' 臺南・特有種商行' → '台南特有種商行'  [name='台南特有種商行']
+  [90/255] ↻ renamed: 'belonginn' → 'BELONGINN'  [name='BELONGINN']
+  [91/255] ✗ not_found: '老棧'
+  [92/255] ✗ not_found: "MR PIKI Cafe'"
+  [93/255] ✓ resolved: '奇美咖啡館' → '奇美咖啡館(柳營奇美醫院)'  [google_place_id='ChIJp8fvuA2GbjQRQXzjz8lindI', google_maps_url='https://maps.google.com/?cid=15176394938224180289&g_mp=Cidnb29nbGUubWFwcy5wbGFjZXMudjEuUGxhY2VzLlNlYXJjaFRleHQQAhgEIAA', name='奇美咖啡館(柳營奇美醫院)']
+  [94/255] ↻ renamed: '豆谷咖啡 Dual Good' → '豆谷咖啡'  [name='豆谷咖啡']
+  [95/255] = unchanged: '瑞尹咖啡館Rui Yin Cafe'
+  [96/255] ↻ renamed: 'Ho-Yo Cookies' → 'HO-YO Cookies'  [name='HO-YO Cookies']
+  [97/255] = unchanged: '自己的房間'
+  [98/255] ✗ not_found: '毛伊咖啡'
+  [99/255] ↻ renamed: '勝曼咖啡 公園店' → '勝曼咖啡-公園門市'  [name='勝曼咖啡-公園門市']
+  [100/255] ↻ renamed: 'Coffee x Conscience' → 'Coffee x Conscience 咖啡良知'  [name='Coffee x Conscience 咖啡良知']
+  [101/255] = unchanged: '雄雄食社'
+  [102/255] ✗ not_found: 'Wooli cafe屋裡自家烘焙咖啡店'
+  [103/255] ✗ not_found: '塗鴉空間 書店 小酒館 - Picturesque'
+  [104/255] ✗ not_found: ' 樸澍 咖啡館'
+  [105/255] ✓ resolved: '安內咖啡' → '安內咖啡 An Coffee 成功外帶店'  [google_place_id='ChIJS0lFTNJ3bjQRHNbsvBS1j2k', google_maps_url='https://maps.google.com/?cid=7606497396325668380&g_mp=Cidnb29nbGUubWFwcy5wbGFjZXMudjEuUGxhY2VzLlNlYXJjaFRleHQQAhgEIAA', name='安內咖啡 An Coffee 成功外帶店']
+  [106/255] ✗ not_found: 'MR PIKI 外帶吧'
+  [107/255] = unchanged: 'Meller 墨樂咖啡'
+  [108/255] ↻ renamed: 'Cama現烘咖啡專門店-台南西門店' → 'CAMA CAFE 台南西門店'  [name='CAMA CAFE 台南西門店']
+  [109/255] ⊕ dup-by-place_id: 'More Cafe,摩爾咖啡' → 'More Cafe' (canonical 2aae2569-6ae4-44e5-9f8f-5de763d90561)
+  [110/255] ↻ renamed: 'Kizuna Café' → 'Kizuna Café（5/30開始營業。店內有貓，請斟酌入店；六位以上恕不接待）'  [name='Kizuna Café（5/30開始營業。店內有貓，請斟酌入店；六位以上恕不接待）']
+  [111/255] ↻ renamed: '咖啡匙' → '咖啡匙 － 精品咖啡｜濾掛咖啡｜自家烘焙｜咖啡課程｜生豆供應｜咖啡產品開發'  [name='咖啡匙 － 精品咖啡｜濾掛咖啡｜自家烘焙｜咖啡課程｜生豆供應｜咖啡產品開發']
+  [112/255] = unchanged: 'Mini Izzy cafe 小東店'
+  [113/255] ↻ renamed: '喝我咖啡 Hold My Cafe‘ 咖啡豆專門店' → '喝我咖啡 Hold My Cafe‘ 咖啡豆自烘專門店Coffee roaster'  [name='喝我咖啡 Hold My Cafe‘ 咖啡豆自烘專門店Coffee roaster']
+  [114/255] ✗ not_found: 'RW Coffee'
+  [115/255] ⊕ dup-by-place_id: 'IZZY CAFE' → 'IZZY CAFE' (canonical 9dcc690a-ea68-474e-8913-9c3e5585ac20)
+  [116/255] ⊕ dup-by-place_id: '鹿柴咖啡' → '鹿柴咖啡' (canonical 199f6f83-1262-4aa0-bdef-5343679a9da8)
+  [117/255] ⊕ dup-by-place_id: 'Mini Izzy cafe 民族店' → 'Mini Izzy cafe 民族店' (canonical d7f94aa2-d35d-4336-be7a-d59e848f86af)
+  [118/255] ✗ not_found: '咖啡匙咖啡工作室'
+  [119/255] ✓ resolved: 'Miss Bossy Café' → 'Miss Bossy Cafe(甜點)'  [google_place_id='ChIJuxTuD2F2bjQRfaBSETGziHc', google_maps_url='https://maps.google.com/?cid=8613331310671470717&g_mp=Cidnb29nbGUubWFwcy5wbGFjZXMudjEuUGxhY2VzLlNlYXJjaFRleHQQAhgEIAA', name='Miss Bossy Cafe(甜點)', business_status='permanently_closed']
+  [120/255] ↻ renamed: '木門 朝午洋食 MOMENT' → '木門厝 Moment Cafe'  [name='木門厝 Moment Cafe']
+  [121/255] ✗ not_found: 'WO TANG XING 莪堂行'
+  [122/255] ✓ resolved: 'M2 coffee shop 凱旋店' → 'm2 coffee shop'  [google_place_id='ChIJs5vWVL52bjQRTryfIjD_8BA', google_maps_url='https://maps.google.com/?cid=1220756081221811278&g_mp=Cidnb29nbGUubWFwcy5wbGFjZXMudjEuUGxhY2VzLlNlYXJjaFRleHQQAhgEIAA', name='m2 coffee shop', business_status='permanently_closed']
+  [123/255] ↻ renamed: '賣 飲料 my beverages' → '賣飲料 my beverages'  [name='賣飲料 my beverages']
+  [124/255] ↻ renamed: "娜咖啡 Hannah's cafe & bar" → "娜咖啡Hannah's cafe & bar 精品咖啡｜調酒｜甜點｜手沖咖啡｜深夜咖啡｜酒吧｜餐點｜場地租借｜婚紗攝影"  [name="娜咖啡Hannah's cafe & bar 精品咖啡｜調酒｜甜點｜手沖咖啡｜深夜咖啡｜酒吧｜餐點｜場地租借｜婚紗攝影"]
+  [125/255] ⊕ dup-by-name: '六合境 茶弥' → '六合境 茶弥 SaBiSKi (在2F）' (canonical 01db65c3-4007-47d6-85b7-ad8c3b1d238a)
+  [126/255] ✗ not_found: '暖暖蛇咖啡館 Café Flâneur'
+  [127/255] ✗ not_found: '古行自家烘焙咖啡'
+  [128/255] ⊕ dup-by-place_id: 'Coffee Cape station' → '夢蟲 Worm Coffee Stand (To Go Only）' (canonical 0598cee3-09f8-4247-9aaa-423c0111d6de)
+  [129/255] ✗ not_found: '福吉161商行'
+  [130/255] ✓ resolved: '( AT ) ~Cats&Tea 茶飲輕食' → '( AT ) ~Cats&Tea 茶飲輕食'  [google_place_id='ChIJh6O7gId2bjQRhhkT9Gh60PQ', google_maps_url='https://maps.google.com/?cid=17640734331600312710&g_mp=Cidnb29nbGUubWFwcy5wbGFjZXMudjEuUGxhY2VzLlNlYXJjaFRleHQQAhgEIAA', business_status='permanently_closed']
+  [131/255] = unchanged: '漫步日光'
+  [132/255] = unchanged: '山椿台灣咖啡'
+  [133/255] ↻ renamed: '瞎聊貓咖啡' → '瞎聊。貓咖啡'  [name='瞎聊。貓咖啡']
+  [134/255] ↻ renamed: 'T3CA精緻咖啡店' → 'T3CA - 第三爆聯盟精緻咖啡店'  [name='T3CA - 第三爆聯盟精緻咖啡店']
+  [135/255] ⊕ dup-by-name: 'Birdeye Espresso / 被愛咖啡' → '被愛咖啡' (canonical 14275222-9be2-408b-b324-aaf43d75d0c7)
+  [136/255] ↻ renamed: '李白先生咖啡' → '李白先生咖啡-台南咖啡教學工作室|咖啡課程|咖啡教學|自家烘焙咖啡|手沖咖啡教學|咖啡拉花教學'  [name='李白先生咖啡-台南咖啡教學工作室|咖啡課程|咖啡教學|自家烘焙咖啡|手沖咖啡教學|咖啡拉花教學']
+  [137/255] ⊕ dup-by-place_id: '窄門咖啡' → '窄門咖啡館' (canonical 05958cec-f721-424f-8374-fb53ffafc129)
+  [138/255] = unchanged: '双生 Shuànsên Cafe'
+  [139/255] = unchanged: '生命樹咖啡'
+  [140/255] ↻ renamed: 'CALM Ice Workshop-冷靜工作坊' → 'CALM Ice Workshop-冷靜工作坊(手作冰品）'  [name='CALM Ice Workshop-冷靜工作坊(手作冰品）', business_status='operational']
+  [141/255] ✓ resolved: '曼頓咖啡Manton Coffee-成大店24H' → '曼頓咖啡Manton Coffee-成大店'  [google_place_id='ChIJDxLaQep2bjQRn9nqlmNcVKs', google_maps_url='https://maps.google.com/?cid=12345594061332863391&g_mp=Cidnb29nbGUubWFwcy5wbGFjZXMudjEuUGxhY2VzLlNlYXJjaFRleHQQAhgEIAA', name='曼頓咖啡Manton Coffee-成大店', business_status='permanently_closed']
+  [142/255] ✓ resolved: '首璽咖啡 SoSee Coffee' → "首富咖啡 Home caf'e"  [google_place_id='ChIJKdKn2Fh6bjQRvq669qQwaIs', google_maps_url='https://maps.google.com/?cid=10045332453922090686&g_mp=Cidnb29nbGUubWFwcy5wbGFjZXMudjEuUGxhY2VzLlNlYXJjaFRleHQQAhgEIAA', name="首富咖啡 Home caf'e"]
+  [143/255] = unchanged: '阿烏咖啡'
+  [144/255] ↻ renamed: '浮游咖啡' → '浮游咖啡(暫停營業）'  [name='浮游咖啡(暫停營業）']
+  [145/255] ↻ renamed: 'Et咖啡' → 'ET咖啡'  [name='ET咖啡']
+  [146/255] ⊕ dup-by-name: '鹿柴咖啡' → '鹿柴咖啡' (canonical ac23e561-8687-433c-b3dd-4de6ebf08f82)
+  [147/255] ↻ renamed: '西門洋行' → '西門洋行'  [business_status='operational']
+  [148/255] ↻ renamed: '貓薄荷咖啡' → '貓薄荷手工蛋糕咖啡館'  [name='貓薄荷手工蛋糕咖啡館']
+  [149/255] ↻ renamed: '木蘭咖啡' → '木蘭咖啡(MULAN CAFE)(營業時間及店休日請看ig動態）'  [name='木蘭咖啡(MULAN CAFE)(營業時間及店休日請看ig動態）']
+  [150/255] ⊕ dup-by-name: 'Panorama Caffe' → 'Panorama caffe 5/21、5/22店休。（因為座位不多，週末有計畫前來的話，可以先電話確認座位情況，才不會多跑一趟。 麻煩大家了，謝謝。）' (canonical 0b1913d1-13be-4333-b4da-c2ae6de4d6e4)
+  [151/255] = unchanged: '南島夢遊'
+  [152/255] = unchanged: '是吉咖啡'
+  [153/255] ✓ resolved: '大鋤花間' → '大鋤花間'  [google_place_id='ChIJf8L9COuMbjQRWyiSaAjn4Zc', google_maps_url='https://maps.google.com/?cid=10944282592787179611&g_mp=Cidnb29nbGUubWFwcy5wbGFjZXMudjEuUGxhY2VzLlNlYXJjaFRleHQQAhgEIAA']
+  [154/255] ↻ renamed: '二子' → '二子（不定休、無訂位）'  [name='二子（不定休、無訂位）']
+  [155/255] ↻ renamed: '窩餐廳--咖啡話語' → '咖啡話語'  [name='咖啡話語']
+  [156/255] ↻ renamed: '雷克斯咖啡吧' → '雷克斯咖啡吧（翻新裝潢暫時停業中）'  [name='雷克斯咖啡吧（翻新裝潢暫時停業中）']
+  [157/255] ✗ not_found: '美麗少婦的羽球咖-白色小舖子'
+  [158/255] ✗ not_found: '咖啡．候機室The Departure Lounge台南大同店'
+  [159/255] = unchanged: '吉光咖啡'
+  [160/255] ↻ renamed: 'MixCoffee' → 'MIX Coffee'  [name='MIX Coffee']
+  [161/255] ↻ renamed: '192手工咖啡' → '192手工咖啡(手沖、自家手網烘焙、精品咖啡、單品咖啡、咖啡豆)'  [name='192手工咖啡(手沖、自家手網烘焙、精品咖啡、單品咖啡、咖啡豆)', business_status='operational']
+  [162/255] ↻ renamed: '性格咖啡' → '性格'  [name='性格', business_status='operational']
+  [163/255] = unchanged: '銅板咖啡'
+  [164/255] ✓ resolved: 'parkview綠帕克' → '綠帕克咖啡館PARKVIEW'  [google_place_id='ChIJ2Y_FXI52bjQROkirYIszRl4', google_maps_url='https://maps.google.com/?cid=6793173761650280506&g_mp=Cidnb29nbGUubWFwcy5wbGFjZXMudjEuUGxhY2VzLlNlYXJjaFRleHQQAhgEIAA', name='綠帕克咖啡館PARKVIEW', business_status='permanently_closed']
+  [165/255] ↻ renamed: '湠咖啡' → '湠咖啡 Thuann Coffee'  [name='湠咖啡 Thuann Coffee', business_status='operational']
+  [166/255] ✓ resolved: 'findcoffee 找咖啡' → 'NOTHING but coffee'  [google_place_id='ChIJVWRw-X13bjQRIj_-W_2uqBA', google_maps_url='https://maps.google.com/?cid=1200401703887585058&g_mp=Cidnb29nbGUubWFwcy5wbGFjZXMudjEuUGxhY2VzLlNlYXJjaFRleHQQAhgEIAA', name='NOTHING but coffee', business_status='operational']
+  [167/255] ⊕ dup-by-name: '緩緩咖啡' → '緩緩咖啡 Ease Coffee_極淺專門' (canonical 319a0e65-34f2-432d-b2cf-103bd0659d9f)
+  [168/255] = unchanged: '奧薇小鎮'
+  [169/255] ⊕ dup-by-name: 'a room' → 'a Room房間咖啡' (canonical 4de328ec-19cd-4731-a598-3076af475a94)
+  [170/255] ⊕ dup-by-place_id: '存憶 Cafe Bar' → '存憶 Cafe Bar' (canonical b0b5c4e0-5e62-41f1-be8c-c3f5233ebae3)
+  [171/255] = unchanged: '棧留咖啡小館'
+  [172/255] = unchanged: '肥貓咖啡'
+  [173/255] ⊕ dup-by-name: 'THE YUAN 東興店' → 'THE YUAN 東興店（無訂位）' (canonical 96e4562d-c7f7-4d1e-aee0-8ace406d904a)
+  [174/255] ↻ renamed: '雷巴咖啡烘焙道場' → '雷巴咖啡烘焙道場 I 山形外帶店 I 溫度手沖 I 療癒拿鐵 I 冠軍風味 I 專營咖啡豆 I 咖啡濾掛包'  [name='雷巴咖啡烘焙道場 I 山形外帶店 I 溫度手沖 I 療癒拿鐵 I 冠軍風味 I 專營咖啡豆 I 咖啡濾掛包']
+  [175/255] ✗ not_found: '虫二咖啡'
+  [176/255] ⊕ dup-by-place_id: 'ARA  coffee co' → 'AT Coffee 艾緹咖啡' (canonical 54910ee6-a8e5-438a-9c39-4987df50d6ef)
+  [177/255] ✗ not_found: '農林咖啡'
+  [178/255] ✗ not_found: '直式咖啡'
+  [179/255] = unchanged: '卡加米亞casamia cafe'
+  [180/255] ✗ not_found: '兩倆'
+  [181/255] ↻ renamed: 'PEKOPEKO' → 'PEKO PEKO'  [name='PEKO PEKO']
+  [182/255] ↻ renamed: 'bib pancake' → 'bibi pancake'  [name='bibi pancake']
+  [183/255] ↻ renamed: '蔬食樂 初始店' → '蔬食樂 初始店 SoothRoad Original'  [name='蔬食樂 初始店 SoothRoad Original']
+  [184/255] ✓ resolved: '哈本咖啡Happen Coffee' → '哈本咖啡'  [google_place_id='ChIJsUQyWat3bjQRtgaCqgkAFek', google_maps_url='https://maps.google.com/?cid=16795330426863486646&g_mp=Cidnb29nbGUubWFwcy5wbGFjZXMudjEuUGxhY2VzLlNlYXJjaFRleHQQAhgEIAA', name='哈本咖啡', business_status='permanently_closed']
+  [185/255] ✓ resolved: '華莎咖啡' → '華莎咖啡'  [google_place_id='ChIJv3OYgqR2bjQRldb16qJNmFs', google_maps_url='https://maps.google.com/?cid=6600110616033482389&g_mp=Cidnb29nbGUubWFwcy5wbGFjZXMudjEuUGxhY2VzLlNlYXJjaFRleHQQAhgEIAA', business_status='permanently_closed']
+  [186/255] ✓ resolved: '爖咖啡' → '爖咖啡（不定休/請見IG公告）'  [google_place_id='ChIJjwLN3et3bjQR2z-EfcX5KcI', google_maps_url='https://maps.google.com/?cid=13990988344012849115&g_mp=Cidnb29nbGUubWFwcy5wbGFjZXMudjEuUGxhY2VzLlNlYXJjaFRleHQQAhgEIAA', name='爖咖啡（不定休/請見IG公告）', business_status='permanently_closed']
+  [187/255] = unchanged: '那咖啡'
+  [188/255] ↻ renamed: '曲屋咖啡' → '曲屋咖啡府緯店'  [name='曲屋咖啡府緯店']
+  [189/255] ↻ renamed: '東楓咖啡' → '東楓咖啡茶飲'  [name='東楓咖啡茶飲']
+  [190/255] ✗ not_found: '恆萃咖啡Coffee Forever'
+  [191/255] ✓ resolved: 'URN Cafe' → 'URN Cafe 陶甕現烘焙精品咖啡'  [google_place_id='ChIJL4WAvn92bjQRQ2vLCDW9wTY', google_maps_url='https://maps.google.com/?cid=3945642784031730499&g_mp=Cidnb29nbGUubWFwcy5wbGFjZXMudjEuUGxhY2VzLlNlYXJjaFRleHQQAhgEIAA', name='URN Cafe 陶甕現烘焙精品咖啡', business_status='permanently_closed']
+  [192/255] ⊕ dup-by-name: '品蓬咖啡Pinpong Coffee' → '品蓬咖啡' (canonical 548fbad6-9f19-42c4-8706-05174abbb328)
+  [193/255] ↻ renamed: 'Smile Elephant 微笑日作菓子' → '微笑日作菓子'  [name='微笑日作菓子']
+  [194/255] ⊕ dup-by-name: '小巷裡的拾壹號' → '小巷裡的拾壹號' (canonical 94c10ddf-d521-4568-b415-649e9f3b343d)
+  [195/255] ✗ not_found: '私人藏豆 COFFELLECTION - 永康店'
+  [196/255] ↻ renamed: "FuYu cafe'賦于咖啡" → '賦于咖啡'  [name='賦于咖啡']
+  [197/255] ↻ renamed: '辰星咖啡 EstrellaCoffee' → '辰星咖啡'  [name='辰星咖啡']
+  [198/255] ⊕ dup-by-place_id: '開普三號店' → '開普三號店' (canonical cc13994f-8ac0-431e-b303-c0db955ee6db)
+  [199/255] ↻ renamed: '藏風藝文咖啡' → '藏風藝文空間'  [name='藏風藝文空間']
+  [200/255] = unchanged: '跳舞的羊咖啡豆專賣店'
+  [201/255] ✗ not_found: '微果咖啡  wego cafe'
+  [202/255] ↻ renamed: '仙人指路咖啡' → '仙人指路咖啡館（午餐下午茶.七股第一品牌）'  [name='仙人指路咖啡館（午餐下午茶.七股第一品牌）']
+  [203/255] ↻ renamed: "EAGER CAF'E" → 'EAGER CAFE 一個 咖啡'  [name='EAGER CAFE 一個 咖啡']
+  [204/255] ✗ not_found: '有邑家咖啡'
+  [205/255] ✓ resolved: 'lazy day' → 'Lazy Bar 懶人酒吧'  [google_place_id='ChIJk7vp3nZ3bjQRn_5RWdU1KAY', google_maps_url='https://maps.google.com/?cid=443663753738845855&g_mp=Cidnb29nbGUubWFwcy5wbGFjZXMudjEuUGxhY2VzLlNlYXJjaFRleHQQAhgEIAA', name='Lazy Bar 懶人酒吧']
+  [206/255] ✗ not_found: '小野珈琲烘焙坊'
+  [207/255] ↻ renamed: '咚珈琲' → '咚珈琲自家烘焙'  [name='咚珈琲自家烘焙']
+  [208/255] ↻ renamed: '未艾公寓' → '未艾公寓(住宿)'  [name='未艾公寓(住宿)']
+  [209/255] ↻ renamed: '沛里歐早午餐鬆餅咖啡館' → '沛里歐早午餐鬆餅咖啡館(店休日請看FB/IG)'  [name='沛里歐早午餐鬆餅咖啡館(店休日請看FB/IG)']
+  [210/255] ✗ not_found: '牽咖啡 Chen Coffee'
+  [211/255] ✗ not_found: '豆趣留聲'
+  [212/255] ↻ renamed: '多那之台南西門門市（寶美樓）' → '多那之台南西門門市'  [name='多那之台南西門門市']
+  [213/255] ↻ renamed: 'CaffeBene 咖啡伴_成大門市' → 'CAFFE BENE 雙十店'  [name='CAFFE BENE 雙十店']
+  [214/255] = unchanged: '透南風咖啡聚場'
+  [215/255] = unchanged: '握咖啡台南赤崁店'
+  [216/255] = unchanged: '南找咖啡'
+  [217/255] ⊕ dup-by-name: '台南-秘氏咖啡' → '台南-秘氏咖啡' (canonical c16b7b29-cbaa-4313-abb9-00290b40dc36)
+  [218/255] ↻ renamed: '貓吐司' → '貓吐司堡專賣店'  [name='貓吐司堡專賣店']
+  [219/255] = unchanged: '安內咖啡 An1943 Coffee 新市店'
+  [220/255] ↻ renamed: '小雨咖啡 Café Drizzle' → '小雨咖啡 Café Drizzle (無內用座位)'  [name='小雨咖啡 Café Drizzle (無內用座位)']
+  [221/255] ✓ resolved: '日日咖啡' → '日日咖啡'  [google_place_id='ChIJUx56ssZ2bjQRw0Uu9xbbchU', google_maps_url='https://maps.google.com/?cid=1545538513824269763&g_mp=Cidnb29nbGUubWFwcy5wbGFjZXMudjEuUGxhY2VzLlNlYXJjaFRleHQQAhgEIAA', business_status='permanently_closed']
+  [222/255] ↻ renamed: '漿果咖啡' → '漿果咖啡館BACCA CAFE'  [name='漿果咖啡館BACCA CAFE']
+  [223/255] ✗ not_found: '手草生活'
+  [224/255] = unchanged: '友日子丨咖啡丨台灣茶'
+  [225/255] = unchanged: "134巷內的女巫's"
+  [226/255] ✗ not_found: 'Hour Jungle共同工作室（台南崇學館）'
+  [227/255] ↻ renamed: '叁七茶房' → '叁七茶房(37茶房)'  [name='叁七茶房(37茶房)']
+  [228/255] ↻ renamed: '巷隅咖啡Lane Corner Coffee' → '巷隅咖啡'  [name='巷隅咖啡']
+  [229/255] = unchanged: '覓拾coffee'
+  [230/255] ✓ resolved: 'mini izzy cafe 府前店' → 'Mini izzy Cafe 府前店'  [google_place_id='ChIJ8__rwod2bjQRw8grrxMisuU', google_maps_url='https://maps.google.com/?cid=16551329048478599363&g_mp=Cidnb29nbGUubWFwcy5wbGFjZXMudjEuUGxhY2VzLlNlYXJjaFRleHQQAhgEIAA', name='Mini izzy Cafe 府前店', business_status='permanently_closed']
+  [231/255] ⊕ dup-by-name: '好像不錯 Sounds Nice' → '好像不錯 Sounds Nice' (canonical f789e4e1-9f9f-4e7c-a516-89eb001c464c)
+  [232/255] = unchanged: '月牙兒彎彎 Le Croissant de Lune'
+  [233/255] = unchanged: '雨露微亮 everiridescent'
+  [234/255] ↻ renamed: 'ROOM A' → 'Room A'  [name='Room A']
+  [235/255] ↻ renamed: 'Paripari ' → 'Paripari apt.'  [name='Paripari apt.']
+  [236/255] ✓ resolved: '寂寞先生 Mr.lonely Cafe & Bar' → '寂寞先生 MR.LONELY CAFE'  [google_place_id='ChIJSVni4U11bjQR69SZqPgf9EE', google_maps_url='https://maps.google.com/?cid=4752458659623720171&g_mp=Cidnb29nbGUubWFwcy5wbGFjZXMudjEuUGxhY2VzLlNlYXJjaFRleHQQAhgEIAA', name='寂寞先生 MR.LONELY CAFE', business_status='permanently_closed']
+  [237/255] = unchanged: '肆樓咖啡'
+  [238/255] = unchanged: '甜在心咖啡館'
+  [239/255] ↻ renamed: '豐咖啡東橋店' → '豐咖啡東橋店 / 極淺烘焙、淺焙 / 公休日除了禮拜一可以參考臉書'  [name='豐咖啡東橋店 / 極淺烘焙、淺焙 / 公休日除了禮拜一可以參考臉書']
+  [240/255] ↻ renamed: '可斯里咖啡烘焙' → '可斯里咖啡烘培'  [name='可斯里咖啡烘培']
+  [241/255] ↻ renamed: 'TreesWind 樹有風精選咖啡豆專賣店' → '樹有風'  [name='樹有風']
+  [242/255] ↻ renamed: 'Kadoya喫茶店' → 'KADOYA喫茶店'  [name='KADOYA喫茶店']
+  [243/255] ✗ not_found: '先吃•再聊'
+  [244/255] ✓ resolved: '慕坐會' → '慕坐會小聚所'  [google_place_id='ChIJR_ZI84p2bjQROTCXMQs2rIo', google_maps_url='https://maps.google.com/?cid=9992421094932820025&g_mp=Cidnb29nbGUubWFwcy5wbGFjZXMudjEuUGxhY2VzLlNlYXJjaFRleHQQAhgEIAA', name='慕坐會小聚所', business_status='permanently_closed']
+  [245/255] ↻ renamed: "T'WIN coffee 咖啡' 云" → "T'WIN Coffee · 咖啡 / 云"  [name="T'WIN Coffee · 咖啡 / 云"]
+  [246/255] ⊕ dup-by-name: '咖啡茶朵CHADOR' → '台南-CHADOR' (canonical 9982dfde-4c88-430f-b63c-786ff4ab3b16)
+  [247/255] = unchanged: '那豆鮮焙'
+  [248/255] ✗ not_found: 'Quinny cafe & lounge'
+  [249/255] = unchanged: '米寓'
+  [250/255] ✓ resolved: '稍後咖啡館Encore Cafe' → '洄響咖啡 In echo cafe'  [google_place_id='ChIJ51eycm13bjQRlVhPMbZtE48', google_maps_url='https://maps.google.com/?cid=10309704601259956373&g_mp=Cidnb29nbGUubWFwcy5wbGFjZXMudjEuUGxhY2VzLlNlYXJjaFRleHQQAhgEIAA', name='洄響咖啡 In echo cafe', business_status='operational']
+  [251/255] = unchanged: '蛋黃咖啡'
+  [252/255] ⊕ dup-by-name: '存憶CafeBar' → '存憶 Cafe Bar' (canonical bb1232f9-9726-4eab-9c21-9923a7067da5)
+  [253/255] ↻ renamed: 'ours我們工作室' → '我們工作室'  [name='我們工作室']
+  [254/255] = unchanged: 'StableNice BLDG.'
+  [255/255] ↻ renamed: '無' → '無飲台南一中店（現萃茶專賣店）'  [name='無飲台南一中店（現萃茶專賣店）']
+
+--- Summary ---
+  renamed              87
+  newly_resolved       35
+  dup_by_place_id      15
+  dup_by_name          14
+  not_found            55
+  unchanged            49
+
+(dry-run; nothing written. 加 --apply 寫入。)

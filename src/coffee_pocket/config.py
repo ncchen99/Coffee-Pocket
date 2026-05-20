@@ -13,5 +13,12 @@ class Settings(BaseSettings):
     openrouter_api_key: str = ""
     openrouter_model: str = "google/gemini-3-flash-preview"
 
+    # Cloudflare R2 (S3-compatible) — cafe hero images
+    r2_endpoint: str = ""
+    r2_bucket: str = ""
+    r2_access_key_id: str = ""
+    r2_secret_access_key: str = ""
+    r2_public_base: str = ""  # public worker URL or custom domain
+
 
 settings = Settings()

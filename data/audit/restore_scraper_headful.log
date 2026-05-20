@@ -1,0 +1,49 @@
+2026-05-20 15:29:20,273 INFO HTTP Request: GET https://ztxehfpzmxzzhruitwso.supabase.co/rest/v1/cafes?select=id%2Cname%2Caddress%2Cgoogle_place_id%2Cgoogle_maps_url%2Cbusiness_status%2Cduplicate_of&id=in.%28915d403f-d07f-4c9a-a706-45356591a6ad%2Ca99e4f7b-4888-4bd2-ad2f-55941a488118%2Cd2c67b38-9b46-4cea-8619-9a3158ce0b66%2Ce31735c8-ce40-42d3-8367-9617f065d64a%2C609e019f-c349-44a1-be1e-5bb014bc1bd1%2C605b305f-339f-4966-9de0-fd9624e22a9f%2Cb3f28668-5bb5-4b34-9178-24976ab7f205%2Ceb6a87d8-55e4-42ac-9448-3f52cd69d537%2Cc8ab01cb-44f3-47cc-9292-e9b9b56a2db1%2C2b926c15-f5e6-4a47-994d-341962595d89%29 "HTTP/2 200 OK"
+2026-05-20 15:29:20,368 INFO Picked 10 cafes to scrape
+2026-05-20 15:29:23,227 INFO → More Cafe  (https://maps.google.com/?cid=10199387720588317236&g_mp=Cidnb29nbGUubWFwcy5wbGFjZXMudjEuUGxhY2VzLlNlYXJjaFRleHQQAhgEIAA&hl=zh-TW)
+2026-05-20 15:29:27,807 INFO   meta: status=permanently_closed rating=4.7 reviews=197 price=$1-200永久歇業 phone=06 224 8830
+2026-05-20 15:30:04,215 INFO   collected 100 reviews (stop_reason=max_reviews)
+2026-05-20 15:30:04,216 INFO   wrote data/reviews/ChIJo2hCqWF2bjQRNNIl3BeBi40.json
+2026-05-20 15:30:04,786 INFO HTTP Request: GET https://lh3.googleusercontent.com/gps-cs-s/APNQkAH_NRLB7yr9cP9-hWjW02vLIm6k1gqZUI72KLTxGZ-bDbURMwb-ZoDQ8YyKX1FH2FkeLSSJRVFU8f2RVh9yJ8qtq4xrD5Xslng2N-NBC-6wwgo2m3K-ke8zqgOLyl3WFXoRNg0WBw=w408-h544-k-no "HTTP/1.1 200 OK"
+2026-05-20 15:30:07,835 INFO HTTP Request: GET https://ztxehfpzmxzzhruitwso.supabase.co/rest/v1/cafes?select=photos&id=eq.915d403f-d07f-4c9a-a706-45356591a6ad "HTTP/2 200 OK"
+2026-05-20 15:30:08,533 INFO HTTP Request: PATCH https://ztxehfpzmxzzhruitwso.supabase.co/rest/v1/cafes?id=eq.915d403f-d07f-4c9a-a706-45356591a6ad "HTTP/2 200 OK"
+2026-05-20 15:30:08,628 INFO   cafes row updated
+2026-05-20 15:30:08,628 INFO   …sleeping 65.3s before next cafe
+2026-05-20 15:31:13,937 INFO → 鹿柴咖啡  (https://maps.google.com/?cid=12408958409187562276&g_mp=Cidnb29nbGUubWFwcy5wbGFjZXMudjEuUGxhY2VzLlNlYXJjaFRleHQQAhgEIAA&hl=zh-TW)
+2026-05-20 15:31:18,987 INFO   meta: status=operational rating=4.6 reviews=200 price=$200-400咖啡店 phone=06 299 0200
+2026-05-20 15:31:53,165 INFO   collected 100 reviews (stop_reason=max_reviews)
+2026-05-20 15:31:53,168 INFO   wrote data/reviews/ChIJmSVsWYd2bjQRJJM4fO15Naw.json
+2026-05-20 15:31:53,746 INFO HTTP Request: GET https://lh3.googleusercontent.com/gps-cs-s/APNQkAHreD3S8sgn7N7_p9vz0s0Qd34tWDtBz8Flv4mg1Qh-_WM_Nflqo_ODCnrC_LnjmLzIase0PdWvpFvhXgAGOKd2M6ZpTW4tppH19gcbTbjzv-0pYYcYmBgDuJGZQGUO00FLpQz6=w426-h240-k-no "HTTP/1.1 200 OK"
+2026-05-20 15:31:55,698 INFO HTTP Request: GET https://ztxehfpzmxzzhruitwso.supabase.co/rest/v1/cafes?select=photos&id=eq.d2c67b38-9b46-4cea-8619-9a3158ce0b66 "HTTP/2 200 OK"
+2026-05-20 15:31:56,022 INFO HTTP Request: PATCH https://ztxehfpzmxzzhruitwso.supabase.co/rest/v1/cafes?id=eq.d2c67b38-9b46-4cea-8619-9a3158ce0b66 "HTTP/2 200 OK"
+2026-05-20 15:31:56,117 INFO   cafes row updated
+2026-05-20 15:31:56,117 INFO   …sleeping 83.7s before next cafe
+2026-05-20 15:33:19,813 INFO → kaffuns brew coffee 極萃咖啡  (https://maps.google.com/?cid=14371966548675220776&g_mp=Cidnb29nbGUubWFwcy5wbGFjZXMudjEuUGxhY2VzLlNlYXJjaFRleHQQAhgEIAA&hl=zh-TW)
+2026-05-20 15:33:24,897 INFO   meta: status=operational rating=4.9 reviews=304 price=$1-200咖啡店 phone=06 298 6787
+2026-05-20 15:34:18,189 INFO   collected 100 reviews (stop_reason=max_reviews)
+2026-05-20 15:34:18,193 INFO   wrote data/reviews/ChIJhR9ag2N2bjQRKFWVGW57c8c.json
+2026-05-20 15:34:18,691 INFO HTTP Request: GET https://lh3.googleusercontent.com/gps-cs-s/APNQkAHZA42HFQGi1azXItdV9X2nLzj2nsj0Gbw-M5jSpnAfv22NAO87a5c2qnFUmAEhqisu8BCuAW8K5GqsRT8-M02kufaO7EiUR2zgtvCLTjVwW22tW95PQf2GElPPZHJvN3H839D_Zf2yPGw4=w628-h240-k-no "HTTP/1.1 200 OK"
+2026-05-20 15:34:20,987 INFO HTTP Request: GET https://ztxehfpzmxzzhruitwso.supabase.co/rest/v1/cafes?select=photos&id=eq.e31735c8-ce40-42d3-8367-9617f065d64a "HTTP/2 200 OK"
+2026-05-20 15:34:21,366 INFO HTTP Request: PATCH https://ztxehfpzmxzzhruitwso.supabase.co/rest/v1/cafes?id=eq.e31735c8-ce40-42d3-8367-9617f065d64a "HTTP/2 200 OK"
+2026-05-20 15:34:21,458 INFO   cafes row updated
+2026-05-20 15:34:21,458 INFO   …sleeping 74.5s before next cafe
+2026-05-20 15:35:35,974 INFO → IZZY CAFE  (https://maps.google.com/?cid=16189671232835183175&g_mp=Cidnb29nbGUubWFwcy5wbGFjZXMudjEuUGxhY2VzLlNlYXJjaFRleHQQAhgEIAA&hl=zh-TW)
+2026-05-20 15:35:42,168 INFO   meta: status=operational rating=4.5 reviews=513 price=$1-200咖啡店 phone=06 358 8388
+2026-05-20 15:36:25,978 INFO   collected 100 reviews (stop_reason=max_reviews)
+2026-05-20 15:36:25,984 INFO   wrote data/reviews/ChIJ278oMBJ2bjQRR2KArzVEreA.json
+2026-05-20 15:36:26,528 INFO HTTP Request: GET https://lh3.googleusercontent.com/gps-cs-s/APNQkAGsamr6nOsES-MmpYKs2CaHQc-BNM-lfrQJikT4C6xFROxQ2cQED3NL493eFIF9mIcM6_XLC-gTZ09Suhi-vdfRBmym05-B55FYhKVcJzq9peXS8Xk7PrXZXIdZgy5eZpKFCy_PtvDO3mfq=w408-h544-k-no "HTTP/1.1 200 OK"
+2026-05-20 15:36:29,568 INFO HTTP Request: GET https://ztxehfpzmxzzhruitwso.supabase.co/rest/v1/cafes?select=photos&id=eq.609e019f-c349-44a1-be1e-5bb014bc1bd1 "HTTP/2 200 OK"
+2026-05-20 15:36:29,934 INFO HTTP Request: PATCH https://ztxehfpzmxzzhruitwso.supabase.co/rest/v1/cafes?id=eq.609e019f-c349-44a1-be1e-5bb014bc1bd1 "HTTP/2 200 OK"
+2026-05-20 15:36:30,027 INFO   cafes row updated
+2026-05-20 15:36:30,027 INFO   …sleeping 63.8s before next cafe
+2026-05-20 15:37:33,885 INFO → 開普三號店  (https://maps.google.com/?cid=10101644743636310773&g_mp=Cidnb29nbGUubWFwcy5wbGFjZXMudjEuUGxhY2VzLlNlYXJjaFRleHQQAhgEIAA&hl=zh-TW)
+2026-05-20 15:37:39,194 INFO   meta: status=permanently_closed rating=4.1 reviews=473 price=$$永久歇業 phone=06 208 8911
+2026-05-20 15:38:25,915 INFO   collected 100 reviews (stop_reason=max_reviews)
+2026-05-20 15:38:25,925 INFO   wrote data/reviews/ChIJw9PibZR2bjQR9Vqin19AMIw.json
+2026-05-20 15:38:26,561 INFO HTTP Request: GET https://lh3.googleusercontent.com/gps-cs-s/APNQkAGXZrjz2xdZFTmoHI23X41Y_kvZQIz2YexTIX_yY5HTWQURuyn_7IoT2gBa5gLyTVzZnUzUVUudEOWJIjnl1447MQ2cMXJYzRQ9rxOy59caqjzy6-8b1FgfQfSSIIJSXe1Ogbwf=w408-h306-k-no "HTTP/1.1 200 OK"
+2026-05-20 15:38:28,705 INFO HTTP Request: GET https://ztxehfpzmxzzhruitwso.supabase.co/rest/v1/cafes?select=photos&id=eq.605b305f-339f-4966-9de0-fd9624e22a9f "HTTP/2 200 OK"
+2026-05-20 15:38:29,279 INFO HTTP Request: PATCH https://ztxehfpzmxzzhruitwso.supabase.co/rest/v1/cafes?id=eq.605b305f-339f-4966-9de0-fd9624e22a9f "HTTP/2 200 OK"
+2026-05-20 15:38:29,386 INFO   cafes row updated
+2026-05-20 15:38:29,386 INFO   …sleeping 52.1s before next cafe
+2026-05-20 15:39:22,068 INFO → 花樓咖啡 Follow Coffee 二店  (https://maps.google.com/?cid=15396764963176642688&g_mp=Cidnb29nbGUubWFwcy5wbGFjZXMudjEuUGxhY2VzLlNlYXJjaFRleHQQAhgEIAA&hl=zh-TW)
+2026-05-20 15:39:27,253 INFO   meta: status=operational rating=4 reviews=543 price=$1-200咖啡店 phone=06 221 0777
