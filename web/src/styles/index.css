@@ -91,62 +91,48 @@
 }
 
 /* ─────────────────────────────────────
- * 客製化 scrollbar — 細直角線,視覺貼在區塊右緣
- *   ⚠️ scrollbar-width / scrollbar-color (CSS Scrollbars Module) 與
- *      ::-webkit-scrollbar 互斥 —— 在 Chrome 121+ 與近期 Safari,
- *      一旦 element 有 scrollbar-width,所有 ::-webkit-scrollbar
- *      pseudo 都會被略過(這就是先前樣式沒套上的原因)。
- *      所以這裡只給 Firefox(用 @supports 判斷沒有 webkit pseudo),
- *      WebKit 全交給 ::-webkit-scrollbar。
- *
- *   thumb 用 10px 外寬 + 4px 透明 border + background-clip: padding-box
- *   壓成 2px 視覺寬,直角、always visible —— 看起來像貼在區塊邊緣的
- *   一條細線而不是傳統 scrollbar block,避免疊在內容 padding 上覺得擠。
+ * 客製化 scrollbar — 超細直角線,完美解決跨瀏覽器與留白對稱問題
  * ────────────────────────────────── */
-@supports not selector(::-webkit-scrollbar) {
+
+/* 1. 全域將標準 scrollbar 重設為 auto,讓 Chrome/Safari (WebKit/Blink) 啟用 ::-webkit-scrollbar */
+*:not(html) {
+  scrollbar-color: auto !important;
+  scrollbar-width: auto !important;
+}
+
+/* 2. 針對 Firefox (Gecko) 引擎單獨進行優化，使用標準屬性 */
+@supports (-moz-appearance: none) {
   * {
-    scrollbar-width: thin;
-    scrollbar-color: oklch(var(--bc) / 0.35) transparent;
+    scrollbar-width: thin !important;
+    scrollbar-color: oklch(var(--bc) / 0.35) transparent !important;
   }
 }
 
-/* ⚠️ -webkit-appearance: none 是關鍵 ——
-   macOS 上 Chrome/Safari 預設使用「系統 overlay scrollbar」(隨系統設定
-   「捲動時顯示」隱藏),此 mode 下 ::-webkit-scrollbar 的自訂樣式會被略過。
-   設 appearance: none 才能把 scrollbar 從原生 overlay 切回可被 CSS 控制、
-   永遠可見的 mode。 */
+/* 3. 針對 Chrome & Safari & Edge (WebKit/Blink) 自訂細直角 scrollbar */
 *::-webkit-scrollbar {
-  -webkit-appearance: none;
-  width: 10px;
-  height: 10px;
+  width: 4px;      /* 縱向 scrollbar 寬度為 4px */
+  height: 4px;     /* 橫向 scrollbar 高度為 4px */
   background: transparent;
 }
+
 *::-webkit-scrollbar-track {
   background: transparent;
 }
+
 *::-webkit-scrollbar-thumb {
-  background-color: oklch(var(--bc) / 0.3);
+  background-color: oklch(var(--bc) / 0.25);
   background-clip: padding-box;
-  border-radius: 0;
+  border-radius: 0 !important; /* 確保直角 */
 }
-/* 不對稱 border —— 把可見 thumb 推到區塊邊緣,看起來像細線而不是塊狀 thumb。
-   :vertical / :horizontal 分開設,避免縱向 thumb 又被 border-top 切短頭部。 */
-*::-webkit-scrollbar-thumb:vertical {
-  border-left: 8px solid transparent;
-  border-right: 0;
-  min-height: 32px;
-}
-*::-webkit-scrollbar-thumb:horizontal {
-  border-top: 8px solid transparent;
-  border-bottom: 0;
-  min-width: 32px;
-}
+
 *::-webkit-scrollbar-thumb:hover {
-  background-color: oklch(var(--bc) / 0.6);
+  background-color: oklch(var(--bc) / 0.5);
 }
+
 *::-webkit-scrollbar-corner {
   background: transparent;
 }
+
 *::-webkit-scrollbar-button {
   display: none;
 }
