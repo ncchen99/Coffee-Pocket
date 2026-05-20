@@ -52,8 +52,16 @@ export default function HomePage() {
 
         <button
           type="button"
+          onClick={() => navigate("/filter")}
+          className="btn btn-ghost btn-sm mt-4 gap-1 text-base-content/55"
+        >
+          ⚙ 進階篩選
+        </button>
+
+        <button
+          type="button"
           onClick={() => goSearch()}
-          className="btn btn-neutral btn-block mt-6"
+          className="btn btn-neutral btn-block mt-4"
         >
           看符合的店 →
         </button>

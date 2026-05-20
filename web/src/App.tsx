@@ -8,6 +8,7 @@ import { CafeMap } from "@/components/search/CafeMap";
 import { SearchSidebar } from "@/components/search/SearchSidebar";
 import { CafeDetailContent } from "@/components/cafe/CafeDetailContent";
 import { DesktopFilterPanel } from "@/components/search/DesktopFilterPanel";
+import { useSearchSelection } from "@/hooks/useSearchSelection";
 import { mockCafes, mockCafeDetail } from "@/data/mockCafes";
 import HomePage from "./pages/HomePage";
 import MapPage from "./pages/MapPage";
@@ -18,6 +19,8 @@ import ProfilePage from "./pages/ProfilePage";
 import SettingsPage from "./pages/SettingsPage";
 import FilterPage from "./pages/FilterPage";
 import OnboardingPage, { isOnboarded } from "./pages/OnboardingPage";
+import DesktopProfilePage from "./pages/DesktopProfilePage";
+import DesktopPocketPage from "./pages/DesktopPocketPage";
 
 export default function App() {
   const isDesktop = useIsDesktop();
@@ -26,9 +29,9 @@ export default function App() {
     return (
       <Routes>
         <Route path="/login" element={<LoginPage />} />
-        <Route path="/profile" element={<ProfilePage />} />
+        <Route path="/profile" element={<DesktopProfilePage />} />
         <Route path="/settings" element={<SettingsPage />} />
-        <Route path="/pocket" element={<PocketListPage />} />
+        <Route path="/pocket" element={<DesktopPocketPage />} />
         <Route path="*" element={<DesktopApp />} />
       </Routes>
     );
@@ -67,6 +70,8 @@ function DesktopApp() {
   const activeId = cafeMatch?.params.id ?? null;
   const isFilterOpen = !!filterMatch;
 
+  const { selected, toggle, setAll, query, setQuery } = useSearchSelection(["no_limit", "socket"]);
+
   // displayed 落後 activeId —— 關閉時讓內容多停留 280ms 給 exit 動畫播完。
   const [displayed, setDisplayed] = useState<string | null>(activeId);
   const [isScrolled, setIsScrolled] = useState(false);
@@ -92,7 +97,14 @@ function DesktopApp() {
       <Topbar variant="desktop" />
       <div className="flex flex-1 overflow-hidden">
         <div className="flex w-[28%] min-w-[400px] shrink-0">
-          <SearchSidebar activeId={activeId} />
+          <SearchSidebar
+            activeId={activeId}
+            selected={selected}
+            toggle={toggle}
+            setAll={setAll}
+            query={query}
+            setQuery={setQuery}
+          />
         </div>
         <div
           className={`relative shrink-0 overflow-hidden bg-base-100 transition-[width,opacity] duration-300 ease-out ${
@@ -104,6 +116,9 @@ function DesktopApp() {
           {isFilterOpen ? (
             <div className="cp-anim-slide-in h-full">
               <DesktopFilterPanel
+                selected={selected}
+                onToggle={toggle}
+                onReset={() => setAll([])}
                 onClose={() => navigate("/")}
                 onApply={() => navigate("/")}
               />

@@ -3,19 +3,19 @@ import { PromptHero } from "./PromptHero";
 import { ScenarioGrid } from "./ScenarioGrid";
 import { CafeListItem } from "./CafeListItem";
 import { Cap } from "@/components/primitives";
-import { useSearchSelection } from "@/hooks/useSearchSelection";
 import { mockCafes } from "@/data/mockCafes";
 
 interface SearchSidebarProps {
   activeId: string | null;
+  selected: Set<string>;
+  toggle: (key: string) => void;
+  setAll: (keys: string[]) => void;
+  query: string;
+  setQuery: (v: string) => void;
 }
 
 /** 桌面左欄 — 首頁與咖啡廳詳細頁共用,點咖啡廳時不會改版 */
-export function SearchSidebar({ activeId }: SearchSidebarProps) {
-  const { selected, toggle, setAll, query, setQuery } = useSearchSelection([
-    "no_limit",
-    "socket",
-  ]);
+export function SearchSidebar({ activeId, selected, toggle, setAll, query, setQuery }: SearchSidebarProps) {
 
   return (
     <aside className="flex h-full w-full min-w-0 flex-col overflow-hidden border-r border-base-content/10">

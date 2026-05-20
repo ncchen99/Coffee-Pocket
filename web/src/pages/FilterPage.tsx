@@ -3,14 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Cancel01Icon } from "@hugeicons/core-free-icons";
 import { Cap } from "@/components/primitives";
-
-const TAG_GROUPS: { label: string; tags: string[] }[] = [
-  { label: "工作 / 讀書", tags: ["有插座", "不限時", "安靜", "Wi-Fi", "大桌面", "適合讀書"] },
-  { label: "社交", tags: ["適合聊天", "可訂位", "適合多人"] },
-  { label: "其他", tags: ["低消友善", "戶外座", "停車方便"] },
-];
-
-const SORT_OPTIONS = ["距離", "評分", "熱門"];
+import { FILTER_TAG_GROUPS, SORT_OPTIONS } from "@/data/filterTags";
 
 /**
  * 進階篩選頁 — 手機全螢幕,多標籤交叉篩選,底部即時筆數。
@@ -93,18 +86,18 @@ export default function FilterPage() {
         <div className="divider" />
 
         {/* Tag groups */}
-        {TAG_GROUPS.map((group) => (
+        {FILTER_TAG_GROUPS.map((group) => (
           <section key={group.label} className="mb-4">
             <Cap>{group.label}</Cap>
             <div className="mt-2 flex flex-wrap gap-2">
               {group.tags.map((tag) => (
                 <button
-                  key={tag}
+                  key={tag.key}
                   type="button"
-                  onClick={() => toggle(tag)}
-                  className={`btn btn-sm ${selected.has(tag) ? "btn-neutral" : "btn-ghost border border-base-content/15"}`}
+                  onClick={() => toggle(tag.key)}
+                  className={`btn btn-sm ${selected.has(tag.key) ? "btn-neutral" : "btn-ghost border border-base-content/15"}`}
                 >
-                  {tag}
+                  {tag.label}
                 </button>
               ))}
             </div>
