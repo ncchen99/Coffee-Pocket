@@ -46,10 +46,14 @@ export default function OnboardingPage() {
   };
 
   const requestLocation = () => {
-    navigator.geolocation?.getCurrentPosition(
-      () => finish(),
-      () => finish(),
-    );
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        () => finish(),
+        () => finish(),
+      );
+    } else {
+      finish();
+    }
   };
 
   const current = STEPS[step];

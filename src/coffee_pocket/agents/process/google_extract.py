@@ -106,10 +106,15 @@ def mark_processed(review_ids: list[str], signals_by_review: dict[str, list[dict
         return
     db = get_client()
     now = datetime.now(timezone.utc).isoformat()
-    for rid in review_ids:
-        db.table("reviews_raw").update(
-            {"processed_at": now, "extracted_signals": signals_by_review.get(rid, [])}
-        ).eq("id", rid).execute()
+    rows = [
+        {
+            "id": rid,
+            "processed_at": now,
+            "extracted_signals": signals_by_review.get(rid, []),
+        }
+        for rid in review_ids
+    ]
+    db.table("reviews_raw").upsert(rows).execute()
 
 
 def extract_chunk(chunk: list[dict[str, str]]) -> ExtractionResult:

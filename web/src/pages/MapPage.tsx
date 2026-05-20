@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { ArrowLeft02Icon, Share01Icon } from "@hugeicons/core-free-icons";
+import { ArrowLeft02Icon, Share01Icon, Settings01Icon } from "@hugeicons/core-free-icons";
 import { useIsDesktop } from "@/components/layout/Responsive";
 import { FilterChipBar, type ChipOption } from "@/components/search/FilterChipBar";
 import { CafeListItem } from "@/components/search/CafeListItem";
@@ -85,12 +85,21 @@ export default function MapPage() {
       </header>
 
       {/* chip bar — 緊貼 header 下方 */}
-      <div className="border-b border-base-content/10 bg-base-100 px-3 py-2">
+      <div className="flex items-center gap-1 border-b border-base-content/10 bg-base-100 px-3 py-2">
         <FilterChipBar
           options={CHIP_OPTIONS}
           selected={selected}
           onToggle={toggle}
+          className="flex-1"
         />
+        <button
+          type="button"
+          onClick={() => navigate("/filter")}
+          className="btn btn-ghost btn-xs btn-square shrink-0"
+          aria-label="進階篩選"
+        >
+          <HugeiconsIcon icon={Settings01Icon} size={16} strokeWidth={1.5} />
+        </button>
       </div>
 
       {/* 地圖區 + bottom sheet */}

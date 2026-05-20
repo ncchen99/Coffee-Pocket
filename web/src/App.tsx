@@ -7,6 +7,7 @@ import { Topbar } from "@/components/layout/Topbar";
 import { CafeMap } from "@/components/search/CafeMap";
 import { SearchSidebar } from "@/components/search/SearchSidebar";
 import { CafeDetailContent } from "@/components/cafe/CafeDetailContent";
+import { DesktopFilterPanel } from "@/components/search/DesktopFilterPanel";
 import { mockCafes, mockCafeDetail } from "@/data/mockCafes";
 import HomePage from "./pages/HomePage";
 import MapPage from "./pages/MapPage";
@@ -20,7 +21,19 @@ import OnboardingPage, { isOnboarded } from "./pages/OnboardingPage";
 
 export default function App() {
   const isDesktop = useIsDesktop();
-  if (isDesktop) return <DesktopApp />;
+
+  if (isDesktop) {
+    return (
+      <Routes>
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="/profile" element={<ProfilePage />} />
+        <Route path="/settings" element={<SettingsPage />} />
+        <Route path="/pocket" element={<PocketListPage />} />
+        <Route path="*" element={<DesktopApp />} />
+      </Routes>
+    );
+  }
+
   return (
     <Routes>
       <Route path="/" element={isOnboarded() ? <HomePage /> : <Navigate to="/onboarding" replace />} />
@@ -48,9 +61,11 @@ export default function App() {
  *   保留可分享 / 後退鍵原本的行為。
  */
 function DesktopApp() {
-  const match = useMatch("/cafe/:id");
+  const cafeMatch = useMatch("/cafe/:id");
+  const filterMatch = useMatch("/filter");
   const navigate = useNavigate();
-  const activeId = match?.params.id ?? null;
+  const activeId = cafeMatch?.params.id ?? null;
+  const isFilterOpen = !!filterMatch;
 
   // displayed 落後 activeId —— 關閉時讓內容多停留 280ms 給 exit 動畫播完。
   const [displayed, setDisplayed] = useState<string | null>(activeId);
@@ -69,7 +84,7 @@ function DesktopApp() {
     setIsScrolled(false);
   }, [activeId]);
 
-  const isOpen = !!activeId;
+  const isPanelOpen = !!activeId || isFilterOpen;
   const cafe = displayed ? mockCafeDetail(displayed) : null;
 
   return (
@@ -81,12 +96,19 @@ function DesktopApp() {
         </div>
         <div
           className={`relative shrink-0 overflow-hidden bg-base-100 transition-[width,opacity] duration-300 ease-out ${
-            isOpen
+            isPanelOpen
               ? "w-[32%] min-w-[380px] border-r border-base-content/10 opacity-100"
               : "w-0 min-w-0 opacity-0"
           }`}
         >
-          {cafe ? (
+          {isFilterOpen ? (
+            <div className="cp-anim-slide-in h-full">
+              <DesktopFilterPanel
+                onClose={() => navigate("/")}
+                onApply={() => navigate("/")}
+              />
+            </div>
+          ) : cafe ? (
             <div key={cafe.id} className="cp-anim-slide-in relative h-full flex flex-col">
               <button
                 type="button"

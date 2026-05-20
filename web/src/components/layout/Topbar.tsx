@@ -1,7 +1,8 @@
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Menu01Icon, Coffee02Icon } from "@hugeicons/core-free-icons";
+import { Coffee02Icon } from "@hugeicons/core-free-icons";
 import { ThemeToggle } from "./ThemeToggle";
+import { useAuth } from "@/hooks/useAuth";
 
 interface TopbarProps {
   variant?: "mobile" | "desktop";
@@ -9,6 +10,9 @@ interface TopbarProps {
 
 /** 全站 topbar — 基於 daisyUI navbar。桌面不再含搜尋,搜尋移到左欄。 */
 export function Topbar({ variant = "desktop" }: TopbarProps) {
+  const navigate = useNavigate();
+  const { user, signInWithGoogle } = useAuth();
+
   if (variant === "mobile") {
     return (
       <header className="navbar min-h-12 border-b border-base-content/10 bg-base-100 px-4">
@@ -20,9 +24,6 @@ export function Topbar({ variant = "desktop" }: TopbarProps) {
         </div>
         <div className="navbar-end gap-1">
           <ThemeToggle />
-          <button type="button" className="btn btn-ghost btn-sm btn-square" aria-label="選單">
-            <HugeiconsIcon icon={Menu01Icon} size={20} strokeWidth={1.5} />
-          </button>
         </div>
       </header>
     );
@@ -42,9 +43,23 @@ export function Topbar({ variant = "desktop" }: TopbarProps) {
       </div>
       <div className="navbar-end gap-2">
         <ThemeToggle />
-        <button type="button" className="btn btn-ghost btn-sm">
-          登入
-        </button>
+        {user ? (
+          <button
+            type="button"
+            onClick={() => navigate("/profile")}
+            className="btn btn-ghost btn-sm"
+          >
+            {user.user_metadata?.full_name ?? "我的"}
+          </button>
+        ) : (
+          <button
+            type="button"
+            onClick={signInWithGoogle}
+            className="btn btn-ghost btn-sm"
+          >
+            登入
+          </button>
+        )}
       </div>
     </header>
   );

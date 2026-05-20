@@ -82,7 +82,7 @@ SCROLL_PAUSE_MS = (2200, 4200)           # between feed scrolls
 AFTER_NAV_MS = (3000, 5500)              # after opening a place URL
 AFTER_TAB_CLICK_MS = (1500, 3000)        # after clicking 評論 tab
 AFTER_SORT_MS = (2000, 4000)             # after picking 最新
-BETWEEN_CAFES_MS = (45_000, 90_000)      # idle gap between cafes — long on purpose
+BETWEEN_CAFES_MS = (20_000, 30_000)      # idle gap between cafes — shorter as requested
 MICRO_PAUSE_MS = (200, 700)              # tiny think-time between sub-actions
 
 

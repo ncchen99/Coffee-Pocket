@@ -1,3 +1,4 @@
+import { Link } from "react-router-dom";
 import { PromptHero } from "./PromptHero";
 import { ScenarioGrid } from "./ScenarioGrid";
 import { CafeListItem } from "./CafeListItem";
@@ -35,6 +36,15 @@ export function SearchSidebar({ activeId }: SearchSidebarProps) {
           <div className="mt-2">
             <ScenarioGrid layout="grid" onPick={(s) => setAll(s.tags)} />
           </div>
+        </div>
+
+        <div className="px-5 pt-3">
+          <Link
+            to="/filter"
+            className="btn btn-ghost btn-xs text-base-content/55 gap-1"
+          >
+            ⚙ 進階篩選
+          </Link>
         </div>
 
         <div className="divider mx-5 my-3" />
