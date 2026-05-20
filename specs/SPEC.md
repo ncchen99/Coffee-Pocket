@@ -51,6 +51,7 @@
 | `socket_available` | boolean | 是否有插座（單一可靠來源即可，confidence ≥ 0.7） |
 | `pet_friendly` | boolean | 是否寵物友善 |
 | `reservable` | boolean | 是否可訂位 / 預約座位 |
+| `outdoor_seating` | boolean | 是否有戶外座位 |
 | `study_friendly` | score (0–100) | 適合一人讀書 / 辦公 |
 | `discussion_friendly` | score (0–100) | 適合 2–3 人小組討論 / 開會 |
 | `group_chat_friendly` | score (0–100) | 適合 3 人以上社交聚會 / 純聊天 |

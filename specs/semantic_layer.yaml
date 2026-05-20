@@ -246,6 +246,44 @@ platform_tags:
         - "mentions_no_reservation"
         - "mentions_walk_in_only"
 
+  outdoor_seating:
+    display_name:
+      zh: "戶外座"
+      en: "Outdoor Seating"
+    type: boolean
+    confidence_rules:
+      minimum_confidence: 0.7
+      minimum_sources: 1
+    description: >
+      店家是否有戶外座位 / 室外區 / 露天座位。cafe_nomad 沒有對應欄位，
+      由 Google reviews / Instagram 抽取。
+    source_mapping:
+      google_reviews:
+        positive_keywords:
+          - "戶外座"
+          - "戶外座位"
+          - "露天"
+          - "室外區"
+          - "戶外區"
+          - "室外座位"
+        negative_keywords:
+          - "沒有戶外座"
+          - "僅限室內"
+          - "無室外座位"
+      instagram_posts:
+        positive_keywords:
+          - "戶外座"
+          - "露天"
+          - "室外區"
+          - "戶外區"
+    llm_interpretation_rules:
+      positive_conditions:
+        - "mentions_outdoor_seating"
+        - "mentions_patio"
+        - "mentions_terrace"
+      negative_conditions:
+        - "mentions_no_outdoor_seating"
+
   time_limit:
     display_name:
       zh: "限時規則"

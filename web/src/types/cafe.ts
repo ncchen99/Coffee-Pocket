@@ -5,6 +5,7 @@ export type PlatformTagKey =
   | "socket_available"
   | "pet_friendly"
   | "reservable"
+  | "outdoor_seating"
   | "study_friendly"
   | "discussion_friendly"
   | "group_chat_friendly"

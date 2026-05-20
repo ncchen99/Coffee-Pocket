@@ -225,10 +225,16 @@ def aggregate_reservable(items: list[dict[str, Any]]) -> dict[str, Any] | None:
     return aggregate_boolean(items, min_sources=1)
 
 
+def aggregate_outdoor_seating(items: list[dict[str, Any]]) -> dict[str, Any] | None:
+    """Outdoor seating signals are sparse, so one reliable source is enough."""
+    return aggregate_boolean(items, min_sources=1)
+
+
 AGGREGATORS = {
     "socket_available": aggregate_socket,
     "pet_friendly": aggregate_pet_friendly,
     "reservable": aggregate_reservable,
+    "outdoor_seating": aggregate_outdoor_seating,
     "study_friendly": lambda items: aggregate_score(items, "study_friendly"),
     "discussion_friendly": lambda items: aggregate_score(items, "discussion_friendly"),
     "group_chat_friendly": lambda items: aggregate_score(items, "group_chat_friendly"),

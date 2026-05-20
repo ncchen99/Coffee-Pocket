@@ -87,7 +87,7 @@ LLM 提示應引用 SPEC.md 的 `positive_keywords` / `negative_keywords` 作為
 
 輸入：來自所有來源的 Raw Signals。
 
-輸出：SPEC.md 中定義的 Product Tags（`socket_available`、`pet_friendly`、`reservable`、`study_friendly`、`discussion_friendly`、`group_chat_friendly`、`time_limit`⋯⋯）。
+輸出：SPEC.md 中定義的 Product Tags（`socket_available`、`pet_friendly`、`reservable`、`outdoor_seating`、`study_friendly`、`discussion_friendly`、`group_chat_friendly`、`time_limit`⋯⋯）。
 
 規則：
 
