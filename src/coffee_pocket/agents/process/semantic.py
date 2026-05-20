@@ -7,8 +7,10 @@ Layer per specs/SPEC.md and specs/AGENTS.md §3.
 Tags handled (v1.0):
   - socket_available (boolean)
   - pet_friendly (boolean)
+  - reservable (boolean)
   - study_friendly (score 0–100)
   - discussion_friendly (score 0–100)
+  - group_chat_friendly (score 0–100)
   - time_limit (structured)
 """
 
@@ -218,11 +220,18 @@ def aggregate_time_limit(items: list[dict[str, Any]]) -> dict[str, Any] | None:
     }
 
 
+def aggregate_reservable(items: list[dict[str, Any]]) -> dict[str, Any] | None:
+    """Reservation signals are sparse, so one reliable source is enough."""
+    return aggregate_boolean(items, min_sources=1)
+
+
 AGGREGATORS = {
     "socket_available": aggregate_socket,
     "pet_friendly": aggregate_pet_friendly,
+    "reservable": aggregate_reservable,
     "study_friendly": lambda items: aggregate_score(items, "study_friendly"),
     "discussion_friendly": lambda items: aggregate_score(items, "discussion_friendly"),
+    "group_chat_friendly": lambda items: aggregate_score(items, "group_chat_friendly"),
     "time_limit": aggregate_time_limit,
 }
 

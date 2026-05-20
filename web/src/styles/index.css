@@ -1,0 +1,59 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ─────────────────────────────────────
+ * 直角強制 — 所有 daisyUI 元件 border-radius 全部歸零
+ * (card / modal / alert / btn / input / select /
+ *  tab / checkbox / toggle / badge + 其他衍生)
+ * theme 變數已歸零,這裡再 hard-pin 防漏
+ * ────────────────────────────────── */
+@layer base {
+  :root { color-scheme: light; }
+  [data-theme="coffee-roast"] { color-scheme: dark; }
+
+  html, body, #root { height: 100%; }
+  body {
+    @apply font-sans antialiased bg-base-100 text-base-content;
+    overscroll-behavior-y: none;
+  }
+}
+
+@layer components {
+  .card,
+  .card-body,
+  .modal-box,
+  .alert,
+  .btn,
+  .input,
+  .select,
+  .textarea,
+  .file-input,
+  .range,
+  .tab,
+  .tabs-boxed,
+  .checkbox,
+  .toggle,
+  .badge,
+  .menu,
+  .menu li > *,
+  .menu :where(li > *:not(ul, .menu-title, details, .btn)),
+  .dropdown-content,
+  .navbar,
+  .join *,
+  .swap,
+  .indicator-item {
+    border-radius: 0 !important;
+  }
+
+  .card,
+  .modal-box,
+  .dropdown-content,
+  .navbar {
+    box-shadow: none !important;
+  }
+
+  /* Mapbox attribution 縮小,不搶版面 */
+  .mapboxgl-ctrl-attrib { font-size: 10px !important; }
+  .mapboxgl-ctrl-attrib-inner { background: transparent !important; }
+}

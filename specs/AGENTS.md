@@ -33,7 +33,7 @@
 | Cafe Nomad 欄位 | 對應 Raw Signal              |
 | --------------- | ---------------------------- |
 | `socket`        | `socket_available`           |
-| `quiet`         | `noise_level`（1–5）         |
+| `quiet`         | `noise_level`（1–5，**5 = 最安靜**） |
 | `seat`          | `seating_availability`       |
 | `wifi`          | `wifi_quality`               |
 | `limited_time`  | `time_limit.status`          |
@@ -87,7 +87,7 @@ LLM 提示應引用 SPEC.md 的 `positive_keywords` / `negative_keywords` 作為
 
 輸入：來自所有來源的 Raw Signals。
 
-輸出：SPEC.md 中定義的 Product Tags（`socket_available`、`study_friendly`、`discussion_friendly`、`time_limit`⋯⋯）。
+輸出：SPEC.md 中定義的 Product Tags（`socket_available`、`pet_friendly`、`reservable`、`study_friendly`、`discussion_friendly`、`group_chat_friendly`、`time_limit`⋯⋯）。
 
 規則：
 

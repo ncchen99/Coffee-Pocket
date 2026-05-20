@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Coffee Pocket · Wireframes</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Caveat:wght@400;600;700&family=Kalam:wght@300;400;700&family=Noto+Sans+TC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --paper: #fdfcf8;
+    --ink: #1a1714;
+    --ink-soft: #6b635a;
+    --ink-faint: #b8b0a4;
+    --rule: #1a1714;
+    --accent: #c8623a;
+    --accent-soft: #f3d9c8;
+    --hi: #fff5b3;
+  }
+  html, body { background: #efece4; margin: 0; padding: 0; }
+  body {
+    font-family: "Noto Sans TC", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    color: var(--ink);
+  }
+  /* sketch defaults */
+  .wf { background: var(--paper); color: var(--ink); width: 100%; height: 100%; position: relative; overflow: hidden; font-size: 12px; }
+  .wf.dark { --paper: #1B1714; --ink: #f0e9dc; --ink-soft: #a89b88; --ink-faint: #5c5347; --rule: #f0e9dc; --accent: #e3895e; --accent-soft: #3a2a20; --hi: #4a3d1f; }
+  .wf * { box-sizing: border-box; }
+  .ann { font-family: "Caveat", "Kalam", cursive; color: var(--ink-soft); font-weight: 500; font-size: 15px; line-height: 1.05; letter-spacing: 0.2px; }
+  .mono { font-family: "JetBrains Mono", ui-monospace, monospace; font-size: 10px; letter-spacing: 0.02em; }
+  .hand { font-family: "Caveat", cursive; font-weight: 600; }
+  .rule { background: var(--rule); }
+  .col { display: flex; flex-direction: column; }
+  .row { display: flex; flex-direction: row; }
+  .gap-2 { gap: 2px; } .gap-4 { gap: 4px; } .gap-6 { gap: 6px; } .gap-8 { gap: 8px; } .gap-10 { gap: 10px; } .gap-12 { gap: 12px; } .gap-16 { gap: 16px; }
+  .center { align-items: center; }
+  .between { justify-content: space-between; }
+  .pad-12 { padding: 12px; } .pad-16 { padding: 16px; } .pad-20 { padding: 20px; }
+  /* primitives */
+  .box { border: 1.2px solid var(--ink); background: transparent; }
+  .box-soft { border: 1px solid var(--ink-faint); }
+  .box-thin { border: 1px solid var(--ink); }
+  .pill { border: 1.2px solid var(--ink); border-radius: 999px; padding: 4px 10px; font-size: 11px; display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; }
+  .pill.sel { background: var(--ink); color: var(--paper); }
+  .pill.acc { background: var(--accent-soft); border-color: var(--accent); color: var(--ink); }
+  .chip { border: 1px solid var(--ink); border-radius: 6px; padding: 4px 8px; font-size: 11px; }
+  .divider { height: 1.2px; background: var(--ink); width: 100%; }
+  .divider.soft { background: var(--ink-faint); height: 1px; }
+  .divider.dashed { border-top: 1.2px dashed var(--ink); background: transparent; height: 0; }
+  .placeholder {
+    background-image: repeating-linear-gradient(135deg, transparent 0 6px, currentColor 6px 7px);
+    color: var(--ink-faint);
+    border: 1px solid var(--ink-faint);
+  }
+  .label-cap { font-size: 9px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--ink-soft); }
+  .h-title { font-weight: 700; font-size: 18px; letter-spacing: -0.01em; }
+  .h-display { font-weight: 700; font-size: 28px; letter-spacing: -0.02em; line-height: 1.05; }
+  .h-mega { font-weight: 700; font-size: 36px; letter-spacing: -0.025em; line-height: 1; }
+  .meta { font-size: 11px; color: var(--ink-soft); }
+  .x-mark { position: relative; }
+  .x-mark::before, .x-mark::after { content: ''; position: absolute; inset: 0; border-top: 1px solid var(--ink-faint); transform-origin: 0 0; }
+  .x-mark::before { transform: rotate(8deg) translateY(50%); }
+  .x-mark::after  { transform: rotate(-8deg) translateY(50%); }
+  /* map placeholder */
+  .map {
+    background:
+      radial-gradient(circle at 30% 40%, transparent 0 32px, rgba(0,0,0,0.04) 32px 34px, transparent 34px),
+      radial-gradient(circle at 70% 70%, transparent 0 52px, rgba(0,0,0,0.04) 52px 54px, transparent 54px),
+      radial-gradient(circle at 50% 50%, transparent 0 86px, rgba(0,0,0,0.04) 86px 88px, transparent 88px),
+      linear-gradient(135deg, rgba(0,0,0,0.025) 1px, transparent 1px) 0 0/24px 24px,
+      linear-gradient(45deg, rgba(0,0,0,0.025) 1px, transparent 1px) 0 0/24px 24px,
+      var(--paper);
+    position: relative; overflow: hidden;
+  }
+  .wf.dark .map { background:
+      radial-gradient(circle at 30% 40%, transparent 0 32px, rgba(255,255,255,0.06) 32px 34px, transparent 34px),
+      radial-gradient(circle at 70% 70%, transparent 0 52px, rgba(255,255,255,0.06) 52px 54px, transparent 54px),
+      radial-gradient(circle at 50% 50%, transparent 0 86px, rgba(255,255,255,0.06) 86px 88px, transparent 88px),
+      linear-gradient(135deg, rgba(255,255,255,0.04) 1px, transparent 1px) 0 0/24px 24px,
+      linear-gradient(45deg, rgba(255,255,255,0.04) 1px, transparent 1px) 0 0/24px 24px,
+      #211D1A;
+  }
+  .pin { width: 18px; height: 18px; border: 1.4px solid var(--ink); background: var(--paper); border-radius: 50% 50% 50% 0; transform: rotate(-45deg); display: inline-flex; align-items: center; justify-content: center; }
+  .pin.acc { background: var(--accent); border-color: var(--ink); color: var(--paper); }
+  .pin-dot { width: 4px; height: 4px; background: var(--ink); border-radius: 50%; transform: rotate(45deg); }
+  /* sketchy filter overlay */
+  .sketchy {
+    filter: url(#wf-rough);
+  }
+  /* annotation arrows */
+  .arrow { position: absolute; pointer-events: none; }
+  .arrow svg { width: 100%; height: 100%; overflow: visible; }
+  /* phone status */
+  .status-mob { display: flex; justify-content: space-between; padding: 6px 16px 0; font-size: 10px; font-family: "JetBrains Mono", monospace; color: var(--ink-soft); }
+  /* desktop chrome */
+  .browser-bar { height: 28px; border-bottom: 1.2px solid var(--ink); display: flex; align-items: center; padding: 0 10px; gap: 6px; }
+  .browser-dot { width: 8px; height: 8px; border-radius: 50%; border: 1px solid var(--ink); }
+  .url-bar { flex: 1; height: 16px; border: 1px solid var(--ink-faint); border-radius: 3px; padding: 0 8px; font-family: "JetBrains Mono", monospace; font-size: 10px; color: var(--ink-soft); display: flex; align-items: center; }
+  /* slider */
+  .sli { position: relative; height: 18px; display: flex; align-items: center; }
+  .sli .track { height: 1.2px; width: 100%; background: var(--ink); }
+  .sli .thumb { width: 12px; height: 12px; background: var(--paper); border: 1.4px solid var(--ink); border-radius: 50%; position: absolute; }
+  /* hand-drawn tick */
+  .tick { font-family: "Caveat", cursive; font-size: 16px; line-height: 1; }
+  /* card */
+  .listing { display: flex; gap: 10px; padding: 12px 0; border-bottom: 1px solid var(--ink-faint); }
+  .listing .thumb { width: 64px; height: 64px; flex-shrink: 0; }
+  .listing .body { flex: 1; min-width: 0; }
+</style>
+</head>
+<body>
+
+<!-- shared SVG defs (rough filter) -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <filter id="wf-rough">
+      <feTurbulence type="fractalNoise" baseFrequency="0.025" numOctaves="2" seed="3" />
+      <feDisplacementMap in="SourceGraphic" scale="1.2" />
+    </filter>
+    <filter id="wf-rough-strong">
+      <feTurbulence type="fractalNoise" baseFrequency="0.04" numOctaves="2" seed="7" />
+      <feDisplacementMap in="SourceGraphic" scale="2.4" />
+    </filter>
+  </defs>
+</svg>
+
+<div id="root"></div>
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+<script type="text/babel" src="design-canvas.jsx"></script>
+<script type="text/babel" src="tweaks-panel.jsx"></script>
+<script type="text/babel" src="wf-primitives.jsx"></script>
+<script type="text/babel" src="wf-home.jsx"></script>
+<script type="text/babel" src="wf-mobile.jsx"></script>
+<script type="text/babel" src="wf-desktop.jsx"></script>
+<script type="text/babel" src="app.jsx"></script>
+
+</body>
+</html>

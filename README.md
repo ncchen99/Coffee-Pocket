@@ -94,6 +94,67 @@ uv run python -m coffee_pocket.agents.enrich.google_scraper --no-missing --updat
 
 爬蟲會把評論與店家資訊存到 `data/reviews/<google_place_id>.json`。加上 `--update-cafe` 時，也會把可用的 Google 店家資訊寫回 `cafes`。
 
+### 4. 評論語意萃取（LLM）
+
+爬蟲拿到的 Google 評論、手動匯入的 Instagram 貼文都是原始文字，需要透過 LLM 抽出結構化標籤（是否有插座、是否適合讀書 / 討論 / 多人聊天、是否可訂位、限時規則⋯⋯）。這一步會把訊號寫進 `reviews_raw.extracted_signals`。
+
+目前支援的標籤定義在 [`specs/semantic_layer.yaml`](specs/semantic_layer.yaml)，prompt 與 schema 在 [`src/coffee_pocket/agents/process/google_places.py`](src/coffee_pocket/agents/process/google_places.py)。Cafe Nomad 來源不需要跑 LLM（它的欄位本身就是結構化的，由 `sources/cafenomad.py` 直接映射）。
+
+1. 處理 Google 評論（讀取 `data/reviews/*.json`）：
+
+   ```bash
+   # 只處理還沒抽過 signals 的評論
+   uv run python -m coffee_pocket.agents.process.google_extract
+
+   # 想先試少量資料：
+   uv run python -m coffee_pocket.agents.process.google_extract --limit 2
+
+   # prompt 或 schema 更新後，要重新抽全部評論：
+   uv run python -m coffee_pocket.agents.process.google_extract --reprocess
+
+   # 只想 upsert 評論，不跑 LLM：
+   uv run python -m coffee_pocket.agents.process.google_extract --no-llm
+   ```
+
+2. 處理 Instagram 貼文（讀取 `data/ig/*.txt`）：
+
+   ```bash
+   # 只抽還沒處理過的貼文
+   uv run python -m coffee_pocket.agents.sources.instagram_extract
+
+   # 先預覽匹配結果，不寫資料庫：
+   uv run python -m coffee_pocket.agents.sources.instagram_extract --dry-run
+
+   # 重新抽全部
+   uv run python -m coffee_pocket.agents.sources.instagram_extract --reprocess
+   ```
+
+跑這一步需要 `OPENAI_API_KEY`（或 `OPENROUTER_API_KEY`，視 `llm.py` 設定）。失敗的批次會寫到 `dead_letter` 表，方便事後追查。
+
+### 5. 標籤彙整（Semantic Layer）
+
+最後把多個來源（cafe_nomad 結構化欄位 + Google / IG 的 LLM signals）彙整成最終的 `cafe_tags` 與 `tag_evidence`：
+
+```bash
+# 全部咖啡廳
+uv run python -m coffee_pocket.agents.process.semantic
+
+# 只跑某一家驗證
+uv run python -m coffee_pocket.agents.process.semantic --cafe-id <cafe-uuid>
+
+# 先試少量
+uv run python -m coffee_pocket.agents.process.semantic --limit 5
+```
+
+彙整邏輯：
+
+- Boolean 標籤（`socket_available`、`pet_friendly`、`reservable`）：多數決，社群編輯可覆寫。
+- Score 標籤（`study_friendly`、`discussion_friendly`、`group_chat_friendly`）：正負訊號加總，clip 到 0–100。
+- Structured 標籤（`time_limit`）：依來源優先順序取 canonical value。
+- 已被 community 鎖定的標籤（`locked_by_community=true`）不會被自動覆蓋。
+
+注意：cafe_nomad 來源沒有「訂位」、「多人聊天」相關欄位，所以這兩個標籤只會在有 Google / IG 訊號的咖啡廳上產生。`noise_level` 三個來源都遵循同一方向（**5 = 最安靜，1 = 最吵**）。
+
 ## `src` 腳本分類
 
 `src/coffee_pocket/agents` 已依階段拆成子資料夾：
@@ -123,15 +184,15 @@ agents/
 | 共用 | `src/coffee_pocket/storage.py` | 上傳 Google 店家封面圖到 R2 | 使用中，輔助模組 |
 | 共用 | `src/coffee_pocket/config.py` / `db.py` | 環境變數與 Supabase 連線 | 使用中，基礎模組 |
 
-### 暫停使用或舊流程
+### LLM / Semantic 流程
 
-| 檔案 | 原本用途 | 現在狀態 |
+| 檔案 | 用途 | 狀態 |
 | --- | --- | --- |
-| `src/coffee_pocket/agents/process/google_places.py` | 舊版一站式 Google Places 流程：查 Place ID、抓 API 回傳的少量評論、跑 LLM | 沒有用在目前主流程；保留作為 schema / prompt 參考 |
-| `src/coffee_pocket/agents/process/google_extract.py` | 讀取 `data/reviews/*.json` 後，把評論寫入 `reviews_raw` 並跑 LLM | 目前主流程沒有跑 LLM；暫停使用 |
-| `src/coffee_pocket/agents/sources/instagram_extract.py` | 讀取 IG 文字檔，匹配店家並可選擇跑 LLM | 目前只作為實驗 / 備用；若只要匯入手動店家清單，優先用 `insert_manual_cafes.py` |
-| `src/coffee_pocket/agents/process/semantic.py` | 彙整 `reviews_raw.extracted_signals` 成 `cafe_tags` / `tag_evidence` | LLM / semantic layer 流程暫停時不需要跑 |
-| `src/coffee_pocket/llm.py` | OpenRouter JSON LLM helper | 只有舊 LLM 流程會用到 |
+| `src/coffee_pocket/agents/process/google_extract.py` | 讀取 `data/reviews/*.json`，把評論寫入 `reviews_raw` 並跑 LLM 抽 signals | 使用中（Step 4） |
+| `src/coffee_pocket/agents/sources/instagram_extract.py` | 讀取 `data/ig/*.txt`，匹配店家後跑 LLM 抽 signals | 使用中（Step 4） |
+| `src/coffee_pocket/agents/process/semantic.py` | 彙整 `reviews_raw.extracted_signals` 成 `cafe_tags` / `tag_evidence` | 使用中（Step 5） |
+| `src/coffee_pocket/agents/process/google_places.py` | 共用 LLM schema / prompt（`Signal` model + `SYSTEM_PROMPT`），舊版一站式流程已停用 | 作為 schema / prompt 來源，被 `google_extract` 與 `instagram_extract` 共用 |
+| `src/coffee_pocket/llm.py` | LLM JSON helper | 使用中 |
 
 ### 一次性修復或稽核工具
 
@@ -161,10 +222,7 @@ agents/
 
 暫時不要跑：
 
-- `agents/process/google_places.py`
-- `agents/process/google_extract.py`
-- `agents/sources/instagram_extract.py` 的 LLM 模式
-- `agents/process/semantic.py`
+- `agents/process/google_places.py`（一站式舊流程，仍保留 schema / prompt 給其他 process 腳本共用）
 
 可以直接清掉：
 
@@ -185,7 +243,8 @@ OPENROUTER_API_KEY=
 OPENROUTER_MODEL=
 ```
 
-目前主流程如果不跑 LLM，`OPENROUTER_API_KEY` 可以先不填。`agents/prepare/recheck_place_ids.py` 和 `agents/enrich/google_scraper.py` 的 Place ID 補齊會需要 `GOOGLE_PLACES_API_KEY`。
+- `GOOGLE_PLACES_API_KEY`：`agents/prepare/recheck_place_ids.py` 與 `agents/enrich/google_scraper.py` 的 Place ID 補齊會用到。
+- `OPENAI_API_KEY` / `OPENROUTER_API_KEY`：Step 4（`google_extract` / `instagram_extract`）跑 LLM 才需要；只跑 Step 1–3 可以不填。
 
 ## 檢查方式
 

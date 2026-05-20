@@ -49,8 +49,11 @@
 | key | 類型 | 用途 |
 | --- | --- | --- |
 | `socket_available` | boolean | 是否有插座（單一可靠來源即可，confidence ≥ 0.7） |
-| `study_friendly` | score (0–100) | 適合讀書 / 辦公 |
-| `discussion_friendly` | score (0–100) | 適合聚會 / 討論 |
+| `pet_friendly` | boolean | 是否寵物友善 |
+| `reservable` | boolean | 是否可訂位 / 預約座位 |
+| `study_friendly` | score (0–100) | 適合一人讀書 / 辦公 |
+| `discussion_friendly` | score (0–100) | 適合 2–3 人小組討論 / 開會 |
+| `group_chat_friendly` | score (0–100) | 適合 3 人以上社交聚會 / 純聊天 |
 | `time_limit` | structured | 限時規則（unlimited / conditional / limited + 分鐘） |
 
 新增標籤的步驟：

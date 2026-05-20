@@ -135,11 +135,14 @@ platform_tags:
     score_range:
       min: 0
       max: 100
+    description: >
+      適合 2~3 人小組討論 / 開會 / 共同工作的環境（需要能講話但不一定要熱鬧）。
+      與 group_chat_friendly 區別：這是「工作型討論」，後者是「社交型聊天」。
     semantic_conditions:
       strong_positive:
         - "conversation_allowed"
         - "moderate_noise"
-        - "group_friendly"
+        - "small_group_work_friendly"
         - "large_table"
       negative:
         - "too_quiet"
@@ -153,13 +156,95 @@ platform_tags:
             score_bonus: 20
       google_reviews:
         positive_keywords:
-          - "適合聊天"
-          - "聚會"
-          - "聊天"
-          - "朋友聚餐"
+          - "適合討論"
+          - "小組討論"
+          - "開會"
+          - "帶筆電討論"
+          - "兩三人工作"
         negative_keywords:
-          - "太安靜"
-          - "不適合講話"
+          - "太安靜不敢講話"
+          - "太吵聽不到"
+
+  group_chat_friendly:
+    display_name:
+      zh: "適合多人聊天"
+      en: "Group Chat Friendly"
+    type: score
+    score_range:
+      min: 0
+      max: 100
+    description: >
+      適合 3 人以上社交聚會 / 純聊天（放鬆社交，氛圍熱鬧、可放心暢聊）。
+      cafe_nomad 沒有直接欄位可以推導，主要由 Google reviews / Instagram 提供。
+    semantic_conditions:
+      strong_positive:
+        - "group_gathering_friendly"
+        - "large_table"
+        - "lively_atmosphere"
+        - "private_room_available"
+      negative:
+        - "too_small_for_groups"
+        - "two_person_table_only"
+        - "strict_silence"
+    source_mapping:
+      google_reviews:
+        positive_keywords:
+          - "適合多人"
+          - "朋友聚會"
+          - "聚餐"
+          - "包場"
+          - "大桌"
+          - "一群人聊天"
+          - "熱鬧暢聊"
+          - "家庭聚會"
+        negative_keywords:
+          - "位置太小"
+          - "不適合多人"
+          - "僅限兩人桌"
+          - "限一人一杯"
+      instagram_posts:
+        positive_keywords:
+          - "聚會"
+          - "包場"
+          - "多人"
+          - "聚餐"
+
+  reservable:
+    display_name:
+      zh: "可訂位"
+      en: "Reservable"
+    type: boolean
+    confidence_rules:
+      minimum_confidence: 0.7
+      minimum_sources: 1
+    description: >
+      店家是否可事先訂位 / 預約座位。cafe_nomad 沒有對應欄位，
+      由 Google reviews / Instagram 抽取。
+    source_mapping:
+      google_reviews:
+        positive_keywords:
+          - "可訂位"
+          - "接受訂位"
+          - "可預約"
+          - "建議先訂位"
+          - "打電話訂位"
+          - "線上訂位"
+        negative_keywords:
+          - "不接受訂位"
+          - "僅現場排隊"
+          - "不可預約"
+          - "採排隊制"
+      instagram_posts:
+        positive_keywords:
+          - "訂位"
+          - "預約"
+    llm_interpretation_rules:
+      positive_conditions:
+        - "mentions_reservation_accepted"
+        - "mentions_booking_recommended"
+      negative_conditions:
+        - "mentions_no_reservation"
+        - "mentions_walk_in_only"
 
   time_limit:
     display_name:
@@ -207,6 +292,23 @@ platform_tags:
           output_minutes: 120
         - input: "90分鐘"
           output_minutes: 90
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 輔助欄位（不是 platform_tags，但會出現在 raw signals 裡，供彙整使用）
+auxiliary_signals:
+  noise_level:
+    description: >
+      環境的「安靜程度」，1~5 整數。**5 = 非常安靜（鴉雀無聲），1 = 非常吵雜**。
+      注意欄位名稱叫 noise_level，但語意是「quietness」——歷史遺留命名。
+      Cafe Nomad 的 `quiet` 欄位直接映射到這個欄位。
+      Google reviews / Instagram 的 LLM 抽取也應遵循同方向（高=安靜）。
+    used_by:
+      - study_friendly       # >=4 → 加分
+      - discussion_friendly  # <=3 → 加分
+  wifi_quality:
+    description: "Wi-Fi 品質, 1~5 整數, 5 = 最好。"
+  seating_availability:
+    description: "座位充足度, 1~5 整數, 5 = 最充足。"
 
 # 共通輔助欄位（每個標籤實例都應附帶）
 evidence_schema:

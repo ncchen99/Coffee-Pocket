@@ -153,7 +153,39 @@
 - 「偏安靜，很多人在工作」
 - 「下午容易客滿」
 
-## 8. 未來發展方向
+## 8. 技術選型
+
+### 8.1 前端
+
+- **框架**:React (Vite)
+- **樣式**:Tailwind CSS + [daisyUI](https://daisyui.com/llms.txt) component library
+  - daisyUI 提供 button / modal / drawer / tab / dropdown / form 等基底元件
+  - 自訂 theme 對應 §4.2 配色 (light: `coffee-paper`,dark: `coffee-roast`)
+- **Icon**:[`@hugeicons/react`](https://hugeicons.com/docs/integrations/react/overview) + `@hugeicons/core-free-icons` (Stroke Rounded 風格,呼應手繪 ann)
+- **地圖**:Mapbox GL JS
+- **狀態管理**:React Query (server state) + Zustand (UI state,可選)
+- **路由**:React Router v6
+- **部署**:Vercel / Netlify (靜態 build) 或 Cloudflare Pages
+
+### 8.2 後端 (全部跑在 Supabase)
+
+- **資料庫**:Supabase Postgres + PostGIS (已建,`supabase/migrations/`)
+- **Auth**:Supabase Auth — Google OAuth、Apple OAuth (見 [login wireframe](../designs/wireframes/pages/login.md))
+- **儲存**:Supabase Storage — 店家照片、使用者上傳
+- **API / AI 服務**:**Supabase Edge Functions** (Deno)
+  - 語意搜尋 endpoint (multi-tag 交叉 + PostGIS 距離 + 排序)
+  - AI 標籤萃取觸發 (Python pipeline 跑在外部 worker / cron,Edge Function 只負責 enqueue 與讀結果)
+  - AI 摘要生成 (呼叫 OpenAI / Anthropic,結果寫回 cafes 表)
+  - 社群編輯審核佇列 (edits → moderation)
+  - 重複店家偵測 (Place ID + geo + 名稱相似度)
+- **排程 / Worker**:Supabase cron (pg_cron) + 外部 Python jobs (現有 `src/coffee_pocket/agents`,負責爬蟲與 LLM 重活)
+
+### 8.3 邊界
+
+- LLM 推論不放 Edge Function 內 (cold start + 30s timeout),只放快取 / 觸發 / 輕量任務
+- 大批次標籤生成留在 Python pipeline,Edge Function 透過 RPC 或 storage 取結果
+
+## 9. 未來發展方向
 
 - **個人化推薦**：根據使用者偏好（安靜、深夜、大桌面）自動推薦
 - **聚會模式**：輸入人數 + 時間 + 需求，直接推薦最佳店家
