@@ -74,6 +74,16 @@
   background: oklch(var(--wa) / 1) !important;
   color: oklch(var(--wac) / 1) !important;
 }
+
+/* 淺色模式下 (coffee-paper) 選中的咖啡廳：
+   1. 把圖案和文字顏色改成亮色 (#FFF8EE)
+   2. 背景再加深一點點，提昇對比度與質感 */
+[data-theme="coffee-paper"] .cp-cafe-marker--active .cp-cafe-marker__circle,
+[data-theme="coffee-paper"] .cp-cafe-marker--active .cp-cafe-marker__label {
+  background: #8A5714 !important;
+  color: #FFF8EE !important;
+}
+
 .cp-cafe-marker--active .cp-cafe-marker__circle {
   transform: scale(1.18) !important;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3) !important;

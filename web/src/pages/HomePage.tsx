@@ -1,5 +1,6 @@
 import { useNavigate } from "react-router-dom";
 import { Topbar } from "@/components/layout/Topbar";
+import { MobileTabBar } from "@/components/layout/MobileTabBar";
 import { PromptHero } from "@/components/search/PromptHero";
 import { ScenarioGrid } from "@/components/search/ScenarioGrid";
 import { Cap } from "@/components/primitives";
@@ -57,6 +58,7 @@ export default function HomePage() {
           看符合的店 →
         </button>
       </main>
+      <MobileTabBar />
     </div>
   );
 }

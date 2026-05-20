@@ -11,15 +11,27 @@ import { mockCafes, mockCafeDetail } from "@/data/mockCafes";
 import HomePage from "./pages/HomePage";
 import MapPage from "./pages/MapPage";
 import CafeDetailPage from "./pages/CafeDetailPage";
+import LoginPage from "./pages/LoginPage";
+import PocketListPage from "./pages/PocketListPage";
+import ProfilePage from "./pages/ProfilePage";
+import SettingsPage from "./pages/SettingsPage";
+import FilterPage from "./pages/FilterPage";
+import OnboardingPage, { isOnboarded } from "./pages/OnboardingPage";
 
 export default function App() {
   const isDesktop = useIsDesktop();
   if (isDesktop) return <DesktopApp />;
   return (
     <Routes>
-      <Route path="/" element={<HomePage />} />
+      <Route path="/" element={isOnboarded() ? <HomePage /> : <Navigate to="/onboarding" replace />} />
+      <Route path="/onboarding" element={<OnboardingPage />} />
       <Route path="/map" element={<MapPage />} />
+      <Route path="/filter" element={<FilterPage />} />
       <Route path="/cafe/:id" element={<CafeDetailPage />} />
+      <Route path="/login" element={<LoginPage />} />
+      <Route path="/pocket" element={<PocketListPage />} />
+      <Route path="/profile" element={<ProfilePage />} />
+      <Route path="/settings" element={<SettingsPage />} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );
@@ -42,6 +54,8 @@ function DesktopApp() {
 
   // displayed 落後 activeId —— 關閉時讓內容多停留 280ms 給 exit 動畫播完。
   const [displayed, setDisplayed] = useState<string | null>(activeId);
+  const [isScrolled, setIsScrolled] = useState(false);
+
   useEffect(() => {
     if (activeId) {
       setDisplayed(activeId);
@@ -49,6 +63,10 @@ function DesktopApp() {
     }
     const t = window.setTimeout(() => setDisplayed(null), 280);
     return () => window.clearTimeout(t);
+  }, [activeId]);
+
+  useEffect(() => {
+    setIsScrolled(false);
   }, [activeId]);
 
   const isOpen = !!activeId;
@@ -69,16 +87,27 @@ function DesktopApp() {
           }`}
         >
           {cafe ? (
-            <div key={cafe.id} className="cp-anim-slide-in relative h-full overflow-y-auto">
+            <div key={cafe.id} className="cp-anim-slide-in relative h-full flex flex-col">
               <button
                 type="button"
                 onClick={() => navigate("/")}
                 aria-label="關閉"
-                className="btn btn-ghost btn-sm btn-square absolute right-2 top-2 z-10 bg-base-100/80 backdrop-blur"
+                className={`btn btn-ghost btn-sm btn-square absolute right-4 top-4 z-20 transition-all duration-200 ${
+                  isScrolled
+                    ? "bg-base-100 text-base-content opacity-100 shadow-md border border-base-content/10"
+                    : "bg-base-100/40 text-base-content/70 opacity-60 hover:opacity-100 hover:bg-base-100/60 backdrop-blur"
+                }`}
               >
                 <HugeiconsIcon icon={Cancel01Icon} size={18} strokeWidth={1.5} />
               </button>
-              <CafeDetailContent cafe={cafe} isDesktop={true} />
+              <div
+                className="flex-1 overflow-y-auto"
+                onScroll={(e) => {
+                  setIsScrolled(e.currentTarget.scrollTop >= 10);
+                }}
+              >
+                <CafeDetailContent cafe={cafe} isDesktop={true} />
+              </div>
             </div>
           ) : displayed ? (
             // displayed 有值但 mockCafeDetail 回 null —— 顯示找不到提示。
