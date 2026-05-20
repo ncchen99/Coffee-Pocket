@@ -6,8 +6,8 @@ losing manual edits, so we mark the loser with ``duplicate_of`` pointing at
 the canonical row and leave the data intact.
 
 Usage:
-    uv run python -m coffee_pocket.agents.dedupe_cafes              # dry-run, list groups
-    uv run python -m coffee_pocket.agents.dedupe_cafes --apply      # interactive merge
+    uv run python -m coffee_pocket.agents.prepare.dedupe_cafes              # dry-run, list groups
+    uv run python -m coffee_pocket.agents.prepare.dedupe_cafes --apply      # interactive merge
 """
 
 from __future__ import annotations
@@ -18,7 +18,7 @@ import sys
 from collections import defaultdict
 from typing import Any
 
-from ..db import get_client
+from ...db import get_client
 
 
 def _normalize(name: str) -> str:

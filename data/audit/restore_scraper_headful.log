@@ -47,3 +47,45 @@
 2026-05-20 15:38:29,386 INFO   …sleeping 52.1s before next cafe
 2026-05-20 15:39:22,068 INFO → 花樓咖啡 Follow Coffee 二店  (https://maps.google.com/?cid=15396764963176642688&g_mp=Cidnb29nbGUubWFwcy5wbGFjZXMudjEuUGxhY2VzLlNlYXJjaFRleHQQAhgEIAA&hl=zh-TW)
 2026-05-20 15:39:27,253 INFO   meta: status=operational rating=4 reviews=543 price=$1-200咖啡店 phone=06 221 0777
+2026-05-20 15:40:16,803 INFO   collected 100 reviews (stop_reason=max_reviews)
+2026-05-20 15:40:16,809 INFO   wrote data/reviews/ChIJNQRqF2R2bjQRgPhSkChMrNU.json
+2026-05-20 15:40:17,510 INFO HTTP Request: GET https://lh3.googleusercontent.com/gps-cs-s/APNQkAGcPfDG8wucGCfPy4OSsn7-CgTthMuKdOm42OjLyBHTmmI80uftIEmEASz63JwZ1BCQUh5H-sRWDvo8DG6ZvM_mzp6gveFRl5CCFyvWLlCDKbDT_yQrcUfkzjJNO1-eRt5sloNmxA=w408-h306-k-no "HTTP/1.1 200 OK"
+2026-05-20 15:40:19,705 INFO HTTP Request: GET https://ztxehfpzmxzzhruitwso.supabase.co/rest/v1/cafes?select=photos&id=eq.b3f28668-5bb5-4b34-9178-24976ab7f205 "HTTP/2 200 OK"
+2026-05-20 15:40:19,982 INFO HTTP Request: PATCH https://ztxehfpzmxzzhruitwso.supabase.co/rest/v1/cafes?id=eq.b3f28668-5bb5-4b34-9178-24976ab7f205 "HTTP/2 200 OK"
+2026-05-20 15:40:20,077 INFO   cafes row updated
+2026-05-20 15:40:20,077 INFO   …sleeping 81.1s before next cafe
+2026-05-20 15:41:41,224 INFO → 夢蟲 Worm Coffee Stand (To Go Only）  (https://maps.google.com/?cid=8832348848762217178&g_mp=Cidnb29nbGUubWFwcy5wbGFjZXMudjEuUGxhY2VzLlNlYXJjaFRleHQQAhgEIAA&hl=zh-TW)
+2026-05-20 15:41:46,322 INFO   meta: status=operational rating=4.8 reviews=274 price=$1-200外帶咖啡專賣店 phone=None
+2026-05-20 15:42:26,504 INFO   collected 100 reviews (stop_reason=max_reviews)
+2026-05-20 15:42:26,508 INFO   wrote data/reviews/ChIJ360jIk53bjQR2mLNbnvOkno.json
+2026-05-20 15:42:27,114 INFO HTTP Request: GET https://lh3.googleusercontent.com/gps-cs-s/APNQkAG0MUWIw7hScsfrEXBpr2BHDRT-HJuK8yw82nSeaBU-xAMxeekqSf4UWHz1GikRLRf9uXB0FM2-bRekh7bw4JH_nY4on5-Efz0P9Vq5dioVZTJqzFR23eQOrhmPBmxlrhhiXYmH6Vz7VyIv=w408-h544-k-no "HTTP/1.1 200 OK"
+2026-05-20 15:42:29,491 INFO HTTP Request: GET https://ztxehfpzmxzzhruitwso.supabase.co/rest/v1/cafes?select=photos&id=eq.eb6a87d8-55e4-42ac-9448-3f52cd69d537 "HTTP/2 200 OK"
+2026-05-20 15:42:29,840 INFO HTTP Request: PATCH https://ztxehfpzmxzzhruitwso.supabase.co/rest/v1/cafes?id=eq.eb6a87d8-55e4-42ac-9448-3f52cd69d537 "HTTP/2 200 OK"
+2026-05-20 15:42:29,935 INFO   cafes row updated
+2026-05-20 15:42:29,935 INFO   …sleeping 48.0s before next cafe
+2026-05-20 15:43:17,978 INFO → 存憶 Cafe Bar  (https://maps.google.com/?cid=10749180695366189238&g_mp=Cidnb29nbGUubWFwcy5wbGFjZXMudjEuUGxhY2VzLlNlYXJjaFRleHQQAhgEIAA&hl=zh-TW)
+2026-05-20 15:43:22,750 INFO   meta: status=operational rating=4.7 reviews=776 price=$1-200咖啡店 phone=0915 699 290
+2026-05-20 15:44:28,130 INFO   collected 100 reviews (stop_reason=max_reviews)
+2026-05-20 15:44:28,135 INFO   wrote data/reviews/ChIJHW_2ymZ2bjQRtsDJDeTCLJU.json
+2026-05-20 15:44:28,718 INFO HTTP Request: GET https://lh3.googleusercontent.com/a/ACg8ocKSp9Rvhek62Lx72f0Lah1mfFrUXDE-KwRA2yQCagBqDWGlRA=w36-h36-p-rp-mo-ba5-br100 "HTTP/1.1 200 OK"
+2026-05-20 15:44:30,922 INFO HTTP Request: GET https://ztxehfpzmxzzhruitwso.supabase.co/rest/v1/cafes?select=photos&id=eq.c8ab01cb-44f3-47cc-9292-e9b9b56a2db1 "HTTP/2 200 OK"
+2026-05-20 15:44:31,412 INFO HTTP Request: PATCH https://ztxehfpzmxzzhruitwso.supabase.co/rest/v1/cafes?id=eq.c8ab01cb-44f3-47cc-9292-e9b9b56a2db1 "HTTP/2 200 OK"
+2026-05-20 15:44:31,517 INFO   cafes row updated
+2026-05-20 15:44:31,517 INFO   …sleeping 62.3s before next cafe
+2026-05-20 15:45:33,893 INFO → 窄門咖啡館  (https://maps.google.com/?cid=581900569953332083&g_mp=Cidnb29nbGUubWFwcy5wbGFjZXMudjEuUGxhY2VzLlNlYXJjaFRleHQQAhgEIAA&hl=zh-TW)
+2026-05-20 15:45:39,355 INFO   meta: status=operational rating=4.5 reviews=3802 price=$200-400咖啡店 phone=06 211 0508
+2026-05-20 15:46:16,312 INFO   collected 100 reviews (stop_reason=max_reviews)
+2026-05-20 15:46:16,318 INFO   wrote data/reviews/ChIJq-hjV312bjQRc2uqPnxTEwg.json
+2026-05-20 15:46:16,999 INFO HTTP Request: GET https://lh3.googleusercontent.com/gps-cs-s/APNQkAFK4NzQmFCK4UfZfp-IiNT7kRR8qkV3qt-s38rEX57zs1JFnZe2eEek23mBoM9s1YW29tga_xT78aC4DK8OfYcxr9V0F2GIX-vmNJKeOa2N1nicjMlI0y7nRQKYKGW5MBN68awD=w408-h272-k-no "HTTP/1.1 200 OK"
+2026-05-20 15:46:18,877 INFO HTTP Request: GET https://ztxehfpzmxzzhruitwso.supabase.co/rest/v1/cafes?select=photos&id=eq.2b926c15-f5e6-4a47-994d-341962595d89 "HTTP/2 200 OK"
+2026-05-20 15:46:19,397 INFO HTTP Request: PATCH https://ztxehfpzmxzzhruitwso.supabase.co/rest/v1/cafes?id=eq.2b926c15-f5e6-4a47-994d-341962595d89 "HTTP/2 200 OK"
+2026-05-20 15:46:19,518 INFO   cafes row updated
+2026-05-20 15:46:19,518 INFO   …sleeping 48.9s before next cafe
+2026-05-20 15:47:08,490 INFO → 魚羊鮮豆 東豐店  (https://maps.google.com/?cid=14869571626721030986&g_mp=Cidnb29nbGUubWFwcy5wbGFjZXMudjEuUGxhY2VzLlNlYXJjaFRleHQQAhgEIAA&hl=zh-TW)
+2026-05-20 15:47:13,160 INFO   meta: status=operational rating=4.2 reviews=1275 price=$1-200咖啡店 phone=06 274 8718
+2026-05-20 15:47:58,152 INFO   collected 100 reviews (stop_reason=max_reviews)
+2026-05-20 15:47:58,156 INFO   wrote data/reviews/ChIJ7WuMWel2bjQRSjPvtJxUW84.json
+2026-05-20 15:47:58,607 INFO HTTP Request: GET https://lh3.googleusercontent.com/gps-cs-s/APNQkAGRJ7ubuKcb6TsigDEmAW_DAIeYV3wneNcKOVMo0H5X2jfUj-F7BtsuLU2N4VOE2-y70pC4nMmdQulQazjK9Bcr85kZz15QkDHo7hYRjTCVlUm-KEXOrndL1fqh-3sD1gBMmLSz__CkWcRx=w408-h544-k-no "HTTP/1.1 200 OK"
+2026-05-20 15:48:01,237 INFO HTTP Request: GET https://ztxehfpzmxzzhruitwso.supabase.co/rest/v1/cafes?select=photos&id=eq.a99e4f7b-4888-4bd2-ad2f-55941a488118 "HTTP/2 200 OK"
+2026-05-20 15:48:01,847 INFO HTTP Request: PATCH https://ztxehfpzmxzzhruitwso.supabase.co/rest/v1/cafes?id=eq.a99e4f7b-4888-4bd2-ad2f-55941a488118 "HTTP/2 200 OK"
+2026-05-20 15:48:01,945 INFO   cafes row updated

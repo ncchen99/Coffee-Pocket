@@ -8,8 +8,8 @@ By default the script DOES NOT write to Supabase — pass --write-db to upsert
 into the `cafes` table after you've reviewed the JSON.
 
 Usage:
-  uv run python -m coffee_pocket.agents.tainan_list --headful
-  uv run python -m coffee_pocket.agents.tainan_list --write-db
+  uv run python -m coffee_pocket.agents.sources.tainan_list --headful
+  uv run python -m coffee_pocket.agents.sources.tainan_list --write-db
 """
 
 from __future__ import annotations
@@ -30,8 +30,8 @@ from playwright.sync_api import (
     sync_playwright,
 )
 
-from ..db import get_client
-from .google_scraper import _launch_persistent, _sleep, _with_hl
+from ...db import get_client
+from ..enrich.google_scraper import _launch_persistent, _sleep, _with_hl
 
 logger = logging.getLogger(__name__)
 

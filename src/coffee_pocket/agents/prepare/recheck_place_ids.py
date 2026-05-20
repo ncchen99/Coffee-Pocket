@@ -31,9 +31,9 @@ The snapshot is updated after each write so collisions inside this batch
 also get caught.
 
 Usage:
-    uv run python -m coffee_pocket.agents.recheck_place_ids               # dry-run
-    uv run python -m coffee_pocket.agents.recheck_place_ids --limit 10    # dry-run on a few
-    uv run python -m coffee_pocket.agents.recheck_place_ids --apply       # actually write
+    uv run python -m coffee_pocket.agents.prepare.recheck_place_ids               # dry-run
+    uv run python -m coffee_pocket.agents.prepare.recheck_place_ids --limit 10    # dry-run on a few
+    uv run python -m coffee_pocket.agents.prepare.recheck_place_ids --apply       # actually write
 """
 
 from __future__ import annotations
@@ -44,8 +44,8 @@ import sys
 import time
 from typing import Any
 
-from ..db import get_client
-from .places_lookup import _normalize_name, find_place
+from ...db import get_client
+from ..shared.places_lookup import _normalize_name, find_place
 
 logger = logging.getLogger(__name__)
 

@@ -11,6 +11,17 @@
 每個來源都有對應的 Agent，輸出**標準化的 Raw Signals**，
 再由共用的 Semantic Agent 推導最終標籤。
 
+目前實作已按階段拆到 `src/coffee_pocket/agents/`：
+
+| 目錄 | 階段 / 用途 |
+| ---- | ----------- |
+| `sources/` | 來源匯入：Cafe Nomad、Google Maps 清單、IG / 手動清單 |
+| `prepare/` | Place ID 更新、重複檢查、刪除清理 |
+| `enrich/` | Google Maps 爬蟲與店家資訊補充 |
+| `process/` | LLM / Semantic Layer 處理；目前主流程暫停 |
+| `maintenance/` | 一次性修復、稽核、資料救援 |
+| `shared/` | 跨階段共用工具，例如 Places API 查詢 |
+
 ## 2. 來源 Agents
 
 ### 2.1 CafeNomad Agent（結構化欄位映射）
@@ -49,7 +60,7 @@
    }
    ```
 4. **彙整（Reducer）**：跨批合併同 type 的 signals
-5. **信心計算**：套用 `minimum_sources` 規則（如插座需 ≥ 3 位不同評論者）
+5. **信心計算**：單一可靠來源有明確 evidence 即可寫入，並用 confidence 標示可信度
 
 LLM 提示應引用 SPEC.md 的 `positive_keywords` / `negative_keywords` 作為 grounding。
 
@@ -80,7 +91,7 @@ LLM 提示應引用 SPEC.md 的 `positive_keywords` / `negative_keywords` 作為
 
 規則：
 
-1. **Boolean 標籤**（如 `socket_available`）：套用 `minimum_sources` + `minimum_confidence`
+1. **Boolean 標籤**（如 `socket_available`）：單一可靠來源即可寫入，並套用 `minimum_confidence`
 2. **Score 標籤**（如 `study_friendly`）：
    - 套用 `semantic_conditions.strong_positive / weak_positive / negative`
    - 加總、上下限 clip 到 0–100

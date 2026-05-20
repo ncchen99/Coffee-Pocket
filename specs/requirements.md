@@ -143,7 +143,7 @@
 
 ### 7.2 信心機制
 
-例如「插座」需有**至少 3 位不同評論者**提及才標記為「有插座」，避免單一評論誤判。
+單一可靠來源有明確 evidence 即可標記，例如 Google 評論、Instagram 貼文或 Cafe Nomad 欄位；可信度由 confidence 與 evidence 呈現，方便後續人工校正。
 
 ### 7.3 AI 摘要
 

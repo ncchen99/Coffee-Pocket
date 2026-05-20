@@ -48,7 +48,7 @@
 
 | key | 類型 | 用途 |
 | --- | --- | --- |
-| `socket_available` | boolean | 是否有插座（需 ≥ 2 來源、confidence ≥ 0.7） |
+| `socket_available` | boolean | 是否有插座（單一可靠來源即可，confidence ≥ 0.7） |
 | `study_friendly` | score (0–100) | 適合讀書 / 辦公 |
 | `discussion_friendly` | score (0–100) | 適合聚會 / 討論 |
 | `time_limit` | structured | 限時規則（unlimited / conditional / limited + 分鐘） |

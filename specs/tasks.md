@@ -12,9 +12,11 @@
 
 ## Phase 1：資料管線（後端優先）
 
-- [ ] **CafeNomad Agent**：抓取臺南清單並映射至 Raw Signals
-- [ ] **Google Places Agent**：抓取評論 + 分批 LLM 萃取
-- [ ] **Semantic Agent**：彙整 signals → product tags（含 confidence、evidence）
+- [x] **Agents 目錄分層**：`sources` / `prepare` / `enrich` / `process` / `maintenance` / `shared`
+- [ ] **CafeNomad Agent**：`coffee_pocket.agents.sources.cafenomad` 抓取臺南清單並映射至 Raw Signals
+- [ ] **Google Maps Enrichment**：`coffee_pocket.agents.enrich.google_scraper` 抓評論與店家資訊
+- [ ] **Google Places / LLM Process**：`coffee_pocket.agents.process.google_extract` 分批 LLM 萃取（目前主流程暫停）
+- [ ] **Semantic Agent**：`coffee_pocket.agents.process.semantic` 彙整 signals → product tags（含 confidence、evidence，目前主流程暫停）
 - [ ] **Community Edit** 基礎：Google 登入 + 編輯權限 + 歷史紀錄
 - [ ] 排程更新（Cafe Nomad 每週、Google 每 2–4 週）
 

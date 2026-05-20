@@ -12,9 +12,9 @@ This module decouples the network/UI fragility of scraping from the LLM step:
 re-running --resume only processes reviews not yet marked processed_at.
 
 Usage:
-  uv run python -m coffee_pocket.agents.google_extract            # all local JSONs
-  uv run python -m coffee_pocket.agents.google_extract --limit 3
-  uv run python -m coffee_pocket.agents.google_extract --no-llm   # just upsert
+  uv run python -m coffee_pocket.agents.process.google_extract            # all local JSONs
+  uv run python -m coffee_pocket.agents.process.google_extract --limit 3
+  uv run python -m coffee_pocket.agents.process.google_extract --no-llm   # just upsert
 """
 
 from __future__ import annotations
@@ -29,8 +29,8 @@ from typing import Any
 
 from pydantic import ValidationError
 
-from ..db import get_client
-from ..llm import LLMError, chat_json
+from ...db import get_client
+from ...llm import LLMError, chat_json
 from .google_places import (  # reuse schema + prompt + chunk size
     CHUNK_SIZE,
     SYSTEM_PROMPT,

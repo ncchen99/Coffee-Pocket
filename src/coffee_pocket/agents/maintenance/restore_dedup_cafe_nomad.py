@@ -31,8 +31,8 @@ Cases reported but NOT auto-fixed:
   clobbering whichever record is correct.
 
 Usage:
-    uv run python -m coffee_pocket.agents.restore_dedup_cafe_nomad         # dry-run
-    uv run python -m coffee_pocket.agents.restore_dedup_cafe_nomad --apply # write
+    uv run python -m coffee_pocket.agents.maintenance.restore_dedup_cafe_nomad         # dry-run
+    uv run python -m coffee_pocket.agents.maintenance.restore_dedup_cafe_nomad --apply # write
 """
 
 from __future__ import annotations
@@ -44,8 +44,8 @@ import sys
 from pathlib import Path
 from typing import Any
 
-from ..db import get_client
-from .cafenomad import fetch_tainan_cafes, upsert_cafes
+from ...db import get_client
+from ..sources.cafenomad import fetch_tainan_cafes, upsert_cafes
 
 logger = logging.getLogger(__name__)
 

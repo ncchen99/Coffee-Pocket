@@ -10,7 +10,7 @@ from typing import Any
 
 import httpx
 
-from ..db import get_client
+from ...db import get_client
 
 CAFE_NOMAD_URL = "https://cafenomad.tw/api/v1.2/cafes/tainan"
 

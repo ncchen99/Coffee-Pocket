@@ -8,8 +8,8 @@ reported and skipped so the user can fix the address.
 The list below was extracted from ``data/ig/greenyaya.314.txt`` (2026-05).
 
 Usage:
-    uv run python -m coffee_pocket.agents.insert_manual_cafes               # dry-run
-    uv run python -m coffee_pocket.agents.insert_manual_cafes --apply       # write to DB
+    uv run python -m coffee_pocket.agents.sources.insert_manual_cafes               # dry-run
+    uv run python -m coffee_pocket.agents.sources.insert_manual_cafes --apply       # write to DB
 """
 
 from __future__ import annotations
@@ -20,8 +20,8 @@ import sys
 import time
 from typing import Any
 
-from ..db import get_client
-from .places_lookup import find_place
+from ...db import get_client
+from ..shared.places_lookup import find_place
 
 logger = logging.getLogger(__name__)
 

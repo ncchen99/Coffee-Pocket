@@ -33,9 +33,9 @@ Output:
   }
 
 Usage:
-  uv run python -m coffee_pocket.agents.google_scraper --limit 5
-  uv run python -m coffee_pocket.agents.google_scraper --cafe-id <uuid> --headful
-  uv run python -m coffee_pocket.agents.google_scraper --update-cafe  # write meta back to DB
+  uv run python -m coffee_pocket.agents.enrich.google_scraper --limit 5
+  uv run python -m coffee_pocket.agents.enrich.google_scraper --cafe-id <uuid> --headful
+  uv run python -m coffee_pocket.agents.enrich.google_scraper --update-cafe  # write meta back to DB
 """
 
 from __future__ import annotations
@@ -59,9 +59,9 @@ from playwright.sync_api import (
     sync_playwright,
 )
 
-from ..db import get_client
-from ..storage import upload_cafe_cover
-from .places_lookup import find_place
+from ...db import get_client
+from ...storage import upload_cafe_cover
+from ..shared.places_lookup import find_place
 
 logger = logging.getLogger(__name__)
 

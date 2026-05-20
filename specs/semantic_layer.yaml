@@ -13,7 +13,7 @@ platform_tags:
     type: boolean
     confidence_rules:
       minimum_confidence: 0.7
-      minimum_sources: 2
+      minimum_sources: 1
     source_mapping:
       cafe_nomad:
         direct_fields:
@@ -44,6 +44,40 @@ platform_tags:
         - "mentions_laptop_usage"
       negative_conditions:
         - "mentions_no_socket"
+
+  pet_friendly:
+    display_name:
+      zh: "寵物友善"
+      en: "Pet Friendly"
+    type: boolean
+    confidence_rules:
+      minimum_confidence: 0.7
+      minimum_sources: 1
+    source_mapping:
+      google_reviews:
+        positive_keywords:
+          - "寵物友善"
+          - "可以帶狗"
+          - "可以帶寵物"
+          - "歡迎毛小孩"
+          - "店狗"
+          - "店貓"
+        negative_keywords:
+          - "謝絕寵物"
+          - "不能帶寵物"
+          - "寵物不能入內"
+      instagram_posts:
+        positive_keywords:
+          - "寵物友善"
+          - "毛小孩"
+          - "店狗"
+          - "店貓"
+    llm_interpretation_rules:
+      positive_conditions:
+        - "mentions_pets_allowed"
+        - "mentions_resident_dog_or_cat"
+      negative_conditions:
+        - "mentions_pets_not_allowed"
 
   study_friendly:
     display_name:

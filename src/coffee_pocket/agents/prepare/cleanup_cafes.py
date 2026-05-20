@@ -15,8 +15,8 @@ have meaningful tag history (they're recent imports we never enriched),
 but we still report the count up-front so the user can bail.
 
 Usage:
-    uv run python -m coffee_pocket.agents.cleanup_cafes              # preview only
-    uv run python -m coffee_pocket.agents.cleanup_cafes --yes        # actually delete
+    uv run python -m coffee_pocket.agents.prepare.cleanup_cafes              # preview only
+    uv run python -m coffee_pocket.agents.prepare.cleanup_cafes --yes        # actually delete
 """
 
 from __future__ import annotations
@@ -25,7 +25,7 @@ import argparse
 import sys
 from typing import Any
 
-from ..db import get_client
+from ...db import get_client
 
 
 def _select_targets(db: Any) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:

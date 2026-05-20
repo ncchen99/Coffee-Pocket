@@ -21,9 +21,9 @@ from typing import Any, Literal
 import httpx
 from pydantic import BaseModel, Field, ValidationError
 
-from ..config import settings
-from ..db import get_client
-from ..llm import LLMError, chat_json
+from ...config import settings
+from ...db import get_client
+from ...llm import LLMError, chat_json
 
 logger = logging.getLogger(__name__)
 
@@ -41,6 +41,7 @@ class Signal(BaseModel):
         "study_friendly",
         "discussion_friendly",
         "time_limit",
+        "pet_friendly",
         "noise_level",
         "wifi_quality",
         "seating_availability",
@@ -55,13 +56,13 @@ class ExtractionResult(BaseModel):
     signals: list[Signal] = Field(default_factory=list)
 
 
-SYSTEM_PROMPT = """你是 Coffee Pocket 的咖啡廳評論語意萃取器。
-輸入是多則 Google 評論，輸出**嚴格符合**以下 JSON Schema：
+SYSTEM_PROMPT = """你是 Coffee Pocket 的咖啡廳評論與社群貼文語意萃取器。
+輸入是多則 Google 評論或 Instagram 貼文段落，輸出**嚴格符合**以下 JSON Schema：
 
 {
   "signals": [
     {
-      "type": "socket_available" | "study_friendly" | "discussion_friendly" | "time_limit" | "noise_level" | "wifi_quality" | "seating_availability",
+      "type": "socket_available" | "study_friendly" | "discussion_friendly" | "time_limit" | "pet_friendly" | "noise_level" | "wifi_quality" | "seating_availability",
       "polarity": "positive" | "negative" | "neutral" | null,
       "value": <依 type 而定，見下>,
       "evidence": "<引用評論短句, ≤80字>",
@@ -74,6 +75,7 @@ type 對應的 value 規則：
 - socket_available：value = true / false / null；polarity 必填。
 - study_friendly / discussion_friendly：value 可為 null；polarity 必填（positive/negative）。
 - time_limit：value = {"status": "unlimited" | "conditional" | "limited", "duration_minutes": int|null}。
+- pet_friendly：value = true / false / null；polarity 必填。判斷店家是否歡迎或允許攜帶寵物（狗、貓等）入內。
 - noise_level / wifi_quality / seating_availability：value = 1~5 整數。
 
 語意提示（繁中關鍵字示意，不是窮舉）：
@@ -81,6 +83,7 @@ type 對應的 value 規則：
 - 讀書辦公：「適合讀書/工作/安靜/桌子大/位置寬」 vs 「很吵/限時/不適合久坐」
 - 聊天聚會：「適合聊天/朋友聚餐/聚會/熱鬧」 vs 「太安靜/不能講話」
 - 限時：「限時 90 分鐘」「假日限時」「不限時」
+- 寵物友善：「可以帶狗/寵物友善/歡迎毛小孩/有店狗店貓」 vs 「謝絕寵物/不能帶寵物入內」
 
 範例輸出（給定兩則評論 id=r1, r2）：
 {"signals":[

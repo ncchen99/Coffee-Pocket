@@ -27,8 +27,8 @@ C. **Semantic** — run ``semantic.process_cafe`` on the newly-inserted
    cafes so ``cafe_tags`` + ``tag_evidence`` get populated.
 
 Usage:
-    uv run python -m coffee_pocket.agents.restore_post_dedup              # dry-run
-    uv run python -m coffee_pocket.agents.restore_post_dedup --apply      # write
+    uv run python -m coffee_pocket.agents.maintenance.restore_post_dedup              # dry-run
+    uv run python -m coffee_pocket.agents.maintenance.restore_post_dedup --apply      # write
 """
 
 from __future__ import annotations
@@ -41,10 +41,10 @@ import time
 from pathlib import Path
 from typing import Any
 
-from ..db import get_client
-from .cafenomad import fetch_tainan_cafes, map_to_raw_signals
-from .places_lookup import get_place_details
-from .semantic import process_cafe
+from ...db import get_client
+from ..process.semantic import process_cafe
+from ..shared.places_lookup import get_place_details
+from ..sources.cafenomad import fetch_tainan_cafes, map_to_raw_signals
 
 logger = logging.getLogger(__name__)
 

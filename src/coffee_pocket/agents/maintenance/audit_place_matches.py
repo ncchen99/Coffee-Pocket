@@ -8,9 +8,9 @@ similarity matches get written to ``data/audit/suspicious_matches.tsv`` for
 human review — nothing is mutated in the DB.
 
 Usage:
-    uv run python -m coffee_pocket.agents.audit_place_matches
-    uv run python -m coffee_pocket.agents.audit_place_matches --limit 20
-    uv run python -m coffee_pocket.agents.audit_place_matches --threshold 0.7
+    uv run python -m coffee_pocket.agents.maintenance.audit_place_matches
+    uv run python -m coffee_pocket.agents.maintenance.audit_place_matches --limit 20
+    uv run python -m coffee_pocket.agents.maintenance.audit_place_matches --threshold 0.7
 """
 
 from __future__ import annotations
@@ -23,8 +23,8 @@ import time
 from pathlib import Path
 from typing import Any
 
-from ..db import get_client
-from .places_lookup import get_place_details, name_similarity
+from ...db import get_client
+from ..shared.places_lookup import get_place_details, name_similarity
 
 logger = logging.getLogger(__name__)
 

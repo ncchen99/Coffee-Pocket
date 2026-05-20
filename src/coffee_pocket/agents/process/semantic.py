@@ -6,6 +6,7 @@ Layer per specs/SPEC.md and specs/AGENTS.md §3.
 
 Tags handled (v1.0):
   - socket_available (boolean)
+  - pet_friendly (boolean)
   - study_friendly (score 0–100)
   - discussion_friendly (score 0–100)
   - time_limit (structured)
@@ -19,7 +20,7 @@ from collections import defaultdict
 from datetime import date
 from typing import Any
 
-from ..db import get_client
+from ...db import get_client
 
 logger = logging.getLogger(__name__)
 
@@ -114,7 +115,7 @@ def collect_signals(rows: list[dict[str, Any]]) -> dict[str, list[dict[str, Any]
                         }
                     )
 
-        elif src == "google_places":
+        elif src in {"google_places", "instagram"}:
             # extracted_signals here is a list (per-review signals list)
             sigs = sig_blob if isinstance(sig_blob, list) else []
             for s in sigs:
@@ -132,13 +133,13 @@ def collect_signals(rows: list[dict[str, Any]]) -> dict[str, list[dict[str, Any]
                         "extra": {},
                     }
                 )
-
-
     return by_tag
 
 
-def aggregate_socket(items: list[dict[str, Any]]) -> dict[str, Any] | None:
-    """Boolean tag: needs ≥ 2 sources (distinct source_id) and confidence ≥ 0.7."""
+def aggregate_boolean(
+    items: list[dict[str, Any]], *, min_sources: int = 1
+) -> dict[str, Any] | None:
+    """Boolean tag: majority polarity with configurable source threshold."""
     pos = [i for i in items if i.get("polarity") == "positive"]
     neg = [i for i in items if i.get("polarity") == "negative"]
     distinct = {i["source"] for i in pos} if len(pos) >= len(neg) else {i["source"] for i in neg}
@@ -148,7 +149,7 @@ def aggregate_socket(items: list[dict[str, Any]]) -> dict[str, Any] | None:
     # Conf: average + small bonus per extra source
     base = sum(i["conf"] for i in winner) / len(winner)
     conf = min(1.0, base + 0.05 * (len(distinct) - 1))
-    if len(distinct) < 2 or conf < 0.7:
+    if len(distinct) < min_sources or conf < 0.7:
         # Below threshold — skip per SPEC unless community override
         if "community" not in distinct:
             return None
@@ -158,6 +159,16 @@ def aggregate_socket(items: list[dict[str, Any]]) -> dict[str, Any] | None:
         "confidence": round(conf, 3),
         "evidence": winner,
     }
+
+
+def aggregate_socket(items: list[dict[str, Any]]) -> dict[str, Any] | None:
+    """Socket tag writes when any reliable source has clear evidence."""
+    return aggregate_boolean(items, min_sources=1)
+
+
+def aggregate_pet_friendly(items: list[dict[str, Any]]) -> dict[str, Any] | None:
+    """Pet-friendly signals are sparse, so one reliable source is enough."""
+    return aggregate_boolean(items, min_sources=1)
 
 
 def aggregate_score(items: list[dict[str, Any]], tag_key: str) -> dict[str, Any] | None:
@@ -209,6 +220,7 @@ def aggregate_time_limit(items: list[dict[str, Any]]) -> dict[str, Any] | None:
 
 AGGREGATORS = {
     "socket_available": aggregate_socket,
+    "pet_friendly": aggregate_pet_friendly,
     "study_friendly": lambda items: aggregate_score(items, "study_friendly"),
     "discussion_friendly": lambda items: aggregate_score(items, "discussion_friendly"),
     "time_limit": aggregate_time_limit,
