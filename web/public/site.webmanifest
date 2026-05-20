@@ -1,0 +1,11 @@
+{
+  "name": "咖啡口袋 · Coffee Pocket",
+  "short_name": "Coffee Pocket",
+  "icons": [
+    { "src": "/android-chrome-192x192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/android-chrome-512x512.png", "sizes": "512x512", "type": "image/png" }
+  ],
+  "theme_color": "#F8F3E9",
+  "background_color": "#FFF8EE",
+  "display": "standalone"
+}

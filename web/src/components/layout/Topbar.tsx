@@ -1,32 +1,17 @@
 import { Link } from "react-router-dom";
 import { HugeiconsIcon } from "@hugeicons/react";
-import {
-  Menu01Icon,
-  Search01Icon,
-  Coffee02Icon,
-  Moon02Icon,
-} from "@hugeicons/core-free-icons";
+import { Menu01Icon, Coffee02Icon } from "@hugeicons/core-free-icons";
 import { ThemeToggle } from "./ThemeToggle";
 
 interface TopbarProps {
   variant?: "mobile" | "desktop";
-  searchValue?: string;
-  onSearchChange?: (v: string) => void;
-  onSubmit?: () => void;
-  searchPlaceholder?: string;
 }
 
-/** 全站 topbar — 基於 daisyUI navbar。 */
-export function Topbar({
-  variant = "desktop",
-  searchValue,
-  onSearchChange,
-  onSubmit,
-  searchPlaceholder = "找咖啡廳或情境⋯",
-}: TopbarProps) {
+/** 全站 topbar — 基於 daisyUI navbar。桌面不再含搜尋,搜尋移到左欄。 */
+export function Topbar({ variant = "desktop" }: TopbarProps) {
   if (variant === "mobile") {
     return (
-      <header className="navbar min-h-12 border-b border-base-content/15 bg-base-100 px-4">
+      <header className="navbar min-h-12 border-b border-base-content/10 bg-base-100 px-4">
         <div className="navbar-start">
           <Link to="/" className="flex items-center gap-2">
             <HugeiconsIcon icon={Coffee02Icon} size={20} strokeWidth={1.5} />
@@ -43,10 +28,10 @@ export function Topbar({
     );
   }
 
-  // desktop
+  // desktop — logo 左,主題 + 登入右,中間留白
   return (
-    <header className="navbar min-h-14 border-b border-base-content/20 bg-base-100 px-6 gap-4">
-      <div className="navbar-start gap-3 flex-none">
+    <header className="navbar min-h-14 border-b border-base-content/10 bg-base-100 px-6">
+      <div className="navbar-start gap-3">
         <Link to="/" className="flex items-center gap-2">
           <HugeiconsIcon icon={Coffee02Icon} size={22} strokeWidth={1.5} />
           <span className="text-lg font-semibold tracking-tight">咖啡口袋</span>
@@ -55,30 +40,7 @@ export function Topbar({
           </span>
         </Link>
       </div>
-      <div className="navbar-center flex-1 max-w-2xl">
-        <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            onSubmit?.();
-          }}
-          className="join w-full border border-base-content/25 bg-base-100"
-        >
-          <span className="join-item flex items-center pl-3 text-base-content/55">
-            <HugeiconsIcon icon={Search01Icon} size={16} strokeWidth={1.5} />
-          </span>
-          <input
-            type="text"
-            className="input input-ghost join-item flex-1 focus:outline-none focus:bg-transparent"
-            placeholder={searchPlaceholder}
-            value={searchValue ?? ""}
-            onChange={(e) => onSearchChange?.(e.target.value)}
-          />
-          <button type="submit" className="btn btn-neutral join-item">
-            搜尋
-          </button>
-        </form>
-      </div>
-      <div className="navbar-end gap-2 flex-none">
+      <div className="navbar-end gap-2">
         <ThemeToggle />
         <button type="button" className="btn btn-ghost btn-sm">
           登入
@@ -87,6 +49,3 @@ export function Topbar({
     </header>
   );
 }
-
-// 為了讓編譯不警告 Moon02Icon 未使用 — 留給後續 dark toggle
-export const _unused = { Moon02Icon };

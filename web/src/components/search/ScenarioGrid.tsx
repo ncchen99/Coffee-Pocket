@@ -5,7 +5,7 @@ import {
   UserMultipleIcon,
   SparklesIcon,
 } from "@hugeicons/core-free-icons";
-import type { ReactNode } from "react";
+import clsx from "@/lib/clsx";
 
 export interface Scenario {
   key: string;
@@ -30,14 +30,32 @@ interface ScenarioGridProps {
 /**
  * 4 個快速場景按鈕。
  * - stack:手機用,垂直清單 + divider
- * - grid:桌面用,2x2 grid,每個是個 btn-outline 大按鈕
+ * - grid:桌面用,2x2 表格式,以分隔線劃分(非卡片)以省空間
  */
 export function ScenarioGrid({ onPick, layout = "stack" }: ScenarioGridProps) {
   if (layout === "grid") {
     return (
-      <div className="grid grid-cols-2 gap-2">
-        {SCENARIOS.map((s) => (
-          <ScenarioGridButton key={s.key} scenario={s} onClick={() => onPick(s)} />
+      <div className="grid grid-cols-2 border border-base-content/15">
+        {SCENARIOS.map((s, i) => (
+          <button
+            key={s.key}
+            type="button"
+            onClick={() => onPick(s)}
+            className={clsx(
+              "flex flex-col items-start gap-1 px-3 py-3 text-left hover:bg-base-200/60",
+              i % 2 === 0 && "border-r border-base-content/15",
+              i < 2 && "border-b border-base-content/15",
+            )}
+          >
+            <HugeiconsIcon
+              icon={s.icon}
+              size={16}
+              strokeWidth={1.5}
+              className="text-base-content/65"
+            />
+            <span className="mt-0.5 text-[13px] font-semibold leading-tight">{s.title}</span>
+            <span className="text-[11px] text-base-content/55 leading-tight">{s.sub}</span>
+          </button>
         ))}
       </div>
     );
@@ -60,36 +78,10 @@ export function ScenarioGrid({ onPick, layout = "stack" }: ScenarioGridProps) {
               <span className="block text-[15px] font-semibold">{s.title}</span>
               <span className="block text-xs text-base-content/55">{s.sub}</span>
             </span>
-            <Arrow />
+            <span className="text-base-content/40">→</span>
           </button>
         </li>
       ))}
     </ul>
   );
-}
-
-function ScenarioGridButton({
-  scenario,
-  onClick,
-}: {
-  scenario: Scenario;
-  onClick: () => void;
-}): ReactNode {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className="btn btn-outline btn-block h-auto min-h-0 justify-start gap-3 py-3 normal-case font-normal text-left hover:btn-neutral"
-    >
-      <HugeiconsIcon icon={scenario.icon} size={18} strokeWidth={1.5} className="shrink-0" />
-      <span className="flex flex-col items-start leading-tight">
-        <span className="text-sm font-semibold">{scenario.title}</span>
-        <span className="text-[11px] text-base-content/55 font-normal">{scenario.sub}</span>
-      </span>
-    </button>
-  );
-}
-
-function Arrow() {
-  return <span className="text-base-content/40">→</span>;
 }

@@ -25,9 +25,10 @@ export function CafeListItem({
     lg: "h-24 w-24",
   }[size];
 
+  // 再點一次已選中的項目就回首頁(關閉詳細區塊)。
   return (
     <Link
-      to={`/cafe/${cafe.id}`}
+      to={active ? "/" : `/cafe/${cafe.id}`}
       onMouseEnter={() => onHover?.(cafe.id)}
       onMouseLeave={() => onHover?.(null)}
       className={clsx(

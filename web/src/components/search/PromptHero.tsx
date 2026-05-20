@@ -34,12 +34,10 @@ export function PromptHero({
       {!compact && (
         <>
           <h2 className="text-3xl font-bold leading-tight sm:text-4xl">
-            我現在
-            <br />
-            想要⋯
+            現在想要⋯
           </h2>
           <p className="mt-2 text-sm text-base-content/60">
-            告訴我你的情境,我幫你挑
+            告訴我情境,我幫你挑
           </p>
         </>
       )}
@@ -77,7 +75,7 @@ export function PromptHero({
             accent={t.accent && !selected.has(t.key)}
             onClick={() => onToggle(t.key)}
           >
-            ＋ {t.label}
+            {selected.has(t.key) ? t.label : `＋ ${t.label}`}
           </TagChip>
         ))}
       </div>

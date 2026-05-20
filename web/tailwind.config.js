@@ -33,19 +33,19 @@ export default {
     themes: [
       {
         "coffee-paper": {
-          // 紙感米白 · light
-          primary: "#1B1714",
+          // 紙感米白 · light — 柔和對比,文字偏深焙咖啡而非純黑
+          primary: "#3A2F26",
           "primary-content": "#FFF8EE",
-          secondary: "#6B5E54",
+          secondary: "#7A6A5C",
           "secondary-content": "#FFF8EE",
-          accent: "#7A4A2B",
+          accent: "#8A5A35",
           "accent-content": "#FFF8EE",
-          neutral: "#211D1A",
+          neutral: "#3A2F26",
           "neutral-content": "#FFF8EE",
           "base-100": "#FFF8EE",
           "base-200": "#F8F3E9",
           "base-300": "#F4E9D8",
-          "base-content": "#1B1714",
+          "base-content": "#3A2F26",
           info: "#3B5F8A",
           success: "#4F7A3A",
           warning: "#A06B1E",
@@ -61,19 +61,19 @@ export default {
       },
       {
         "coffee-roast": {
-          // 深焙咖啡 · dark
-          primary: "#FFF8EE",
+          // 深焙咖啡 · dark — 文字偏溫潤奶油色,降低眩光
+          primary: "#E8DCC4",
           "primary-content": "#1B1714",
-          secondary: "#A89A8C",
+          secondary: "#9A8C7E",
           "secondary-content": "#1B1714",
-          accent: "#D9A26B",
+          accent: "#C8975F",
           "accent-content": "#1B1714",
           neutral: "#2A2521",
-          "neutral-content": "#FFF8EE",
+          "neutral-content": "#E8DCC4",
           "base-100": "#1B1714",
           "base-200": "#211D1A",
           "base-300": "#2A2521",
-          "base-content": "#FFF8EE",
+          "base-content": "#D9CCB3",
           info: "#7FA6D9",
           success: "#8FB87A",
           warning: "#D9A26B",

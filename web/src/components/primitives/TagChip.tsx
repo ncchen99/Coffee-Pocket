@@ -36,7 +36,7 @@ export function TagChip({
         sizeCls,
         "font-normal normal-case",
         selected
-          ? "btn-neutral"
+          ? "border-primary bg-primary text-primary-content hover:bg-primary hover:border-primary hover:text-primary-content"
           : accent
             ? "btn-outline btn-accent"
             : "btn-outline",

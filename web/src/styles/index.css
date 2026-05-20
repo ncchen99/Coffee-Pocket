@@ -17,6 +17,11 @@
     @apply font-sans antialiased bg-base-100 text-base-content;
     overscroll-behavior-y: none;
   }
+
+  /* 降低分隔線預設刺激度 — 任何 hr / divider 都更柔和 */
+  hr, .divider::before, .divider::after {
+    opacity: 0.6;
+  }
 }
 
 @layer components {
@@ -56,4 +61,92 @@
   /* Mapbox attribution 縮小,不搶版面 */
   .mapboxgl-ctrl-attrib { font-size: 10px !important; }
   .mapboxgl-ctrl-attrib-inner { background: transparent !important; }
+}
+
+/* ─────────────────────────────────────
+ * 地圖 marker — selected 高亮
+ *   用 warning(琥珀色 #A06B1E)而非 accent(深棕),
+ *   與預設的深焙咖啡色 base-content 對比較明顯,
+ *   一眼能看出哪顆 marker 是當前選中的。
+ * ────────────────────────────────── */
+.cp-cafe-marker--active .cp-cafe-marker__circle,
+.cp-cafe-marker--active .cp-cafe-marker__label {
+  background: oklch(var(--wa) / 1) !important;
+  color: oklch(var(--wac) / 1) !important;
+}
+.cp-cafe-marker--active .cp-cafe-marker__circle {
+  transform: scale(1.18) !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3) !important;
+}
+
+/* ─────────────────────────────────────
+ * 滑入動畫 — desktop 詳細欄出場用
+ * ────────────────────────────────── */
+@keyframes cp-slide-in-right {
+  from { transform: translateX(16px); opacity: 0; }
+  to   { transform: translateX(0);    opacity: 1; }
+}
+.cp-anim-slide-in {
+  animation: cp-slide-in-right 220ms ease-out both;
+}
+
+/* ─────────────────────────────────────
+ * 客製化 scrollbar — 細直角線,視覺貼在區塊右緣
+ *   ⚠️ scrollbar-width / scrollbar-color (CSS Scrollbars Module) 與
+ *      ::-webkit-scrollbar 互斥 —— 在 Chrome 121+ 與近期 Safari,
+ *      一旦 element 有 scrollbar-width,所有 ::-webkit-scrollbar
+ *      pseudo 都會被略過(這就是先前樣式沒套上的原因)。
+ *      所以這裡只給 Firefox(用 @supports 判斷沒有 webkit pseudo),
+ *      WebKit 全交給 ::-webkit-scrollbar。
+ *
+ *   thumb 用 10px 外寬 + 4px 透明 border + background-clip: padding-box
+ *   壓成 2px 視覺寬,直角、always visible —— 看起來像貼在區塊邊緣的
+ *   一條細線而不是傳統 scrollbar block,避免疊在內容 padding 上覺得擠。
+ * ────────────────────────────────── */
+@supports not selector(::-webkit-scrollbar) {
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: oklch(var(--bc) / 0.35) transparent;
+  }
+}
+
+/* ⚠️ -webkit-appearance: none 是關鍵 ——
+   macOS 上 Chrome/Safari 預設使用「系統 overlay scrollbar」(隨系統設定
+   「捲動時顯示」隱藏),此 mode 下 ::-webkit-scrollbar 的自訂樣式會被略過。
+   設 appearance: none 才能把 scrollbar 從原生 overlay 切回可被 CSS 控制、
+   永遠可見的 mode。 */
+*::-webkit-scrollbar {
+  -webkit-appearance: none;
+  width: 10px;
+  height: 10px;
+  background: transparent;
+}
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+*::-webkit-scrollbar-thumb {
+  background-color: oklch(var(--bc) / 0.3);
+  background-clip: padding-box;
+  border-radius: 0;
+}
+/* 不對稱 border —— 把可見 thumb 推到區塊邊緣,看起來像細線而不是塊狀 thumb。
+   :vertical / :horizontal 分開設,避免縱向 thumb 又被 border-top 切短頭部。 */
+*::-webkit-scrollbar-thumb:vertical {
+  border-left: 8px solid transparent;
+  border-right: 0;
+  min-height: 32px;
+}
+*::-webkit-scrollbar-thumb:horizontal {
+  border-top: 8px solid transparent;
+  border-bottom: 0;
+  min-width: 32px;
+}
+*::-webkit-scrollbar-thumb:hover {
+  background-color: oklch(var(--bc) / 0.6);
+}
+*::-webkit-scrollbar-corner {
+  background: transparent;
+}
+*::-webkit-scrollbar-button {
+  display: none;
 }

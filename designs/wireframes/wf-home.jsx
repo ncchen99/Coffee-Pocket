@@ -15,7 +15,7 @@ const HomeA = (props) => (
     </div>
 
     <div style={{ padding: '34px 22px 0' }}>
-      <div className="h-display">我現在<br/>想要⋯</div>
+      <div className="h-display">我現在想要⋯</div>
       <div className="meta" style={{ marginTop: 6 }}>告訴我你的情境，我幫你挑</div>
 
       <div className="box" style={{ marginTop: 18, padding: '12px 14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
