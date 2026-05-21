@@ -1,7 +1,9 @@
+import { useState } from "react";
 import { Link } from "react-router-dom";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Coffee02Icon, UserIcon, BookmarkAdd01Icon, Settings01Icon, Logout01Icon } from "@hugeicons/core-free-icons";
 import { ThemeToggle } from "./ThemeToggle";
+import { ConfirmModal } from "@/components/primitives";
 import { useAuth } from "@/hooks/useAuth";
 
 interface TopbarProps {
@@ -11,6 +13,7 @@ interface TopbarProps {
 /** 全站 topbar — 基於 daisyUI navbar。桌面不再含搜尋,搜尋移到左欄。 */
 export function Topbar({ variant = "desktop" }: TopbarProps) {
   const { user, signInWithGoogle, signOut } = useAuth();
+  const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
 
   if (variant === "mobile") {
     return (
@@ -80,7 +83,7 @@ export function Topbar({ variant = "desktop" }: TopbarProps) {
               </li>
               <div className="divider my-1" />
               <li>
-                <button type="button" onClick={signOut} className="gap-2">
+                <button type="button" onClick={() => setIsLogoutModalOpen(true)} className="gap-2">
                   <HugeiconsIcon icon={Logout01Icon} size={15} strokeWidth={1.5} />
                   登出
                 </button>
@@ -97,6 +100,15 @@ export function Topbar({ variant = "desktop" }: TopbarProps) {
           </button>
         )}
       </div>
+
+      <ConfirmModal
+        isOpen={isLogoutModalOpen}
+        onClose={() => setIsLogoutModalOpen(false)}
+        onConfirm={signOut}
+        title="確認登出"
+        message="您確定要登出您的咖啡口袋帳號嗎？登出後將無法同步您的收藏與口袋名單。"
+        confirmText="確認登出"
+      />
     </header>
   );
 }

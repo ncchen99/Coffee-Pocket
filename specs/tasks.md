@@ -20,10 +20,10 @@
 ## Phase 1:資料管線 (後端 Python · 現況)
 
 - [x] **Agents 目錄分層**:`sources` / `prepare` / `enrich` / `process` / `maintenance` / `shared`
-- [ ] **CafeNomad Agent**:`coffee_pocket.agents.sources.cafenomad` 抓取臺南清單並映射至 Raw Signals
-- [ ] **Google Maps Enrichment**:`coffee_pocket.agents.enrich.google_scraper` 抓評論與店家資訊
-- [ ] **Google Places / LLM Process**:`coffee_pocket.agents.process.google_extract` 分批 LLM 萃取
-- [ ] **Semantic Agent**:`coffee_pocket.agents.process.semantic` 彙整 signals → product tags (含 confidence / evidence)
+- [x] **CafeNomad Agent**:`coffee_pocket.agents.sources.cafenomad` 抓取臺南清單並映射至 Raw Signals
+- [x] **Google Maps Enrichment**:`coffee_pocket.agents.enrich.google_scraper` 抓評論與店家資訊
+- [x] **Google Places / LLM Process**:`coffee_pocket.agents.process.google_extract` 分批 LLM 萃取
+- [x] **Semantic Agent**:`coffee_pocket.agents.process.semantic` 彙整 signals → product tags (含 confidence / evidence)
 - [ ] 排程 (pg_cron 或外部 cron):Cafe Nomad 每週、Google 每 2–4 週
 - [ ] LLM JSON schema validator + dead letter table
 
@@ -33,8 +33,8 @@
 
 ### 2.1 Auth
 
-- [ ] 啟用 Supabase Auth Google OAuth (對應 [login.md](../designs/wireframes/pages/login.md))
-- [ ] 啟用 Apple OAuth (iOS PWA / 行動端)
+- [x] 啟用 Supabase Auth Google OAuth (對應 [login.md](../designs/wireframes/pages/login.md))
+- [x] 啟用 Apple OAuth (iOS PWA / 行動端) - [x] 這個部分決定不做
 - [ ] `users` 表觸發器:auth.users → public.users (自動同步 display_name / avatar)
 - [ ] RLS 政策:`cafes` public read;`edits` / `pockets` / `pocket_items` owner-only write
 

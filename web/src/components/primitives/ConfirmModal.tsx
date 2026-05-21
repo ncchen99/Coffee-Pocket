@@ -53,7 +53,7 @@ export function ConfirmModal({
           <button
             type="button"
             onClick={onClose}
-            className="btn btn-ghost btn-xs text-xs rounded-none font-normal"
+            className="btn btn-ghost btn-sm text-sm rounded-none font-normal px-4"
           >
             {cancelText}
           </button>
@@ -63,7 +63,7 @@ export function ConfirmModal({
               onConfirm();
               onClose();
             }}
-            className={`btn btn-xs text-xs rounded-none font-medium ${confirmButtonClass}`}
+            className={`btn btn-sm text-sm rounded-none font-medium px-4 ${confirmButtonClass}`}
           >
             {confirmText}
           </button>

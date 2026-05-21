@@ -1,7 +1,8 @@
+import { useState } from "react";
 import { Link } from "react-router-dom";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Settings01Icon, Mail01Icon, Logout01Icon } from "@hugeicons/core-free-icons";
-import { Cap } from "@/components/primitives";
+import { Cap, ConfirmModal } from "@/components/primitives";
 import { DesktopPageLayout } from "@/components/layout/DesktopPageLayout";
 import { useAuth } from "@/hooks/useAuth";
 
@@ -16,6 +17,7 @@ const MOCK_CONTRIBUTIONS = [
  */
 export default function DesktopProfilePage() {
   const { user, signOut } = useAuth();
+  const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
 
   if (!user) {
     return (
@@ -102,7 +104,7 @@ export default function DesktopProfilePage() {
           <li>
             <button
               type="button"
-              onClick={signOut}
+              onClick={() => setIsLogoutModalOpen(true)}
               className="flex w-full items-center gap-3 px-5 py-3 hover:bg-base-200/60 transition-colors"
             >
               <HugeiconsIcon icon={Logout01Icon} size={16} strokeWidth={1.5} className="text-base-content/65" />
@@ -111,6 +113,15 @@ export default function DesktopProfilePage() {
           </li>
         </ul>
       </section>
+
+      <ConfirmModal
+        isOpen={isLogoutModalOpen}
+        onClose={() => setIsLogoutModalOpen(false)}
+        onConfirm={signOut}
+        title="確認登出"
+        message="您確定要登出您的咖啡口袋帳號嗎？登出後將無法同步您的收藏與口袋名單。"
+        confirmText="確認登出"
+      />
     </DesktopPageLayout>
   );
 }

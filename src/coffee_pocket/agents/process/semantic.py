@@ -43,18 +43,6 @@ SOURCE_BASE_CONF = {
 }
 
 
-def fetch_raw_for_cafe(cafe_id: str) -> list[dict[str, Any]]:
-    db = get_client()
-    rows = (
-        db.table("reviews_raw")
-        .select("id, source_id, external_id, text, extracted_signals")
-        .eq("cafe_id", cafe_id)
-        .execute()
-        .data
-    )
-    return rows
-
-
 def collect_signals(rows: list[dict[str, Any]]) -> dict[str, list[dict[str, Any]]]:
     """Normalize raw rows → {tag_key: [{source, polarity/value, text, review_id, conf}, …]}."""
     by_tag: dict[str, list[dict[str, Any]]] = defaultdict(list)
@@ -242,26 +230,18 @@ AGGREGATORS = {
 }
 
 
-def write_tag(cafe_id: str, tag_key: str, agg: dict[str, Any]) -> None:
-    db = get_client()
-    # Skip if locked by community
-    existing = (
-        db.table("cafe_tags")
-        .select("id, locked_by_community")
-        .eq("cafe_id", cafe_id)
-        .eq("tag_key", tag_key)
-        .execute()
-        .data
-    )
-    if existing and existing[0].get("locked_by_community"):
-        return
+# Tuning knobs for batched DB writes
+BATCH_SIZE = 100  # cafes per batch
+EVIDENCE_CHUNK = 500  # max rows per tag_evidence insert
 
+
+def _build_tag_row(cafe_id: str, tag_key: str, agg: dict[str, Any], today: str) -> dict[str, Any]:
     row: dict[str, Any] = {
         "cafe_id": cafe_id,
         "tag_key": tag_key,
         "tag_type": agg["tag_type"],
         "confidence": agg["confidence"],
-        "last_verified_at": date.today().isoformat(),
+        "last_verified_at": today,
     }
     if agg["tag_type"] == "boolean":
         row["bool_value"] = agg["bool_value"]
@@ -269,48 +249,103 @@ def write_tag(cafe_id: str, tag_key: str, agg: dict[str, Any]) -> None:
         row["score_value"] = agg["score_value"]
     elif agg["tag_type"] == "structured":
         row["structured_value"] = agg["structured_value"]
+    return row
 
-    db.table("cafe_tags").upsert(row, on_conflict="cafe_id,tag_key").execute()
 
-    tag_row = (
-        db.table("cafe_tags")
-        .select("id")
-        .eq("cafe_id", cafe_id)
-        .eq("tag_key", tag_key)
-        .single()
+def process_cafes_batch(cafe_ids: list[str]) -> dict[str, int]:
+    """Aggregate + persist tags for a batch of cafes with minimal round trips.
+
+    Round trips per batch (regardless of cafe count):
+      1× select reviews_raw, 1× select cafe_tags (lock check),
+      1× upsert cafe_tags, 1× delete tag_evidence, N× insert tag_evidence
+      (chunked by EVIDENCE_CHUNK).
+    """
+    if not cafe_ids:
+        return {"cafes": 0, "tags": 0}
+    db = get_client()
+
+    # 1) Fetch all raw signals for the batch in one query, group in memory.
+    raw_rows = (
+        db.table("reviews_raw")
+        .select("id, cafe_id, source_id, external_id, text, extracted_signals")
+        .in_("cafe_id", cafe_ids)
         .execute()
         .data
     )
-    tag_id = tag_row["id"]
+    by_cafe: dict[str, list[dict[str, Any]]] = defaultdict(list)
+    for r in raw_rows:
+        by_cafe[r["cafe_id"]].append(r)
 
-    db.table("tag_evidence").delete().eq("cafe_tag_id", tag_id).execute()
-    evidence_rows = [
-        {
-            "cafe_tag_id": tag_id,
-            "source_id": ev["source"],
-            "review_id": ev.get("review_id"),
-            "text": (ev.get("text") or "")[:500],
-            "confidence": ev["conf"],
-            "extra": ev.get("extra") or {},
-        }
-        for ev in agg["evidence"]
+    # 2) Aggregate per (cafe, tag).
+    aggregated: dict[tuple[str, str], dict[str, Any]] = {}
+    for cid, rows in by_cafe.items():
+        by_tag = collect_signals(rows)
+        for tag_key, agg_fn in AGGREGATORS.items():
+            agg = agg_fn(by_tag.get(tag_key, []))
+            if agg:
+                aggregated[(cid, tag_key)] = agg
+
+    if not aggregated:
+        return {"cafes": 0, "tags": 0}
+
+    # 3) One lock-check query for the whole batch; drop community-locked tags.
+    lock_rows = (
+        db.table("cafe_tags")
+        .select("cafe_id, tag_key, locked_by_community")
+        .in_("cafe_id", cafe_ids)
+        .execute()
+        .data
+    )
+    locked = {
+        (r["cafe_id"], r["tag_key"]) for r in lock_rows if r.get("locked_by_community")
+    }
+    for key in list(aggregated.keys()):
+        if key in locked:
+            aggregated.pop(key)
+
+    if not aggregated:
+        return {"cafes": 0, "tags": 0}
+
+    # 4) Bulk upsert cafe_tags; PostgREST evaluates on_conflict per row.
+    today = date.today().isoformat()
+    tag_rows = [
+        _build_tag_row(cid, tag_key, agg, today)
+        for (cid, tag_key), agg in aggregated.items()
     ]
-    if evidence_rows:
-        db.table("tag_evidence").insert(evidence_rows).execute()
+    upserted = (
+        db.table("cafe_tags")
+        .upsert(tag_rows, on_conflict="cafe_id,tag_key")
+        .execute()
+        .data
+    )
+    key_to_id = {(r["cafe_id"], r["tag_key"]): r["id"] for r in upserted}
 
+    # 5) Replace evidence: one delete + chunked inserts.
+    tag_ids = list(key_to_id.values())
+    if tag_ids:
+        db.table("tag_evidence").delete().in_("cafe_tag_id", tag_ids).execute()
 
-def process_cafe(cafe_id: str) -> dict[str, int]:
-    rows = fetch_raw_for_cafe(cafe_id)
-    if not rows:
-        return {"tags": 0}
-    by_tag = collect_signals(rows)
-    written = 0
-    for tag_key, agg_fn in AGGREGATORS.items():
-        agg = agg_fn(by_tag.get(tag_key, []))
-        if agg:
-            write_tag(cafe_id, tag_key, agg)
-            written += 1
-    return {"tags": written}
+    evidence_rows: list[dict[str, Any]] = []
+    for (cid, tag_key), agg in aggregated.items():
+        tag_id = key_to_id.get((cid, tag_key))
+        if not tag_id:
+            continue
+        for ev in agg["evidence"]:
+            evidence_rows.append(
+                {
+                    "cafe_tag_id": tag_id,
+                    "source_id": ev["source"],
+                    "review_id": ev.get("review_id"),
+                    "text": (ev.get("text") or "")[:500],
+                    "confidence": ev["conf"],
+                    "extra": ev.get("extra") or {},
+                }
+            )
+    for i in range(0, len(evidence_rows), EVIDENCE_CHUNK):
+        db.table("tag_evidence").insert(evidence_rows[i : i + EVIDENCE_CHUNK]).execute()
+
+    cafes_with_tags = {cid for (cid, _) in aggregated.keys()}
+    return {"cafes": len(cafes_with_tags), "tags": len(aggregated)}
 
 
 def main() -> None:
@@ -329,13 +364,24 @@ def main() -> None:
             q = q.limit(args.limit)
         cafe_ids = [r["id"] for r in q.execute().data]
 
-    logger.info("Processing %d cafes", len(cafe_ids))
+    logger.info("Processing %d cafes (batch_size=%d)", len(cafe_ids), BATCH_SIZE)
     totals = {"tags": 0, "cafes": 0}
-    for cid in cafe_ids:
-        stats = process_cafe(cid)
-        if stats["tags"]:
-            totals["cafes"] += 1
-            totals["tags"] += stats["tags"]
+    for i in range(0, len(cafe_ids), BATCH_SIZE):
+        batch = cafe_ids[i : i + BATCH_SIZE]
+        try:
+            stats = process_cafes_batch(batch)
+        except Exception:
+            logger.exception("Batch failed (cafe_ids=%s)", batch)
+            continue
+        totals["cafes"] += stats["cafes"]
+        totals["tags"] += stats["tags"]
+        logger.info(
+            "Batch %d–%d done (cafes=%d, tags=%d)",
+            i + 1,
+            i + len(batch),
+            stats["cafes"],
+            stats["tags"],
+        )
     logger.info("Totals: %s", totals)
 
 
