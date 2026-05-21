@@ -70,7 +70,7 @@ function DesktopApp() {
   const activeId = cafeMatch?.params.id ?? null;
   const isFilterOpen = !!filterMatch;
 
-  const { selected, toggle, setAll, query, setQuery } = useSearchSelection(["no_limit", "socket"]);
+  const { selected, toggle, setAll, query, setQuery } = useSearchSelection();
 
   // displayed 落後 activeId —— 關閉時讓內容多停留 280ms 給 exit 動畫播完。
   const [displayed, setDisplayed] = useState<string | null>(activeId);

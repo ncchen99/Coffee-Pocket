@@ -12,10 +12,7 @@ import { useSearchSelection } from "@/hooks/useSearchSelection";
  */
 export default function HomePage() {
   const navigate = useNavigate();
-  const { selected, toggle, setAll, query, setQuery } = useSearchSelection([
-    "no_limit",
-    "socket",
-  ]);
+  const { selected, toggle, setAll, query, setQuery } = useSearchSelection();
 
   const goSearch = (overrideTags?: string[]) => {
     const params = new URLSearchParams();

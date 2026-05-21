@@ -3,8 +3,8 @@ import { Search01Icon } from "@hugeicons/core-free-icons";
 import { TagChip } from "@/components/primitives";
 
 const PROMPT_TAGS = [
-  { key: "no_limit", label: "不限時", accent: true },
-  { key: "socket", label: "有插座", accent: true },
+  { key: "no_limit", label: "不限時" },
+  { key: "socket", label: "有插座" },
   { key: "quiet", label: "安靜" },
   { key: "late_night", label: "22:00 後" },
   { key: "near_3km", label: "3km 內" },
