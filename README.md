@@ -71,7 +71,18 @@ Coffee Pocket 目前的重點是整理臺南咖啡廳資料，先把不同來源
 
    第一行只預覽，第二行才刪除。
 
-### 3. 資訊補充
+### 3. 生成拼音與 slug
+
+咖啡廳名稱與資訊都確定後，為新店家產生 `name_pinyin` 與 `slug`，方便前端搜尋與路由使用：
+
+```bash
+uv run python -m coffee_pocket.agents.prepare.generate_pinyin
+uv run python -m coffee_pocket.agents.prepare.generate_pinyin --apply
+```
+
+第一行只預覽，第二行才寫入資料庫。這一步必須等到**咖啡廳名稱更新完成**後再執行，否則會以舊名稱產生拼音。建議放在資料清理（Step 2）完成後跑，或是在資訊補充（Step 4）結束後補跑一次。
+
+### 4. 資訊補充
 
 最後再跑 Google Maps 爬蟲補齊評論、營業資訊、評分、照片等內容。
 
@@ -131,7 +142,7 @@ uv run python -m coffee_pocket.agents.enrich.google_scraper --no-missing --updat
 
 跑這一步需要 `OPENAI_API_KEY`（或 `OPENROUTER_API_KEY`，視 `llm.py` 設定）。失敗的批次會寫到 `dead_letter` 表，方便事後追查。
 
-### 5. 標籤彙整（Semantic Layer）
+### 6. 標籤彙整（Semantic Layer）
 
 最後把多個來源（cafe_nomad 結構化欄位 + Google / IG 的 LLM signals）彙整成最終的 `cafe_tags` 與 `tag_evidence`：
 
@@ -179,6 +190,7 @@ agents/
 | 2. 資料更新與清理 | `src/coffee_pocket/agents/prepare/recheck_place_ids.py` | 用 Places API 更新名稱、Place ID，並標記可疑重複 | 使用中 |
 | 2. 資料更新與清理 | `src/coffee_pocket/agents/prepare/dedupe_cafes.py` | 互動式檢查重複店家，標記 `duplicate_of` | 使用中 |
 | 2. 資料更新與清理 | `src/coffee_pocket/agents/prepare/cleanup_cafes.py` | 刪除 `not_found` 與 `duplicate_of` 資料 | 使用中 |
+| 2. 資料更新與清理 | `src/coffee_pocket/agents/prepare/generate_pinyin.py` | 為新店家產生 `name_pinyin` 與 `slug` | 使用中 |
 | 3. 資訊補充 | `src/coffee_pocket/agents/enrich/google_scraper.py` | 爬 Google Maps 評論與店家資訊 | 使用中 |
 | 共用 | `src/coffee_pocket/agents/shared/places_lookup.py` | Places API 共用查詢工具 | 使用中，輔助模組 |
 | 共用 | `src/coffee_pocket/storage.py` | 上傳 Google 店家封面圖到 R2 | 使用中，輔助模組 |
@@ -188,9 +200,9 @@ agents/
 
 | 檔案 | 用途 | 狀態 |
 | --- | --- | --- |
-| `src/coffee_pocket/agents/process/google_extract.py` | 讀取 `data/reviews/*.json`，把評論寫入 `reviews_raw` 並跑 LLM 抽 signals | 使用中（Step 4） |
-| `src/coffee_pocket/agents/sources/instagram_extract.py` | 讀取 `data/ig/*.txt`，匹配店家後跑 LLM 抽 signals | 使用中（Step 4） |
-| `src/coffee_pocket/agents/process/semantic.py` | 彙整 `reviews_raw.extracted_signals` 成 `cafe_tags` / `tag_evidence` | 使用中（Step 5） |
+| `src/coffee_pocket/agents/process/google_extract.py` | 讀取 `data/reviews/*.json`，把評論寫入 `reviews_raw` 並跑 LLM 抽 signals | 使用中（Step 5） |
+| `src/coffee_pocket/agents/sources/instagram_extract.py` | 讀取 `data/ig/*.txt`，匹配店家後跑 LLM 抽 signals | 使用中（Step 5） |
+| `src/coffee_pocket/agents/process/semantic.py` | 彙整 `reviews_raw.extracted_signals` 成 `cafe_tags` / `tag_evidence` | 使用中（Step 6） |
 | `src/coffee_pocket/agents/process/google_places.py` | 共用 LLM schema / prompt（`Signal` model + `SYSTEM_PROMPT`），舊版一站式流程已停用 | 作為 schema / prompt 來源，被 `google_extract` 與 `instagram_extract` 共用 |
 | `src/coffee_pocket/llm.py` | LLM JSON helper | 使用中 |
 
@@ -244,7 +256,7 @@ OPENROUTER_MODEL=
 ```
 
 - `GOOGLE_PLACES_API_KEY`：`agents/prepare/recheck_place_ids.py` 與 `agents/enrich/google_scraper.py` 的 Place ID 補齊會用到。
-- `OPENAI_API_KEY` / `OPENROUTER_API_KEY`：Step 4（`google_extract` / `instagram_extract`）跑 LLM 才需要；只跑 Step 1–3 可以不填。
+- `OPENAI_API_KEY` / `OPENROUTER_API_KEY`：Step 5（`google_extract` / `instagram_extract`）跑 LLM 才需要；只跑 Step 1–4 可以不填。
 
 ## 檢查方式
 
@@ -261,6 +273,7 @@ modules = [
     "coffee_pocket.agents.prepare.recheck_place_ids",
     "coffee_pocket.agents.prepare.dedupe_cafes",
     "coffee_pocket.agents.prepare.cleanup_cafes",
+    "coffee_pocket.agents.prepare.generate_pinyin",
     "coffee_pocket.agents.enrich.google_scraper",
     "coffee_pocket.agents.shared.places_lookup",
     "coffee_pocket.agents.process.google_places",
