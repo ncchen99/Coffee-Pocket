@@ -12,7 +12,7 @@ import { useSearchSelection } from "@/hooks/useSearchSelection";
  */
 export default function HomePage() {
   const navigate = useNavigate();
-  const { selected, toggle, setAll, query, setQuery, scenario, pickScenario, openAt } =
+  const { selected, toggle, setAll, query, setQuery, scenario, pickScenario, openAt, setOpenAt } =
     useSearchSelection();
 
   const goSearch = (
@@ -28,10 +28,8 @@ export default function HomePage() {
     const s = scenarioKey === undefined ? scenario : scenarioKey;
     if (s) params.set("scenario", s);
     if (distanceKm != null) params.set("d", String(distanceKm));
-    
-    const timeVal = overrideOpenAt !== undefined ? overrideOpenAt : openAt;
-    if (timeVal) params.set("open_at", timeVal);
-
+    const oa = overrideOpenAt !== undefined ? overrideOpenAt : openAt;
+    if (oa) params.set("open_at", oa);
     navigate(`/map?${params.toString()}`);
   };
 
@@ -44,9 +42,12 @@ export default function HomePage() {
           onQueryChange={setQuery}
           selected={selected}
           onToggle={toggle}
+          openAt={openAt}
+          onOpenAtChange={setOpenAt}
           onSubmit={(parsed, _softTags, parsedOpenAt, distanceKm) => {
             // LLM 解析後的 tags 直接覆蓋 selection 並導頁
             setAll(parsed);
+            setOpenAt(parsedOpenAt);
             goSearch(parsed, null, distanceKm, parsedOpenAt);
           }}
         />
@@ -59,9 +60,8 @@ export default function HomePage() {
             layout="stack"
             activeKey={scenario}
             onPick={(s) => {
-              const resolvedOpenAt = s.resolveOpenAt ? s.resolveOpenAt() : null;
               pickScenario(s);
-              goSearch(s.tags, s.key, null, resolvedOpenAt);
+              goSearch(s.tags, s.key);
             }}
           />
         </div>

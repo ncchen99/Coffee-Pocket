@@ -23,3 +23,6 @@
 - [ ] 搜尋可以直接用關鍵字搜尋 可以輸入咖啡廳的名子 （詞向量搜尋？） 成本太高的話 用類似 big query??? 
 - [ ] 前端標籤投票後 不要按百分排序 跳動影響體驗
 - [ ] 修正 new row violates row-level security policy for table "cafe_tags" 看怎麼設計
+- [ ] 口袋名單的頁面 清單中元素的標題和 rating 沒有垂直置中，且 rating 和星星太小
+- [ ] 咖啡廳 slug 
+- [ ] Onborading 位置授予完或點擊中西區後應該進入主頁 且跳過沒有反應

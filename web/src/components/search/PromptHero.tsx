@@ -13,6 +13,16 @@ const PROMPT_TAGS: { key: string; label: string; accent?: boolean }[] = [
   { key: "group_4", label: "4 人" },
 ];
 
+/** 「22:00 後」chip 觸發的時間點 — 以臺灣時區 (UTC+8) 今天 22:00 為基準。 */
+function todayAt22(): string {
+  const now = new Date();
+  const taipei = new Date(now.toLocaleString("en-US", { timeZone: "Asia/Taipei" }));
+  const y = taipei.getFullYear();
+  const m = String(taipei.getMonth() + 1).padStart(2, "0");
+  const d = String(taipei.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}T22:00:00+08:00`;
+}
+
 interface PromptHeroProps {
   query: string;
   onQueryChange: (v: string) => void;
@@ -22,6 +32,9 @@ interface PromptHeroProps {
   onSubmit: (parsedTags: string[], softTags: string[], openAt: string | null, distanceKm: number | null) => void;
   onClear?: () => void;
   compact?: boolean;
+  /** 目前的時間篩選；與「22:00 後」chip 雙向綁定。 */
+  openAt?: string | null;
+  onOpenAtChange?: (val: string | null) => void;
 }
 
 /** 對話式 hero — 桌面 (compact) / 手機共用。 */
@@ -33,7 +46,11 @@ export function PromptHero({
   onSubmit,
   onClear,
   compact = false,
+  openAt,
+  onOpenAtChange,
 }: PromptHeroProps) {
+  const lateNightTarget = todayAt22();
+  const isLateNightActive = openAt === lateNightTarget;
   const [loading, setLoading] = useState(false);
   const [hint, setHint] = useState<string | null>(null);
   const [lastSubmittedQuery, setLastSubmittedQuery] = useState("");
@@ -128,16 +145,31 @@ export function PromptHero({
       )}
 
       <div className="mt-3 flex flex-wrap gap-1.5">
-        {PROMPT_TAGS.map((t) => (
-          <TagChip
-            key={t.key}
-            selected={selected.has(t.key)}
-            accent={t.accent && !selected.has(t.key)}
-            onClick={() => onToggle(t.key)}
-          >
-            {selected.has(t.key) ? t.label : `＋ ${t.label}`}
-          </TagChip>
-        ))}
+        {PROMPT_TAGS.map((t) => {
+          // 「22:00 後」不是真的 tag，而是時間篩選 — 直接驅動 openAt。
+          if (t.key === "late_night") {
+            return (
+              <TagChip
+                key={t.key}
+                selected={isLateNightActive}
+                accent={t.accent && !isLateNightActive}
+                onClick={() => onOpenAtChange?.(isLateNightActive ? null : lateNightTarget)}
+              >
+                {isLateNightActive ? t.label : `＋ ${t.label}`}
+              </TagChip>
+            );
+          }
+          return (
+            <TagChip
+              key={t.key}
+              selected={selected.has(t.key)}
+              accent={t.accent && !selected.has(t.key)}
+              onClick={() => onToggle(t.key)}
+            >
+              {selected.has(t.key) ? t.label : `＋ ${t.label}`}
+            </TagChip>
+          );
+        })}
       </div>
     </section>
   );

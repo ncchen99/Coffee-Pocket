@@ -91,6 +91,8 @@ export function SearchSidebar({
             onQueryChange={setQuery}
             selected={selected}
             onToggle={toggle}
+            openAt={openAt}
+            onOpenAtChange={onOpenAtChange}
           onSubmit={(parsed, softTags, parsedOpenAt, distanceKm) => {
               setAll(parsed);
               // soft_tags are OR-match bonuses: they affect ranking but never
