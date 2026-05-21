@@ -82,9 +82,9 @@ export default function MapPage() {
     tags_or: orSelected,
     lng: location?.lng ?? null,
     lat: location?.lat ?? null,
-    radius_m: radiusM ?? 5000,
+    radius_m: radiusM ?? undefined,
     sort: location ? "distance" : undefined,
-    limit: 50,
+    limit: 1000,
     open_at: openAt,
   });
   const cafes = searchQuery.data?.cafes ?? [];

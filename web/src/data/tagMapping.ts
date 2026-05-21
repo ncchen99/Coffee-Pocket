@@ -1,9 +1,6 @@
 /**
  * Mapping between frontend short filter keys (used by FILTER_TAG_GROUPS / chips)
  * and DB tag_key values used in the `cafe_tags` / `tag_votes` tables.
- *
- * Frontend-only keys (no DB equivalent yet): wifi, big_table, budget, parking.
- * `filterKeysToDb` silently drops these so the RPC still accepts the array.
  */
 
 export const FILTER_TO_DB: Record<string, string> = {
@@ -14,6 +11,10 @@ export const FILTER_TO_DB: Record<string, string> = {
   reserve: "reservable",
   group: "group_chat_friendly",
   outdoor: "outdoor_seating",
+  wifi: "wifi_available",
+  big_table: "large_desks",
+  budget: "high_cp_value",
+  parking: "parking_friendly",
 };
 
 export const DB_TO_FILTER: Record<string, string> = Object.fromEntries(
@@ -39,8 +40,13 @@ export const DB_TAG_LABEL: Record<string, string> = {
   discussion_friendly: "適合討論",
   group_chat_friendly: "適合多人",
   time_limit: "不限時",
+  wifi_available: "有Wi-Fi",
+  large_desks: "大桌子",
+  high_cp_value: "高CP值",
+  parking_friendly: "方便停車",
 };
 
 export function dbTagLabel(key: string): string {
   return DB_TAG_LABEL[key] ?? key;
 }
+

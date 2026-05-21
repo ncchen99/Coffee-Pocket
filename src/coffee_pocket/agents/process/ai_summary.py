@@ -108,16 +108,23 @@ def fetch_reviews_for_cafes(cafe_ids: list[str]) -> dict[str, list[str]]:
     all_rows: list[dict[str, Any]] = []
     for i in range(0, len(cafe_ids), BATCH_SIZE):
         batch = cafe_ids[i : i + BATCH_SIZE]
-        rows = (
-            db.table("reviews_raw")
-            .select("cafe_id, text")
-            .in_("cafe_id", batch)
-            .not_.is_("text", "null")
-            .order("posted_at", desc=True)
-            .execute()
-            .data
-        )
-        all_rows.extend(rows)
+        offset = 0
+        limit = 1000
+        while True:
+            rows = (
+                db.table("reviews_raw")
+                .select("cafe_id, text")
+                .in_("cafe_id", batch)
+                .not_.is_("text", "null")
+                .order("posted_at", desc=True)
+                .range(offset, offset + limit - 1)
+                .execute()
+                .data
+            )
+            all_rows.extend(rows)
+            if len(rows) < limit:
+                break
+            offset += limit
 
     by_cafe: dict[str, list[str]] = defaultdict(list)
     for r in all_rows:

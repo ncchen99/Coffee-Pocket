@@ -32,3 +32,28 @@ export function useClearVote() {
     },
   });
 }
+
+export function useAddCafeTag() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (vars: { cafeId: string; tagKey: string }) =>
+      api.addCafeTag(vars.cafeId, vars.tagKey),
+    onSuccess: (_data, vars) => {
+      qc.invalidateQueries({ queryKey: ["cafe", vars.cafeId] });
+      qc.invalidateQueries({ queryKey: ["user-votes", vars.cafeId] });
+    },
+  });
+}
+
+export function useDeleteCafeTag() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (vars: { cafeId: string; tagKey: string }) =>
+      api.deleteCafeTag(vars.cafeId, vars.tagKey),
+    onSuccess: (_data, vars) => {
+      qc.invalidateQueries({ queryKey: ["cafe", vars.cafeId] });
+      qc.invalidateQueries({ queryKey: ["user-votes", vars.cafeId] });
+    },
+  });
+}
+

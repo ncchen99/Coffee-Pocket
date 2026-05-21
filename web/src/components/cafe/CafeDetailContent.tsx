@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
   InstagramIcon,
@@ -8,11 +9,13 @@ import {
   AlertCircleIcon,
   LinkForwardIcon,
   Navigation03Icon,
+  Add01Icon,
 } from "@hugeicons/core-free-icons";
 import { Cap, Placeholder, StarRating, TagBadge } from "@/components/primitives";
 import { TagConfidenceRow } from "@/components/cafe/TagConfidenceRow";
+import { AddTagModal } from "@/components/cafe/AddTagModal";
 import type { CafeDetail } from "@/types/cafe";
-import { useVoteTag, useClearVote, useUserVotesForCafe } from "@/hooks/useTagVote";
+import { useVoteTag, useClearVote, useUserVotesForCafe, useDeleteCafeTag } from "@/hooks/useTagVote";
 import { useAuth } from "@/hooks/useAuth";
 import { formatDistance, formatPriceLevel, orderHoursFromToday } from "@/lib/format";
 import { shareUrl } from "@/lib/share";
@@ -27,9 +30,11 @@ interface CafeDetailContentProps {
 /** 詳細頁主體 — 桌面中間欄與手機 main 共用。 */
 export function CafeDetailContent({ cafe, isDesktop, actions }: CafeDetailContentProps) {
   const { user } = useAuth();
+  const [isAddTagOpen, setIsAddTagOpen] = useState(false);
   const { data: userVotes } = useUserVotesForCafe(user ? cafe.id : null);
   const voteMutation = useVoteTag();
   const clearVoteMutation = useClearVote();
+  const deleteTagMutation = useDeleteCafeTag();
 
   const { inPocket, pocketLabel, pocketDisabled, handlePocketClick, openReport } = actions;
 
@@ -38,7 +43,23 @@ export function CafeDetailContent({ cafe, isDesktop, actions }: CafeDetailConten
     const v: 1 | -1 = vote === "up" ? 1 : -1;
     const current = userVotes?.[key];
     if (current === v) {
-      clearVoteMutation.mutate({ cafeId: cafe.id, tagKey: key });
+      if (v === 1) {
+        // "再次點擊選中的讚 會移除這個標籤"
+        // 只有當該標籤是自己新增的（無結構化證據，且無其他人的贊同票）才完全移除該標籤，否則僅清除自己的投票。
+        const tagObj = cafe.tags.find((t) => t.key === key);
+        const detailObj = cafe.tags_detail?.find((t) => t.key === key);
+        const isUserAdded = tagObj
+          ? tagObj.evidence_count === 0 && (!detailObj || detailObj.vote_up <= 1)
+          : false;
+
+        if (isUserAdded) {
+          deleteTagMutation.mutate({ cafeId: cafe.id, tagKey: key });
+        } else {
+          clearVoteMutation.mutate({ cafeId: cafe.id, tagKey: key });
+        }
+      } else {
+        clearVoteMutation.mutate({ cafeId: cafe.id, tagKey: key });
+      }
     } else {
       voteMutation.mutate({ cafeId: cafe.id, tagKey: key, vote: v });
     }
@@ -195,25 +216,39 @@ export function CafeDetailContent({ cafe, isDesktop, actions }: CafeDetailConten
         </div>
       </section>
 
-      {cafe.tags.length > 0 && (
-        <>
-          <div className="divider mx-5" />
-          <section className="px-5">
-            <Cap>標籤與證據</Cap>
-            <ul className="mt-2 divide-y divide-base-content/10">
-              {cafe.tags.map((t) => (
-                <li key={t.key}>
-                  <TagConfidenceRow
-                    tag={t}
-                    userVote={userVotes?.[t.key]}
-                    onVote={handleVote}
-                  />
-                </li>
-              ))}
-            </ul>
-          </section>
-        </>
-      )}
+      <div className="divider mx-5" />
+      <section className="px-5">
+        <div className="flex items-center justify-between">
+          <Cap>標籤與證據</Cap>
+          <button
+            type="button"
+            onClick={() => setIsAddTagOpen(true)}
+            disabled={!user}
+            title={user ? "新增標籤" : "請先登入以新增標籤"}
+            className="btn btn-ghost btn-xs text-primary hover:bg-primary/10 gap-1 rounded-none px-2 font-medium flex items-center disabled:opacity-50"
+          >
+            <HugeiconsIcon icon={Add01Icon} size={12} strokeWidth={2} />
+            新增標籤
+          </button>
+        </div>
+        {cafe.tags.length > 0 ? (
+          <ul className="mt-2 divide-y divide-base-content/10">
+            {cafe.tags.map((t) => (
+              <li key={t.key}>
+                <TagConfidenceRow
+                  tag={t}
+                  userVote={userVotes?.[t.key]}
+                  onVote={handleVote}
+                />
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="mt-3 text-xs text-base-content/50 italic leading-relaxed text-center py-4 bg-base-200/30 border border-dashed border-base-content/10">
+            目前這間店還沒有任何標籤。<br />點擊「新增標籤」來幫忙建立第一個吧！
+          </p>
+        )}
+      </section>
 
       {orderedHours.length > 0 && (
         <>
@@ -269,6 +304,13 @@ export function CafeDetailContent({ cafe, isDesktop, actions }: CafeDetailConten
           回報問題
         </button>
       </section>
+
+      <AddTagModal
+        isOpen={isAddTagOpen}
+        onClose={() => setIsAddTagOpen(false)}
+        cafeId={cafe.id}
+        existingTags={cafe.tags.map((t) => t.key)}
+      />
     </>
   );
 }

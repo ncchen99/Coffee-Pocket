@@ -25,7 +25,7 @@ export function TagConfidenceRow({ tag, userVote, onVote }: TagConfidenceRowProp
             max={100}
           />
           <span className="font-mono text-[10px] text-base-content/55">
-            {pct}% · {tag.evidence_count} 則證據
+            {pct}% · {tag.evidence_count || 1} 則證據
           </span>
         </div>
       </div>

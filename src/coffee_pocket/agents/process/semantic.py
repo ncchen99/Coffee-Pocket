@@ -264,14 +264,24 @@ def process_cafes_batch(cafe_ids: list[str]) -> dict[str, int]:
         return {"cafes": 0, "tags": 0}
     db = get_client()
 
-    # 1) Fetch all raw signals for the batch in one query, group in memory.
-    raw_rows = (
-        db.table("reviews_raw")
-        .select("id, cafe_id, source_id, external_id, text, extracted_signals")
-        .in_("cafe_id", cafe_ids)
-        .execute()
-        .data
-    )
+    # 1) Fetch all raw signals for the batch in one query (paginated to bypass 1000-row limit), group in memory.
+    raw_rows = []
+    limit = 1000
+    offset = 0
+    while True:
+        rows = (
+            db.table("reviews_raw")
+            .select("id, cafe_id, source_id, external_id, text, extracted_signals")
+            .in_("cafe_id", cafe_ids)
+            .range(offset, offset + limit - 1)
+            .execute()
+            .data
+        )
+        raw_rows.extend(rows)
+        if len(rows) < limit:
+            break
+        offset += limit
+
     by_cafe: dict[str, list[dict[str, Any]]] = defaultdict(list)
     for r in raw_rows:
         by_cafe[r["cafe_id"]].append(r)

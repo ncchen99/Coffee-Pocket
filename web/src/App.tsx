@@ -103,9 +103,10 @@ function DesktopApp() {
     tags_or: orSelected,
     lng: location?.lng ?? null,
     lat: location?.lat ?? null,
-    radius_m: radiusM ?? 5000,
+    radius_m: radiusM ?? undefined,
     sort: sortKey,
     open_at: openAt,
+    limit: 1000,
   });
   const cafes = searchQuery.data?.cafes ?? [];
   const totalCount = searchQuery.data?.total ?? 0;

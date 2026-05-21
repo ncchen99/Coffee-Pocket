@@ -99,7 +99,7 @@ function rpcArgsForSearch(params: SearchParams) {
     p_tags: filterKeysToDb(params.tags ?? []),
     p_lng: params.lng ?? null,
     p_lat: params.lat ?? null,
-    p_radius_m: params.radius_m ?? 5000,
+    p_radius_m: params.radius_m !== undefined ? params.radius_m : null,
     p_sort: params.sort ?? "distance",
     p_limit: params.limit ?? 50,
     p_offset: params.offset ?? 0,
@@ -148,7 +148,7 @@ export async function searchCafesCount(
     p_tags: filterKeysToDb(params.tags ?? []),
     p_lng: params.lng ?? null,
     p_lat: params.lat ?? null,
-    p_radius_m: params.radius_m ?? 5000,
+    p_radius_m: params.radius_m !== undefined ? params.radius_m : null,
     p_open_at: params.open_at ?? null,
     p_tags_or: orTags.length > 0 ? orTags : null,
   });
@@ -441,6 +441,31 @@ export async function clearVote(cafeId: string, tagKey: string): Promise<void> {
     .eq("tag_key", tagKey)
     .eq("user_id", userId);
   if (error) throw error;
+}
+
+export async function addCafeTag(cafeId: string, tagKey: string): Promise<void> {
+  await requireUserId();
+  const { error: tagError } = await supabase
+    .from("cafe_tags")
+    .upsert({
+      cafe_id: cafeId,
+      tag_key: tagKey,
+      tag_type: "boolean",
+      bool_value: true,
+      confidence: 1.0,
+      locked_by_community: true,
+      last_verified_at: new Date().toISOString().split("T")[0]
+    }, {
+      onConflict: "cafe_id,tag_key"
+    });
+  if (tagError) throw tagError;
+
+  // Automatically cast a positive vote from the user who added it
+  await voteTag(cafeId, tagKey, 1);
+}
+
+export async function deleteCafeTag(cafeId: string, tagKey: string): Promise<void> {
+  await clearVote(cafeId, tagKey);
 }
 
 export async function fetchUserVotes(cafeId: string): Promise<Record<string, 1 | -1>> {
