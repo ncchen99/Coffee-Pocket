@@ -48,6 +48,51 @@ export interface ParsedPrompt {
   distance_km: number | null;
 }
 
+/**
+ * 一次完成「店名 / 地址關鍵字命中 → 否則 LLM 情境解析」的搜尋分流。
+ * 取代「先 searchCafesCount,0 才打 parse-prompt」兩個 round-trip 的流程。
+ *
+ * 回傳:
+ *   matched_count > 0 → 走關鍵字搜尋,parsed 為 null
+ *   matched_count = 0 → 走 LLM 解析,parsed 為 ParsedPrompt
+ */
+export async function smartSearch(
+  query: string,
+): Promise<{ matched_count: number; parsed: ParsedPrompt | null }> {
+  const q = query.trim();
+  if (!q) return { matched_count: 0, parsed: null };
+
+  const { data, error } = await supabase.functions.invoke("smart-search", {
+    body: {
+      query: q,
+      q_pinyin: toQueryPinyin(q),
+      current_time: new Date().toISOString(),
+    },
+  });
+  if (error) throw error;
+
+  const matched_count = Number(data?.matched_count ?? 0);
+  if (matched_count > 0 || !data?.parsed) {
+    return { matched_count, parsed: null };
+  }
+
+  const p = data.parsed;
+  const dbHardTags: string[] = Array.isArray(p?.hard_tags) ? p.hard_tags : [];
+  const dbSoftTags: string[] = Array.isArray(p?.soft_tags) ? p.soft_tags : [];
+  return {
+    matched_count,
+    parsed: {
+      db_tags: dbHardTags,
+      tags: dbKeysToFilter(dbHardTags),
+      db_soft_tags: dbSoftTags,
+      soft_tags: dbKeysToFilter(dbSoftTags),
+      rationale: typeof p?.rationale === "string" ? p.rationale : "",
+      open_at: typeof p?.open_at === "string" ? p.open_at : null,
+      distance_km: typeof p?.distance_km === "number" ? p.distance_km : null,
+    },
+  };
+}
+
 export async function parsePrompt(query: string): Promise<ParsedPrompt> {
   const q = query.trim();
   if (!q) return { tags: [], db_tags: [], soft_tags: [], db_soft_tags: [], rationale: "", open_at: null, distance_km: null };
@@ -251,11 +296,14 @@ export async function fetchCafeDetail(identifier: string): Promise<CafeDetail | 
   const d: any = data;
   const tagsDetail: TagDetail[] = Array.isArray(d.tags) ? d.tags : [];
 
-  // Pick top 3 by confidence for display
-  const topTagKeys = [...tagsDetail]
-    .sort((a, b) => (b.confidence ?? 0) - (a.confidence ?? 0))
-    .slice(0, 3)
-    .map((t) => t.key);
+  // top_tag_keys 由 cafe_detail RPC 直接回(confidence 前 3,已排序)。
+  // 舊版 RPC 沒這個欄位時 fallback 到 client 端計算,保持相容。
+  const topTagKeys: string[] = Array.isArray(d.top_tag_keys) && d.top_tag_keys.length > 0
+    ? d.top_tag_keys
+    : [...tagsDetail]
+        .sort((a, b) => (b.confidence ?? 0) - (a.confidence ?? 0))
+        .slice(0, 3)
+        .map((t) => t.key);
 
   const tags: TagWithConfidence[] = tagsDetail.map((t) => ({
     key: t.key as PlatformTagKey,
@@ -299,8 +347,9 @@ export async function fetchCafeDetail(identifier: string): Promise<CafeDetail | 
 // ===========================================================================
 
 async function requireUserId(): Promise<string> {
-  const { data } = await supabase.auth.getUser();
-  const id = data.user?.id;
+  // 用 getSession() 從本地 storage 讀 JWT,避免 getUser() 多打一次 /auth/v1/user。
+  const { data } = await supabase.auth.getSession();
+  const id = data.session?.user?.id;
   if (!id) throw new Error("Not authenticated");
   return id;
 }
@@ -310,38 +359,25 @@ async function requireUserId(): Promise<string> {
 // ===========================================================================
 
 export async function fetchPockets(): Promise<Pocket[]> {
-  const { data, error } = await supabase
-    .from("pockets")
-    .select("*, pocket_items(count)")
-    .order("sort_order", { ascending: true });
+  // 單一 RPC,server 端一次 group by 算出 item_count,
+  // 取代 PostgREST embed count(口袋多時每個都另開子查詢)。
+  const { data, error } = await supabase.rpc("user_pockets");
   if (error) throw error;
-  return (data ?? []).map((row: any) => {
-    const counts = row.pocket_items;
-    let item_count = 0;
-    if (Array.isArray(counts) && counts.length > 0) {
-      item_count = counts[0]?.count ?? 0;
-    } else if (counts && typeof counts === "object" && "count" in counts) {
-      item_count = (counts as any).count ?? 0;
-    }
-    return {
-      id: row.id,
-      user_id: row.user_id,
-      name: row.name,
-      emoji: row.emoji ?? null,
-      sort_order: row.sort_order ?? 0,
-      is_public: row.is_public ?? false,
-      created_at: row.created_at,
-      item_count,
-    };
-  });
+  return ((data ?? []) as any[]).map((row) => ({
+    id: row.id,
+    user_id: row.user_id,
+    name: row.name,
+    emoji: row.emoji ?? null,
+    sort_order: row.sort_order ?? 0,
+    is_public: row.is_public ?? false,
+    created_at: row.created_at,
+    item_count: Number(row.item_count ?? 0),
+  }));
 }
 
 export async function fetchPocketItems(pocketId: string): Promise<PocketItem[]> {
-  // Step 1: pocket items + cafe base info via RPC
-  //   為什麼用 RPC?cafes 的座標是 PostGIS geography,要 ST_X/ST_Y 才能取出
-  //   lng/lat,沒辦法靠 PostgREST 的 select=cafe:cafes(...,lng,lat) 直接拿
-  //   (那會 42703,因為 cafes 表沒有 lng/lat 欄位)。
-  //   top_tags 也不在 cafes 表,留到 Step 2 批次抓。
+  // 單一 RPC:pocket items + cafe base + top_tags 一次拿齊。
+  // top_tags 由 SQL 端 LATERAL join cafe_tags 取出(confidence 前 3)。
   const { data, error } = await supabase.rpc("pocket_cafes", {
     p_pocket_id: pocketId,
   });
@@ -362,29 +398,8 @@ export async function fetchPocketItems(pocketId: string): Promise<PocketItem[]> 
     business_hours: any;
     lng: number | null;
     lat: number | null;
+    top_tags: string[] | null;
   }>;
-
-  // Step 2: batch-fetch top tags from cafe_tags for all cafe_ids
-  const cafeIds = rows.map((r) => r.cafe_id).filter(Boolean) as string[];
-  const topTagsMap: Record<string, string[]> = {};
-  if (cafeIds.length > 0) {
-    const { data: tagRows, error: tagError } = await supabase
-      .from("cafe_tags")
-      .select("cafe_id, tag_key, confidence")
-      .in("cafe_id", cafeIds)
-      .or(
-        "and(tag_type.eq.boolean,bool_value.eq.true),and(tag_type.eq.score,score_value.gte.50),and(tag_type.eq.structured,tag_key.eq.time_limit)"
-      )
-      .order("confidence", { ascending: false });
-    if (!tagError && tagRows) {
-      // Group by cafe_id, keep top 3 by confidence
-      for (const row of tagRows as any[]) {
-        const list = topTagsMap[row.cafe_id] ?? [];
-        if (list.length < 3) list.push(row.tag_key);
-        topTagsMap[row.cafe_id] = list;
-      }
-    }
-  }
 
   return rows.map((row) => {
     const cafe: CafeCard = {
@@ -392,7 +407,7 @@ export async function fetchPocketItems(pocketId: string): Promise<PocketItem[]> 
       slug: row.cafe_slug ?? null,
       name: row.cafe_name,
       cover_url: row.cover_image_url ?? null,
-      top_tags: (topTagsMap[row.cafe_id] ?? []).map(dbTagLabel),
+      top_tags: (row.top_tags ?? []).map(dbTagLabel),
       distance_km: 0,
       open_now: false,
       lng: row.lng ?? 0,
@@ -513,24 +528,12 @@ export async function clearVote(cafeId: string, tagKey: string): Promise<void> {
 }
 
 export async function addCafeTag(cafeId: string, tagKey: string): Promise<void> {
-  await requireUserId();
-  const { error: tagError } = await supabase
-    .from("cafe_tags")
-    .upsert({
-      cafe_id: cafeId,
-      tag_key: tagKey,
-      tag_type: "boolean",
-      bool_value: true,
-      confidence: 1.0,
-      locked_by_community: true,
-      last_verified_at: new Date().toISOString().split("T")[0]
-    }, {
-      onConflict: "cafe_id,tag_key"
-    });
-  if (tagError) throw tagError;
-
-  // Automatically cast a positive vote from the user who added it
-  await voteTag(cafeId, tagKey, 1);
+  // 一次 RPC 同時 upsert cafe_tags + tag_votes,免去三趟 round-trip。
+  const { error } = await supabase.rpc("add_cafe_tag", {
+    p_cafe_id: cafeId,
+    p_tag_key: tagKey,
+  });
+  if (error) throw error;
 }
 
 export async function deleteCafeTag(cafeId: string, tagKey: string): Promise<void> {
@@ -599,20 +602,17 @@ export async function submitEdit(input: {
 // ===========================================================================
 
 export async function fetchUserStats(userId: string): Promise<UserStats> {
-  const [pocketsRes, itemsRes, editsRes, votesRes] = await Promise.all([
-    supabase.from("pockets").select("id", { count: "exact", head: true }).eq("user_id", userId),
-    supabase
-      .from("pocket_items")
-      .select("id, pocket:pockets!inner(user_id)", { count: "exact", head: true })
-      .eq("pocket.user_id", userId),
-    supabase.from("edits").select("id", { count: "exact", head: true }).eq("user_id", userId),
-    supabase.from("tag_votes").select("cafe_id", { count: "exact", head: true }).eq("user_id", userId),
-  ]);
+  // 4 個 count 合成一個 RPC,省下 4 條連線 / 4 次 RLS 檢查。
+  const { data, error } = await supabase
+    .rpc("user_stats", { p_user_id: userId })
+    .single();
+  if (error) throw error;
+  const row = (data ?? {}) as any;
   return {
-    pocket_count: pocketsRes.count ?? 0,
-    pocket_items_count: itemsRes.count ?? 0,
-    edits_count: editsRes.count ?? 0,
-    votes_count: votesRes.count ?? 0,
+    pocket_count: Number(row.pocket_count ?? 0),
+    pocket_items_count: Number(row.pocket_items_count ?? 0),
+    edits_count: Number(row.edits_count ?? 0),
+    votes_count: Number(row.votes_count ?? 0),
   };
 }
 
@@ -620,54 +620,35 @@ export async function fetchContributions(
   userId: string,
   limit: number = 20,
 ): Promise<Contribution[]> {
-  const [editsRes, votesRes] = await Promise.all([
-    supabase
-      .from("edits")
-      .select("id, cafe_id, target, after_value, created_at, status, cafe:cafes(name)")
-      .eq("user_id", userId)
-      .order("created_at", { ascending: false })
-      .limit(limit),
-    supabase
-      .from("tag_votes")
-      .select("cafe_id, tag_key, vote, created_at, cafe:cafes(name)")
-      .eq("user_id", userId)
-      .order("created_at", { ascending: false })
-      .limit(limit),
-  ]);
-  if (editsRes.error) throw editsRes.error;
-  if (votesRes.error) throw votesRes.error;
+  // UNION ALL 一次取 edits + votes,server 端全域排序截斷;
+  // 避免「各取 limit 後合併再切」可能漏掉舊紀錄的問題。
+  const { data, error } = await supabase.rpc("user_contributions", {
+    p_user_id: userId,
+    p_limit: limit,
+  });
+  if (error) throw error;
 
-  const contributions: Contribution[] = [];
-
-  for (const row of editsRes.data ?? []) {
-    const r: any = row;
-    const cafe = Array.isArray(r.cafe) ? r.cafe[0] : r.cafe;
-    contributions.push({
-      id: `edit-${r.id}`,
-      type: "edit",
+  return ((data ?? []) as any[]).map((r) => {
+    if (r.kind === "edit") {
+      return {
+        id: `edit-${r.ref_id}`,
+        type: "edit" as const,
+        cafe_id: r.cafe_id,
+        cafe_name: r.cafe_name ?? "",
+        detail: `編輯了 ${r.target}`,
+        created_at: r.created_at,
+        status: r.status ?? undefined,
+      };
+    }
+    return {
+      id: `vote-${r.ref_id}`,
+      type: "vote" as const,
       cafe_id: r.cafe_id,
-      cafe_name: cafe?.name ?? "",
-      detail: `編輯了 ${r.target}`,
+      cafe_name: r.cafe_name ?? "",
+      detail: `${(r.vote ?? 0) > 0 ? "讚同" : "反對"} ${dbTagLabel(r.target)}`,
       created_at: r.created_at,
-      status: r.status ?? undefined,
-    });
-  }
-
-  for (const row of votesRes.data ?? []) {
-    const r: any = row;
-    const cafe = Array.isArray(r.cafe) ? r.cafe[0] : r.cafe;
-    contributions.push({
-      id: `vote-${r.cafe_id}-${r.tag_key}-${r.created_at}`,
-      type: "vote",
-      cafe_id: r.cafe_id,
-      cafe_name: cafe?.name ?? "",
-      detail: `${r.vote > 0 ? "讚同" : "反對"} ${dbTagLabel(r.tag_key)}`,
-      created_at: r.created_at,
-    });
-  }
-
-  contributions.sort((a, b) => (a.created_at < b.created_at ? 1 : -1));
-  return contributions.slice(0, limit);
+    };
+  });
 }
 
 export async function fetchUserPreferences(userId: string): Promise<UserPreferences> {
@@ -681,11 +662,13 @@ export async function fetchUserPreferences(userId: string): Promise<UserPreferen
 }
 
 export async function updateUserPreferences(
-  userId: string,
+  _userId: string,
   prefs: Partial<UserPreferences>,
 ): Promise<void> {
-  const current = await fetchUserPreferences(userId);
-  const merged: UserPreferences = { ...current, ...prefs };
-  const { error } = await supabase.from("users").update({ preferences: merged }).eq("id", userId);
+  // server-side jsonb merge,免去「先讀再寫」兩趟 round-trip。
+  // userId 由 RPC 內的 auth.uid() 取,參數保留是為了相容呼叫端簽名。
+  const { error } = await supabase.rpc("merge_user_preferences", {
+    p_patch: prefs as any,
+  });
   if (error) throw error;
 }

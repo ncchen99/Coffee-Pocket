@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Search01Icon, Loading03Icon } from "@hugeicons/core-free-icons";
 import { TagChip } from "@/components/primitives";
-import { parsePrompt, searchCafesCount } from "@/lib/api";
+import { smartSearch } from "@/lib/api";
 import { TAG_LABEL_TO_KEY } from "@/data/filterTags";
 
 /** 完全等於某個標籤 label（去除多餘空白）→ 直接套用該標籤。 */
@@ -116,24 +116,29 @@ export function PromptHero({
     setLoading(true);
     setHint(null);
     try {
-      // 2. 先試店名 / 地址（含同音字）關鍵字搜尋，看是否有結果。
-      const count = await searchCafesCount({ q });
-      if (count > 0) {
-        setHint(`找到 ${count} 間店名 / 地址含「${q}」`);
+      // 2 + 3. 一個 edge function 同時做關鍵字 count 與 LLM 解析的分流，
+      //         免去客戶端「先 count 再 parse」兩個 round-trip。
+      const { matched_count, parsed } = await smartSearch(q);
+      if (matched_count > 0) {
+        setHint(`找到 ${matched_count} 間店名 / 地址含「${q}」`);
         setLastSubmittedQuery(q);
         onSubmit([], [], null, null, q);
         return;
       }
 
-      // 3. 關鍵字 0 結果 → 視為情境句，丟給 LLM 解析。
-      const parsed = await parsePrompt(q);
-      if (parsed.tags.length === 0 && !parsed.open_at && parsed.distance_km === null) {
+      if (!parsed || (parsed.tags.length === 0 && !parsed.open_at && parsed.distance_km === null)) {
         setHint(`找不到「${q}」相關咖啡廳，也沒抓到對應條件，請試試「有插座」「安靜」「不限時」等關鍵字`);
       } else {
         setHint(parsed.rationale || null);
       }
       setLastSubmittedQuery(q);
-      onSubmit(parsed.tags, parsed.soft_tags, parsed.open_at, parsed.distance_km, null);
+      onSubmit(
+        parsed?.tags ?? [],
+        parsed?.soft_tags ?? [],
+        parsed?.open_at ?? null,
+        parsed?.distance_km ?? null,
+        null,
+      );
     } catch (e) {
       setHint("搜尋失敗,請稍後再試");
       onSubmit([], [], null, null, null);
