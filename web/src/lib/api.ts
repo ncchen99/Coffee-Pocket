@@ -333,7 +333,7 @@ export async function fetchPocketItems(pocketId: string): Promise<PocketItem[]> 
   const { data, error } = await supabase
     .from("pocket_items")
     .select(
-      "id, pocket_id, cafe_id, personal_note, added_at, cafe:cafes(id, name, address, cover_image_url, google_rating, google_review_count, price_level, business_hours)",
+      "id, pocket_id, cafe_id, personal_note, added_at, cafe:cafes(id, name, address, cover_image_url, google_rating, google_review_count, price_level, business_hours, lng, lat)",
     )
     .eq("pocket_id", pocketId)
     .order("added_at", { ascending: false });
@@ -373,8 +373,8 @@ export async function fetchPocketItems(pocketId: string): Promise<PocketItem[]> 
         top_tags: (topTagsMap[c.id] ?? []).map(dbTagLabel),
         distance_km: 0,
         open_now: false,
-        lng: 0,
-        lat: 0,
+        lng: c.lng ?? 0,
+        lat: c.lat ?? 0,
         google_rating: c.google_rating ?? null,
         google_review_count: c.google_review_count ?? null,
         price_level: c.price_level ?? null,

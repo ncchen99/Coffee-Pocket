@@ -1,4 +1,4 @@
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import { useIsDesktop } from "@/components/layout/Responsive";
 import { Placeholder, TagBadge } from "@/components/primitives";
 import type { CafeCard } from "@/types/cafe";
@@ -27,6 +27,7 @@ export function CafeListItem({
   onHover,
 }: CafeListItemProps) {
   const isDesktop = useIsDesktop();
+  const locationObj = useLocation();
   // 在 render 時即時計算營業狀態 —— 避免 React Query 把 fetch 當下的時間點固化,
   // 過了打烊時間後列表仍顯示「營業中」、與詳細頁不一致。
   const liveStatus = cafe.business_hours
@@ -44,7 +45,10 @@ export function CafeListItem({
   // 再點一次已選中的項目就回首頁(關閉詳細區塊)。
   return (
     <Link
-      to={isDesktop && active ? "/" : `/cafe/${cafe.id}`}
+      to={{
+        pathname: isDesktop && active ? "/" : `/cafe/${cafe.id}`,
+        search: locationObj.search,
+      }}
       onMouseEnter={() => onHover?.(cafe.id)}
       onMouseLeave={() => onHover?.(null)}
       className={clsx(
