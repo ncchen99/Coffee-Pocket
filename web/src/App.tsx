@@ -166,6 +166,13 @@ function DesktopApp() {
       : baseCafes;
   const totalCount = isPocketMode ? pocketCafes.length : (searchQuery.data?.total ?? 0);
 
+  // 在 pocket 模式下,所有導航都要把 ?pocket=<id> 帶著走 —— 點 marker 進詳細
+  // 頁不能掉 query string,否則 useSearchParams 抓不到 pocketId,
+  // 整個列表就會切回 search 模式、跑出非口袋裡的店。
+  const pocketSearch = isPocketMode ? `?pocket=${encodeURIComponent(pocketId!)}` : "";
+  const cafePath = (slugOrId: string) => `/cafe/${slugOrId}${pocketSearch}`;
+  const homePath = `/${pocketSearch}`;
+
   // 把 URL 上的 ident (slug / UUID) 對到 cafes 列表中的 UUID,
   // 讓 CafeMap / SearchSidebar 的 active 比對仍走 cafe.id。
   const activeId =
@@ -218,8 +225,8 @@ function DesktopApp() {
                   setOpenAt(null);
                   setRadiusM(null);
                 }}
-                onClose={() => navigate("/")}
-                onApply={() => navigate("/")}
+                onClose={() => navigate(homePath)}
+                onApply={() => navigate(homePath)}
                 openAt={openAt}
                 onOpenAtChange={setOpenAt}
                 radiusM={radiusM}
@@ -237,7 +244,7 @@ function DesktopApp() {
             <div key={cafe.id} className="cp-anim-slide-in relative h-full flex flex-col">
               <button
                 type="button"
-                onClick={() => navigate("/")}
+                onClick={() => navigate(homePath)}
                 aria-label="關閉"
                 className={`btn btn-ghost btn-sm btn-square absolute right-4 top-4 z-20 transition-all duration-200 ${
                   isScrolled
@@ -273,7 +280,7 @@ function DesktopApp() {
             fitToCafesKey={isPocketMode ? `pocket:${pocketId}` : null}
             onMarkerClick={(mid) => {
               const c = cafes.find((x) => x.id === mid);
-              navigate(`/cafe/${c?.slug ?? mid}`);
+              navigate(cafePath(c?.slug ?? mid));
             }}
           />
           {/* 中間欄展開 / 收合期間,地圖容器寬度同步漸變,Mapbox 會逐幀 resize +
