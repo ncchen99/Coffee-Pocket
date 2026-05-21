@@ -55,8 +55,11 @@ export function useCafeActions(cafeId: string | null) {
         onSuccess: (newPocket) => {
           if (pendingAddAfterCreate && cafeId) {
             addMutation.mutate({ pocketId: newPocket.id, cafeId });
-            setPendingAddAfterCreate(false);
           }
+          setPendingAddAfterCreate(false);
+        },
+        onError: () => {
+          setPendingAddAfterCreate(false);
         },
       },
     );
@@ -94,7 +97,6 @@ export function useCafeActions(cafeId: string | null) {
       closePicker: () => setIsPickerOpen(false),
       closeCreatePocket: () => {
         setIsCreatePocketOpen(false);
-        setPendingAddAfterCreate(false);
       },
       closeReport: () => setIsReportOpen(false),
       openCreateFromPicker: () => {

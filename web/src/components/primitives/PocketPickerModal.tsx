@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { BookmarkAdd01Icon, Add01Icon } from "@hugeicons/core-free-icons";
+import { BookmarkAdd01Icon, Add01Icon, Tick01Icon } from "@hugeicons/core-free-icons";
 import type { Pocket } from "@/types/cafe";
 
 interface PocketPickerModalProps {
@@ -82,9 +82,15 @@ export function PocketPickerModal({
                 >
                   {p.emoji ? `${p.emoji} ` : ""}
                   {p.name}
-                  <span className="float-right text-xs text-base-content/55">
-                    {p.item_count ?? 0} 間
-                  </span>
+                  {picked === p.id ? (
+                    <span className="float-right text-success flex items-center mt-0.5">
+                      <HugeiconsIcon icon={Tick01Icon} size={15} strokeWidth={2.5} />
+                    </span>
+                  ) : (
+                    <span className="float-right text-xs text-base-content/55">
+                      {p.item_count ?? 0} 間
+                    </span>
+                  )}
                 </button>
               </li>
             ))}

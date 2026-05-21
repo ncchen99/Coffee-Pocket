@@ -34,7 +34,7 @@ export function TagConfidenceRow({ tag, userVote, onVote }: TagConfidenceRowProp
           type="button"
           aria-label="同意"
           onClick={() => onVote?.(tag.key, "up")}
-          className={`btn btn-xs join-item ${isUpvoted ? "btn-neutral" : "btn-outline"}`}
+          className={`btn btn-xs join-item ${isUpvoted ? "btn-primary" : "btn-outline"}`}
         >
           <HugeiconsIcon icon={ThumbsUpIcon} size={12} strokeWidth={1.5} />
         </button>
@@ -42,7 +42,7 @@ export function TagConfidenceRow({ tag, userVote, onVote }: TagConfidenceRowProp
           type="button"
           aria-label="不同意"
           onClick={() => onVote?.(tag.key, "down")}
-          className={`btn btn-xs join-item ${isDownvoted ? "btn-neutral" : "btn-outline"}`}
+          className={`btn btn-xs join-item ${isDownvoted ? "btn-primary" : "btn-outline"}`}
         >
           <HugeiconsIcon icon={ThumbsDownIcon} size={12} strokeWidth={1.5} />
         </button>

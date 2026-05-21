@@ -82,18 +82,28 @@ export function CafeListItem({
         {cafe.top_tags.length > 0 && (
           <div className="mt-1 flex flex-wrap gap-1">
             {cafe.top_tags.map((t) => (
-              <TagBadge key={t} variant="neutral" size="sm">
+              <TagBadge
+                key={t}
+                variant="neutral"
+                size="sm"
+                className="!h-[18px] py-0.5 px-1.5 flex items-center"
+              >
                 {t}
               </TagBadge>
             ))}
           </div>
         )}
-        <div className="mt-1 text-[11px] text-base-content/45">
+        <div
+          className={clsx(
+            "mt-1 text-[11px]",
+            cafe.open_now ? "text-success font-medium" : "text-error font-medium"
+          )}
+        >
           {cafe.open_now
             ? cafe.closes_at
               ? `營業中 · 至 ${cafe.closes_at}`
               : "營業中"
-            : "今日已休"}
+            : "已休息"}
         </div>
       </div>
     </Link>

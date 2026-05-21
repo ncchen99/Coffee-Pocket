@@ -185,3 +185,18 @@
   }
 }
 
+/* ─────────────────────────────────────
+ * 讓 .badge-neutral 標籤在淺色與深色模式下都呈現「淺色底、深色字」
+ * ────────────────────────────────── */
+[data-theme="coffee-paper"] .badge-neutral {
+  background-color: oklch(var(--b3)) !important;
+  color: oklch(var(--bc)) !important;
+  border-color: transparent !important;
+}
+
+[data-theme="coffee-roast"] .badge-neutral {
+  background-color: oklch(var(--p)) !important;
+  color: oklch(var(--pc)) !important;
+  border-color: transparent !important;
+}
+
