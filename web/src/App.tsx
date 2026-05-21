@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Routes, Route, Navigate, useMatch, useNavigate, useLocation, useSearchParams } from "react-router-dom";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Cancel01Icon, AlertCircleIcon } from "@hugeicons/core-free-icons";
@@ -93,9 +93,6 @@ function DesktopApp() {
   const [displayed, setDisplayed] = useState<string | null>(activeIdent);
   const [isScrolled, setIsScrolled] = useState(false);
   const [sortKey, setSortKey] = useState<SortKey>("distance");
-  // 中間欄轉場期間覆蓋一層模糊遮罩,避免 Mapbox 寬度漸變時的視覺跳動。
-  // 轉場結束後再 fade out。
-  const [isPanelAnimating, setIsPanelAnimating] = useState(false);
 
   useEffect(() => {
     if (activeIdent) {
@@ -113,11 +110,23 @@ function DesktopApp() {
   const { location } = useUserLocation();
   const isPanelOpen = !!activeIdent || isFilterOpen;
 
+  // 中間欄改用「絕對定位 + translate-x 滑入」的覆蓋層,而不是 flex sibling 推擠
+  // CafeMap 寬度。原本 width transition 會讓 Mapbox 容器每幀 resize + reproject,
+  // 視覺上像是地圖整片在跳動 / 閃爍;改成 overlay 後地圖寬度恆定,完全不會 resize。
+  // 為了讓「選中咖啡廳 flyTo」仍把 marker 對在可見區域中心,
+  // 量出覆蓋層的實際寬度並當作 paddingLeft 餵給 CafeMap。
+  const panelRef = useRef<HTMLDivElement>(null);
+  const [panelWidth, setPanelWidth] = useState(0);
   useEffect(() => {
-    setIsPanelAnimating(true);
-    const t = window.setTimeout(() => setIsPanelAnimating(false), 320);
-    return () => window.clearTimeout(t);
-  }, [isPanelOpen]);
+    const el = panelRef.current;
+    if (!el) return;
+    const update = () => setPanelWidth(el.offsetWidth);
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+  const mapPaddingLeft = isPanelOpen ? panelWidth : 0;
 
   const searchQuery = useCafeSearch({
     tags: Array.from(selected),
@@ -208,90 +217,85 @@ function DesktopApp() {
             onKeywordChange={setKeyword}
           />
         </div>
-        <div
-          className={`relative shrink-0 overflow-hidden bg-base-100 transition-[width,opacity] duration-300 ease-out ${
-            isPanelOpen
-              ? "w-[32%] min-w-[360px] xl:w-[29%] xl:min-w-[340px] 2xl:w-[27%] 2xl:min-w-[320px] border-r border-base-content/10 opacity-100"
-              : "w-0 min-w-0 opacity-0"
-          }`}
-        >
-          {isFilterOpen ? (
-            <div className="cp-anim-slide-in h-full">
-              <DesktopFilterPanel
-                selected={selected}
-                onToggle={toggle}
-                onReset={() => {
-                  setAll([]);
-                  setOpenAt(null);
-                  setRadiusM(null);
-                }}
-                onClose={() => navigate(homePath)}
-                onApply={() => navigate(homePath)}
-                openAt={openAt}
-                onOpenAtChange={setOpenAt}
-                radiusM={radiusM}
-                onRadiusMChange={setRadiusM}
-              />
-            </div>
-          ) : detailQuery.isLoading && displayed ? (
-            <div className="cp-anim-slide-in h-full p-6 space-y-3">
-              <div className="h-40 bg-base-200 animate-pulse rounded" />
-              <div className="h-6 bg-base-200 animate-pulse rounded w-1/2" />
-              <div className="h-4 bg-base-200 animate-pulse rounded w-3/4" />
-              <div className="h-20 bg-base-200 animate-pulse rounded" />
-            </div>
-          ) : cafe ? (
-            <div key={cafe.id} className="cp-anim-slide-in relative h-full flex flex-col">
-              <button
-                type="button"
-                onClick={() => navigate(homePath)}
-                aria-label="關閉"
-                className={`btn btn-ghost btn-sm btn-square absolute right-4 top-4 z-20 transition-all duration-200 ${
-                  isScrolled
-                    ? "bg-base-100 text-base-content opacity-100 shadow-md border border-base-content/10"
-                    : "bg-base-100/40 text-base-content/70 opacity-60 hover:opacity-100 hover:bg-base-100/60 backdrop-blur"
-                }`}
-              >
-                <HugeiconsIcon icon={Cancel01Icon} size={18} strokeWidth={1.5} />
-              </button>
-              <div
-                className="flex-1 overflow-y-auto"
-                onScroll={(e) => {
-                  setIsScrolled(e.currentTarget.scrollTop >= 10);
-                }}
-              >
-                <CafeDetailContent cafe={cafe} isDesktop={true} actions={actions} />
-              </div>
-            </div>
-          ) : displayed ? (
-            <div className="flex h-full items-center justify-center p-6">
-              <div role="alert" className="alert alert-warning max-w-sm">
-                <HugeiconsIcon icon={AlertCircleIcon} size={18} strokeWidth={1.5} />
-                <span>{detailQuery.isError ? "載入失敗，請稍後再試" : "找不到這間店"}</span>
-              </div>
-            </div>
-          ) : null}
-        </div>
         <section className="relative flex-1 overflow-hidden">
           <CafeMap
             cafes={cafes}
             activeId={activeId}
             userLocation={location}
+            paddingLeft={mapPaddingLeft}
             fitToCafesKey={isPocketMode ? `pocket:${pocketId}` : null}
             onMarkerClick={(mid) => {
               const c = cafes.find((x) => x.id === mid);
               navigate(cafePath(c?.slug ?? mid));
             }}
           />
-          {/* 中間欄展開 / 收合期間,地圖容器寬度同步漸變,Mapbox 會逐幀 resize +
-              reproject —— 視覺上像是「畫面跳動」。蓋一層模糊覆蓋層在轉場期間
-              遮住跳動,等寬度穩定 (~320ms) 再淡出,避免眼睛抓不到參考點。 */}
+          {/* 詳細欄 / 篩選欄做成絕對定位的覆蓋層,從地圖區左側滑入。
+              CafeMap 的容器寬度全程不變,Mapbox 不會 resize/reproject,
+              因此沒有「畫面閃爍」的問題。aria-hidden 在收起時關閉互動。 */}
           <div
-            aria-hidden
-            className={`pointer-events-none absolute inset-0 bg-base-100/40 backdrop-blur-md transition-opacity duration-300 ease-out ${
-              isPanelAnimating ? "opacity-100" : "opacity-0"
+            ref={panelRef}
+            aria-hidden={!isPanelOpen}
+            className={`absolute inset-y-0 left-0 z-10 w-[38%] min-w-[400px] xl:w-[35%] xl:min-w-[380px] 2xl:w-[33%] 2xl:min-w-[360px] overflow-hidden border-r border-base-content/10 bg-base-100 shadow-lg transition-transform duration-300 ease-out ${
+              isPanelOpen ? "translate-x-0" : "-translate-x-full pointer-events-none"
             }`}
-          />
+          >
+            {isFilterOpen ? (
+              <div className="cp-anim-slide-in h-full">
+                <DesktopFilterPanel
+                  selected={selected}
+                  onToggle={toggle}
+                  onReset={() => {
+                    setAll([]);
+                    setOpenAt(null);
+                    setRadiusM(null);
+                  }}
+                  onClose={() => navigate(homePath)}
+                  onApply={() => navigate(homePath)}
+                  openAt={openAt}
+                  onOpenAtChange={setOpenAt}
+                  radiusM={radiusM}
+                  onRadiusMChange={setRadiusM}
+                />
+              </div>
+            ) : detailQuery.isLoading && displayed ? (
+              <div className="cp-anim-slide-in h-full p-6 space-y-3">
+                <div className="h-40 bg-base-200 animate-pulse rounded" />
+                <div className="h-6 bg-base-200 animate-pulse rounded w-1/2" />
+                <div className="h-4 bg-base-200 animate-pulse rounded w-3/4" />
+                <div className="h-20 bg-base-200 animate-pulse rounded" />
+              </div>
+            ) : cafe ? (
+              <div key={cafe.id} className="cp-anim-slide-in relative h-full flex flex-col">
+                <button
+                  type="button"
+                  onClick={() => navigate(homePath)}
+                  aria-label="關閉"
+                  className={`btn btn-ghost btn-sm btn-square absolute right-4 top-4 z-20 transition-all duration-200 ${
+                    isScrolled
+                      ? "bg-base-100 text-base-content opacity-100 shadow-md border border-base-content/10"
+                      : "bg-base-100/40 text-base-content/70 opacity-60 hover:opacity-100 hover:bg-base-100/60 backdrop-blur"
+                  }`}
+                >
+                  <HugeiconsIcon icon={Cancel01Icon} size={18} strokeWidth={1.5} />
+                </button>
+                <div
+                  className="flex-1 overflow-y-auto"
+                  onScroll={(e) => {
+                    setIsScrolled(e.currentTarget.scrollTop >= 10);
+                  }}
+                >
+                  <CafeDetailContent cafe={cafe} isDesktop={true} actions={actions} />
+                </div>
+              </div>
+            ) : displayed ? (
+              <div className="flex h-full items-center justify-center p-6">
+                <div role="alert" className="alert alert-warning max-w-sm">
+                  <HugeiconsIcon icon={AlertCircleIcon} size={18} strokeWidth={1.5} />
+                  <span>{detailQuery.isError ? "載入失敗，請稍後再試" : "找不到這間店"}</span>
+                </div>
+              </div>
+            ) : null}
+          </div>
         </section>
       </div>
       <CafeActionModals actions={actions} />

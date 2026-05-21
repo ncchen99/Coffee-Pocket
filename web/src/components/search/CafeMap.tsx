@@ -21,10 +21,11 @@ interface CafeMapProps {
   /**
    * 視覺上會被其他面板遮蓋的邊距(px)。flyTo 會把這些邊距視為「不可見區域」,
    * 把選中咖啡廳定位在剩餘可見區域的中心。
-   * - 桌面:詳細欄從左側推進,寬度由 React 控制,Mapbox 容器同步 shrink → 不需 padding。
-   * - 手機:bottom sheet 蓋住下半部 → 傳入 sheet 的高度。
+   * - 桌面:詳細欄是 absolute overlay 蓋在地圖左側 → 傳入 overlay 寬度作為 paddingLeft。
+   * - 手機:bottom sheet 蓋住下半部 → 傳入 sheet 的高度作為 paddingBottom。
    */
   paddingBottom?: number;
+  paddingLeft?: number;
   className?: string;
   /**
    * 當這個 key 變化(且 cafes 非空)時,觸發一次 fitBounds —— 把目前所有 cafes
@@ -160,6 +161,7 @@ export function CafeMap({
   userLocation,
   onMarkerClick,
   paddingBottom = 0,
+  paddingLeft = 0,
   className,
   fitToCafesKey = null,
 }: CafeMapProps) {
@@ -275,7 +277,12 @@ export function CafeMap({
     if (!map || cafes.length === 0) return;
     // 抑制 user location 首次取得時的 auto fly-to,避免和 fitBounds 互相覆寫。
     hasFlownToUserRef.current = true;
-    const padding = { top: 40, right: 40, bottom: Math.max(paddingBottom, 40), left: 40 };
+    const padding = {
+      top: 40,
+      right: 40,
+      bottom: Math.max(paddingBottom, 40),
+      left: Math.max(paddingLeft, 40),
+    };
     if (cafes.length === 1) {
       const only = cafes[0];
       map.flyTo({ center: [only.lng, only.lat], zoom: 15, duration: 800, padding });
@@ -284,7 +291,7 @@ export function CafeMap({
     const bounds = new mapboxgl.LngLatBounds();
     cafes.forEach((c) => bounds.extend([c.lng, c.lat]));
     map.fitBounds(bounds, { padding, duration: 800, maxZoom: 15 });
-  }, [fitToCafesKey, cafes, paddingBottom]);
+  }, [fitToCafesKey, cafes, paddingBottom, paddingLeft]);
 
   // user location marker
   useEffect(() => {
@@ -311,13 +318,13 @@ export function CafeMap({
           center: [userLocation.lng, userLocation.lat],
           zoom: 14,
           duration: 800,
-          padding: { top: 0, right: 0, bottom: paddingBottom, left: 0 },
+          padding: { top: 0, right: 0, bottom: paddingBottom, left: paddingLeft },
         });
       }
     } else {
       hasFlownToUserRef.current = false;
     }
-  }, [userLocation, activeId, paddingBottom]);
+  }, [userLocation, activeId, paddingBottom, paddingLeft]);
 
   // 持久化 padding —— 把 sheet 覆蓋的範圍視為「不可見區域」,
   // 不只用在 flyTo / easeTo,連手動 pan / resize 也會以此重算中心。
@@ -326,8 +333,8 @@ export function CafeMap({
   useEffect(() => {
     const map = mapRef.current;
     if (!map) return;
-    map.setPadding({ top: 0, right: 0, bottom: paddingBottom, left: 0 });
-  }, [paddingBottom]);
+    map.setPadding({ top: 0, right: 0, bottom: paddingBottom, left: paddingLeft });
+  }, [paddingBottom, paddingLeft]);
 
   // highlight active —— 桌面 / 手機都顯示色彩切換
   // 用 class toggle 而非 inline style,讓 hover / active 的 CSS 規則保有正常的階層,
@@ -342,24 +349,25 @@ export function CafeMap({
     const cafe = cafes.find((c) => c.id === activeId);
     if (!cafe) return;
     const map = mapRef.current;
-    // 桌面詳細欄展開時容器寬度會在 300ms 內漸變;在轉場期間先發 flyTo 容易被 resize
-    // 重投影擾動,終態位置不準。先 flyTo 一次給用戶即時回饋,再於轉場結束後補一次
-    // easeTo 校正中心。手機則一律帶入 sheet 的 padding,讓咖啡廳落在可見區域中心。
+    // 詳細欄是 absolute overlay,地圖容器寬度不變、不會 resize/reproject,
+    // 但 overlay 會遮住左側一段視覺寬度,所以 flyTo padding.left 帶 paddingLeft
+    // 把選中咖啡廳對到「剩餘可見區域」的中心。手機則一律帶入 sheet 的 paddingBottom。
+    const padding = { top: 0, right: 0, bottom: paddingBottom, left: paddingLeft };
     map.flyTo({
       center: [cafe.lng, cafe.lat],
       zoom: 16,
       duration: 600,
-      padding: { top: 0, right: 0, bottom: paddingBottom, left: 0 },
+      padding,
     });
     const t = window.setTimeout(() => {
       map.easeTo({
         center: [cafe.lng, cafe.lat],
         duration: 250,
-        padding: { top: 0, right: 0, bottom: paddingBottom, left: 0 },
+        padding,
       });
     }, 360);
     return () => window.clearTimeout(t);
-  }, [activeId, cafes, paddingBottom]);
+  }, [activeId, cafes, paddingBottom, paddingLeft]);
 
   if (!hasMapboxToken) {
     return (
