@@ -21,3 +21,5 @@
 現在沒有新增標籤的功能，應該要讓使用者可以新增標籤。
 - [ ] 檢查 function 是否可以移除 改成前端直接處理 透過好的 rls 規則
 - [ ] 搜尋可以直接用關鍵字搜尋 可以輸入咖啡廳的名子 （詞向量搜尋？） 成本太高的話 用類似 big query??? 
+- [ ] 前端標籤投票後 不要按百分排序 跳動影響體驗
+- [ ] 修正 new row violates row-level security policy for table "cafe_tags" 看怎麼設計
