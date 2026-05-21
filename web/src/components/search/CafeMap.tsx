@@ -199,8 +199,8 @@ export function CafeMap({
       style: "mapbox://styles/mapbox/standard",
       center: TAINAN_CENTER,
       zoom: DEFAULT_ZOOM,
-      minZoom: 12,
-      maxZoom: 16,
+      minZoom: 14,
+      maxZoom: 17,
       attributionControl: false,
       // v3 Standard style 接受 config 物件
       config: { basemap: configForTheme(initialTheme) } as never,

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Routes, Route, Navigate, useMatch, useNavigate } from "react-router-dom";
+import { Routes, Route, Navigate, useMatch, useNavigate, useSearchParams } from "react-router-dom";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Cancel01Icon, AlertCircleIcon } from "@hugeicons/core-free-icons";
 import { useIsDesktop } from "@/components/layout/Responsive";
@@ -10,6 +10,7 @@ import { CafeDetailContent } from "@/components/cafe/CafeDetailContent";
 import { CafeActionModals } from "@/components/cafe/CafeActionModals";
 import { DesktopFilterPanel } from "@/components/search/DesktopFilterPanel";
 import { useSearchSelection } from "@/hooks/useSearchSelection";
+import { SCENARIO_BY_KEY } from "@/components/search/ScenarioGrid";
 import { useCafeSearch, useCafeDetail } from "@/hooks/useCafes";
 import { useCafeActions } from "@/hooks/useCafeActions";
 import { useUserLocation } from "@/context/UserLocationContext";
@@ -74,8 +75,48 @@ function DesktopApp() {
   const activeId = cafeMatch?.params.id ?? null;
   const isFilterOpen = !!filterMatch;
 
+  const [params] = useSearchParams();
+  const initialTags = params.getAll("tag");
+  const initialScenario = params.get("scenario");
+  const initialOpenAt = params.get("open_at");
+  const initialD = params.get("d");
+  const initialRadiusM = initialD != null ? Number(initialD) * 1000 : null;
+
   const { selected, orSelected, toggle, setAll, setOrSelected, query, setQuery, scenario, pickScenario, openAt, setOpenAt, radiusM, setRadiusM } =
-    useSearchSelection();
+    useSearchSelection(initialTags, initialRadiusM);
+
+  // 啟動時根據 URL 還原場景與時間
+  useEffect(() => {
+    if (initialScenario && SCENARIO_BY_KEY[initialScenario]) {
+      pickScenario(SCENARIO_BY_KEY[initialScenario]);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    if (initialOpenAt) {
+      setOpenAt(initialOpenAt);
+    }
+  }, [initialOpenAt, setOpenAt]);
+
+  // 雙向同步：當選中標籤、情境、時間或距離改變時，同步更新 URL 查詢參數，確保分享連結與重新整理功能正常
+  useEffect(() => {
+    const nextParams = new URLSearchParams();
+    selected.forEach((t) => nextParams.append("tag", t));
+    if (scenario) nextParams.set("scenario", scenario);
+    if (openAt) nextParams.set("open_at", openAt);
+    if (radiusM != null) nextParams.set("d", String(radiusM / 1000));
+    if (query) nextParams.set("q", query);
+
+    const searchStr = nextParams.toString();
+    const currentSearch = window.location.search.replace(/^\?/, "");
+    if (searchStr !== currentSearch) {
+      navigate({
+        pathname: window.location.pathname,
+        search: searchStr ? `?${searchStr}` : "",
+      }, { replace: true });
+    }
+  }, [selected, scenario, openAt, radiusM, query, navigate]);
 
   // displayed 落後 activeId —— 關閉時讓內容多停留 280ms 給 exit 動畫播完。
   const [displayed, setDisplayed] = useState<string | null>(activeId);

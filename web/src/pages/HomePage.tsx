@@ -12,10 +12,15 @@ import { useSearchSelection } from "@/hooks/useSearchSelection";
  */
 export default function HomePage() {
   const navigate = useNavigate();
-  const { selected, toggle, setAll, query, setQuery, scenario, pickScenario } =
+  const { selected, toggle, setAll, query, setQuery, scenario, pickScenario, openAt } =
     useSearchSelection();
 
-  const goSearch = (overrideTags?: string[], scenarioKey?: string | null, distanceKm?: number | null) => {
+  const goSearch = (
+    overrideTags?: string[],
+    scenarioKey?: string | null,
+    distanceKm?: number | null,
+    overrideOpenAt?: string | null,
+  ) => {
     const params = new URLSearchParams();
     const tags = overrideTags ?? Array.from(selected);
     tags.forEach((k) => params.append("tag", k));
@@ -23,6 +28,10 @@ export default function HomePage() {
     const s = scenarioKey === undefined ? scenario : scenarioKey;
     if (s) params.set("scenario", s);
     if (distanceKm != null) params.set("d", String(distanceKm));
+    
+    const timeVal = overrideOpenAt !== undefined ? overrideOpenAt : openAt;
+    if (timeVal) params.set("open_at", timeVal);
+
     navigate(`/map?${params.toString()}`);
   };
 
@@ -35,10 +44,10 @@ export default function HomePage() {
           onQueryChange={setQuery}
           selected={selected}
           onToggle={toggle}
-          onSubmit={(parsed, _softTags, _openAt, distanceKm) => {
+          onSubmit={(parsed, _softTags, parsedOpenAt, distanceKm) => {
             // LLM 解析後的 tags 直接覆蓋 selection 並導頁
             setAll(parsed);
-            goSearch(parsed, null, distanceKm);
+            goSearch(parsed, null, distanceKm, parsedOpenAt);
           }}
         />
 
@@ -50,8 +59,9 @@ export default function HomePage() {
             layout="stack"
             activeKey={scenario}
             onPick={(s) => {
+              const resolvedOpenAt = s.resolveOpenAt ? s.resolveOpenAt() : null;
               pickScenario(s);
-              goSearch(s.tags, s.key);
+              goSearch(s.tags, s.key, null, resolvedOpenAt);
             }}
           />
         </div>

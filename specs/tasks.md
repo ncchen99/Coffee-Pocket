@@ -34,9 +34,9 @@
 ### 2.1 Auth
 
 - [x] 啟用 Supabase Auth Google OAuth (對應 [login.md](../designs/wireframes/pages/login.md))
-- [x] 啟用 Apple OAuth (iOS PWA / 行動端) - [x] 這個部分決定不做
+- [~] ~~啟用 Apple OAuth (iOS PWA / 行動端)~~ — 決定不做
 - [x] `users` 表觸發器:auth.users → public.users (自動同步 display_name / avatar)
-- [x] RLS 政策:`cafes` public read;`edits` / `pockets` / `pocket_items` owner-only write
+- [x] RLS 政策:`cafes` / `cafe_tags` / `tag_evidence` public read;`edits` / `pockets` / `pocket_items` / `tag_votes` / `reports` owner-only write;`sources` / `dead_letter` service-role only;`public_user_profiles` view 暴露安全的 user 子集 (見 migrations 0001 / 0005 / 0013–0016)
 
 ### 2.2 Schema 補完
 
@@ -50,21 +50,22 @@
 
 > 統一放 `supabase/functions/<name>/index.ts`。Edge Function 只做 thin layer,重活留給 Postgres / Python worker。
 
-- [x] `search-cafes` — 多標籤交叉 + PostGIS 距離 + 時間 + 排序;input: `{tags, center, radius_km, at_time, sort}` → 直接走 SQL RPC,< 200ms
-- [ ] `cafe-detail` — 單店完整資訊 + tags with evidence + AI 摘要 + 即時營業狀態
-- [ ] `submit-edit` — 寫入 `edits` (pending),回傳 ticket id ([cafe-edit.md](../designs/wireframes/pages/cafe-edit.md) §提交後)
+- [x] `search-cafes` — 多標籤交叉 + PostGIS 距離 + 時間 + 排序;input: `{tags, center, radius_km, at_time, sort}` → 直接走 SQL RPC `cafes_search`,< 200ms
+- [x] `cafe-detail` — 直接走 SQL RPC `cafe_detail(uuid)` (migrations 0006 / 0015),含 tags + evidence count + 即時營業狀態;AI 摘要欄位待 Phase 4 pipeline 填入
+- [x] `submit-edit` — 寫入 `edits` (pending),回傳 ticket id ([supabase/functions/submit-edit/index.ts](../supabase/functions/submit-edit/index.ts))
 - [ ] `submit-cafe` — 新店家送審 + 觸發後端 AI 標籤 pipeline ([cafe-add.md](../designs/wireframes/pages/cafe-add.md))
-- [ ] `vote-tag` — 對標籤 👍/👎,寫入 `tag_votes`,連續 N 次 👎 後 client 顯示「直接修」CTA
+- [x] `vote-tag` — 對標籤 👍/👎,寫入 `tag_votes` ([supabase/functions/vote-tag/index.ts](../supabase/functions/vote-tag/index.ts));連續 N 次 👎 後顯示「直接修」CTA 的前端邏輯尚未做
 - [ ] `ai-summary` — 呼叫 LLM 生成情境式摘要,結果 cache 進 `cafes.ai_summary` (TTL 3000 天);Edge Function 只負責 cache 命中 / 失誤調用
 - [ ] `nearby-resolve` — 反向地理:lat/lng → 臺南行政區名稱 (定位失敗 fallback 用,見 [empty-error.md](../designs/wireframes/pages/empty-error.md))
-- [ ] `export-pocket` — 匯出單一使用者的所有 pockets → JSON ([settings.md](../designs/wireframes/pages/settings.md))
-- [ ] `delete-account` — GDPR 級刪除:auth.users + 級聯清掉 pockets / edits / votes
-- [ ] (Optional) `report-issue` — 寫入 `reports`,管理員後台處理
+- [x] `export-pocket` — 匯出單一使用者的所有 pockets → JSON ([supabase/functions/export-pocket/index.ts](../supabase/functions/export-pocket/index.ts))
+- [x] `delete-account` — GDPR 級刪除:auth.users + 級聯清掉 pockets / edits / votes ([supabase/functions/delete-account/index.ts](../supabase/functions/delete-account/index.ts))
+- [x] (Optional) `report-issue` — 寫入 `reports`,管理員後台處理 ([supabase/functions/submit-report/index.ts](../supabase/functions/submit-report/index.ts))
+- [x] `parse-prompt` — 自然語意 → 搜尋條件解析 ([supabase/functions/parse-prompt/index.ts](../supabase/functions/parse-prompt/index.ts))
 
 ### 2.4 PostGIS / SQL 層
 
-- [ ] SQL function `cafes_search(...)` — 把 §2.3 的 `search-cafes` 主邏輯下推到 SQL (用 generated column + `ST_DWithin` + tag join)
-- [ ] SQL function `cafes_open_at(timestamp)` — 解析營業時間 JSON,回傳當下是否開
+- [x] SQL function `cafes_search(...)` — §2.3 主邏輯下推到 SQL (migrations 0006 → 0007 → 0011 → 0013,含時間過濾、OR-tag、無限半徑)
+- [x] SQL function `cafe_open_at(jsonb, timestamptz)` — 解析營業時間 JSON,回傳當下是否開 (migrations 0006 / 0012)
 - [ ] Tag confidence threshold:strict / loose 兩種模式
 - [ ] Materialized view `cafe_card` — 列表用的精簡欄位 (id, name, cover, top_tags, distance) 提升列表查詢效能
 
@@ -91,8 +92,8 @@
 - [x] **Desktop 左列右地圖** — 移植 `wf-desktop.jsx`,Mapbox + 同步 hover state
 - [x] **Advanced Filter** — 多 tag chip + 即時筆數 ([advanced-filter.md](../designs/wireframes/pages/advanced-filter.md));每改一項 debounce 200ms 重打 `search-cafes`
 - [x] **Cafe Detail** — sticky topbar + hero carousel + 即時營業狀態 + evidence drawer ([cafe-detail.md](../designs/wireframes/pages/cafe-detail.md))
-- [x] **Cafe Edit** — diff 視覺化 + 來源附件 ([cafe-edit.md](../designs/wireframes/pages/cafe-edit.md));打 `submit-edit`
-- [x] **Cafe Add** — 3 步驟 + Google Places autocomplete ([cafe-add.md](../designs/wireframes/pages/cafe-add.md));打 `submit-cafe`
+- [ ] **Cafe Edit** — diff 視覺化 + 來源附件 ([cafe-edit.md](../designs/wireframes/pages/cafe-edit.md));打 `submit-edit` (頁面尚未實作)
+- [ ] **Cafe Add** — 3 步驟 + Google Places autocomplete ([cafe-add.md](../designs/wireframes/pages/cafe-add.md));打 `submit-cafe` (頁面尚未實作)
 - [x] **Pocket List** — chip 切換不同口袋 + 列表 / 地圖 view toggle ([pocket-list.md](../designs/wireframes/pages/pocket-list.md))
 - [x] **Login** — Supabase Auth modal,Google + Apple ([login.md](../designs/wireframes/pages/login.md))
 - [x] **Profile** — 統計 + 貢獻 timeline ([profile.md](../designs/wireframes/pages/profile.md))
