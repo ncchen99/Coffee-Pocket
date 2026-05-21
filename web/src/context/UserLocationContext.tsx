@@ -8,7 +8,7 @@ interface Coords {
 interface UserLocationContextType {
   location: Coords | null;
   permissionStatus: "granted" | "denied" | "prompt";
-  requestLocation: (onSuccess?: () => void, onError?: () => void) => void;
+  requestLocation: (onSuccess?: (coords: Coords) => void, onError?: () => void) => void;
   isLoading: boolean;
 }
 
@@ -26,7 +26,7 @@ export function UserLocationProvider({ children }: { children: React.ReactNode }
   });
   const [isLoading, setIsLoading] = useState(false);
 
-  const requestLocation = (onSuccess?: () => void, onError?: () => void) => {
+  const requestLocation = (onSuccess?: (coords: Coords) => void, onError?: () => void) => {
     setIsLoading(true);
     if (!navigator.geolocation) {
       setPermissionStatus("denied");
@@ -46,7 +46,7 @@ export function UserLocationProvider({ children }: { children: React.ReactNode }
         setPermissionStatus("granted");
         localStorage.setItem(PERMISSION_KEY, "granted");
         setIsLoading(false);
-        onSuccess?.();
+        onSuccess?.(coords);
       },
       (error) => {
         console.warn("Geolocation permission error/denied:", error);

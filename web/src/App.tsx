@@ -140,7 +140,7 @@ function DesktopApp() {
         <div
           className={`relative shrink-0 overflow-hidden bg-base-100 transition-[width,opacity] duration-300 ease-out ${
             isPanelOpen
-              ? "w-[32%] min-w-[380px] border-r border-base-content/10 opacity-100"
+              ? "w-[27%] min-w-[320px] border-r border-base-content/10 opacity-100"
               : "w-0 min-w-0 opacity-0"
           }`}
         >

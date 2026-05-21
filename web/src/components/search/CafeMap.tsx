@@ -1,5 +1,8 @@
 import { useEffect, useRef } from "react";
 import mapboxgl from "mapbox-gl";
+import { HugeiconsIcon } from "@hugeicons/react";
+import { Navigation03Icon } from "@hugeicons/core-free-icons";
+import { useUserLocation } from "@/context/UserLocationContext";
 import {
   MAPBOX_TOKEN,
   hasMapboxToken,
@@ -152,11 +155,31 @@ export function CafeMap({
   paddingBottom = 0,
   className,
 }: CafeMapProps) {
+  const { requestLocation, isLoading: isLocationLoading } = useUserLocation();
   const container = useRef<HTMLDivElement>(null);
   const mapRef = useRef<mapboxgl.Map | null>(null);
   const markersRef = useRef<Map<string, MarkerHandle>>(new Map());
   const userMarkerRef = useRef<mapboxgl.Marker | null>(null);
   const hasFlownToUserRef = useRef(false);
+
+  const handleLocateClick = () => {
+    if (userLocation) {
+      mapRef.current?.flyTo({
+        center: [userLocation.lng, userLocation.lat],
+        zoom: 14,
+        duration: 800,
+      });
+    } else {
+      requestLocation((coords) => {
+        mapRef.current?.flyTo({
+          center: [coords.lng, coords.lat],
+          zoom: 14,
+          duration: 800,
+        });
+      });
+    }
+  };
+
   // onMarkerClick 在父層通常是 inline arrow,每次 render 都是新 ref。
   // 透過 ref 取最新 handler,讓 markers effect 只依賴 cafes,
   // 避免每次 activeId 變更時把所有 marker destroy + recreate
@@ -324,5 +347,24 @@ export function CafeMap({
     );
   }
 
-  return <div ref={container} className={`h-full w-full ${className ?? ""}`} />;
+  return (
+    <div className={`relative h-full w-full ${className ?? ""}`}>
+      <div ref={container} className="h-full w-full" />
+      <div className="absolute right-2.5 top-[80px] z-10 flex flex-col gap-2">
+        <button
+          type="button"
+          onClick={handleLocateClick}
+          className="btn btn-square btn-sm border border-base-content/10 bg-base-100 shadow-md text-base-content hover:bg-base-200 transition-colors duration-200"
+          aria-label="回到現在位置"
+          title="回到現在位置"
+        >
+          {isLocationLoading ? (
+            <span className="loading loading-spinner loading-xs text-base-content/70" />
+          ) : (
+            <HugeiconsIcon icon={Navigation03Icon} size={16} strokeWidth={1.5} />
+          )}
+        </button>
+      </div>
+    </div>
+  );
 }
