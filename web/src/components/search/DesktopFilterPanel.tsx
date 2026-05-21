@@ -12,6 +12,8 @@ interface DesktopFilterPanelProps {
   onClose?: () => void;
   openAt: string | null;
   onOpenAtChange: (val: string | null) => void;
+  radiusM: number | null;
+  onRadiusMChange: (v: number | null) => void;
 }
 
 const WEEKDAY_TO_DATE_STR: Record<string, string> = {
@@ -51,9 +53,14 @@ export function DesktopFilterPanel({
   onClose,
   openAt,
   onOpenAtChange,
+  radiusM,
+  onRadiusMChange,
 }: DesktopFilterPanelProps) {
   const { location } = useUserLocation();
-  const [distance, setDistance] = useState(3);
+  // radiusM is shared (from parent); convert to km for the slider display.
+  // Default to 5km when null/undefined.
+  const distance = radiusM != null ? Math.round(radiusM / 1000) : 5;
+  const setDistance = (km: number) => onRadiusMChange(km * 1000);
   const [sort, setSort] = useState("距離");
 
   // 初始化時間模式與選定時間
@@ -82,7 +89,6 @@ export function DesktopFilterPanel({
 
   const resetAll = () => {
     onReset();
-    setDistance(3);
     setSort("距離");
     setTimeMode("any");
   };

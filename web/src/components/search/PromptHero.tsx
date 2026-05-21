@@ -18,8 +18,9 @@ interface PromptHeroProps {
   onQueryChange: (v: string) => void;
   selected: Set<string>;
   onToggle: (key: string) => void;
-  /** 提交時呼叫，會收到 LLM 解析出的 frontend short keys 和相對時間點。 */
-  onSubmit: (parsedTags: string[], openAt: string | null) => void;
+  /** 提交時呼叫，會收到 LLM 解析出的硬性 tags（AND 過濾）、軟性 tags（OR 加分）、相對時間點、與距離。 */
+  onSubmit: (parsedTags: string[], softTags: string[], openAt: string | null, distanceKm: number | null) => void;
+  onClear?: () => void;
   compact?: boolean;
 }
 
@@ -30,34 +31,48 @@ export function PromptHero({
   selected,
   onToggle,
   onSubmit,
+  onClear,
   compact = false,
 }: PromptHeroProps) {
   const [loading, setLoading] = useState(false);
   const [hint, setHint] = useState<string | null>(null);
+  const [lastSubmittedQuery, setLastSubmittedQuery] = useState("");
 
   const handleSubmit = async () => {
     const q = query.trim();
     if (!q) {
-      onSubmit([], null);
+      setLastSubmittedQuery("");
+      onSubmit([], [], null, null);
       return;
     }
     setLoading(true);
     setHint(null);
     try {
       const parsed = await parsePrompt(q);
-      if (parsed.tags.length === 0 && !parsed.open_at) {
+      if (parsed.tags.length === 0 && !parsed.open_at && parsed.distance_km === null) {
         setHint("沒抓到對應條件,請試試「有插座」「安靜」「不限時」等關鍵字");
       } else {
         setHint(parsed.rationale || null);
       }
-      onSubmit(parsed.tags, parsed.open_at);
+      setLastSubmittedQuery(q);
+      onSubmit(parsed.tags, parsed.soft_tags, parsed.open_at, parsed.distance_km);
     } catch (e) {
       setHint("語意分析失敗,改用手動篩選試試");
-      onSubmit([], null);
+      onSubmit([], [], null, null);
     } finally {
       setLoading(false);
     }
   };
+
+  const handleClear = () => {
+    onQueryChange("");
+    setLastSubmittedQuery("");
+    setHint(null);
+    onClear?.();
+  };
+
+  const hasActiveFilters = query.trim() !== "" || selected.size > 0;
+  const isClearButton = hasActiveFilters && query === lastSubmittedQuery;
 
   return (
     <section>
@@ -78,26 +93,33 @@ export function PromptHero({
       <form
         onSubmit={(e) => {
           e.preventDefault();
-          void handleSubmit();
+          if (!isClearButton) {
+            void handleSubmit();
+          }
         }}
         className="join mt-4 w-full border border-base-content/25"
       >
-        <span className="join-item flex items-center pl-3 text-base-content/55">
-          <HugeiconsIcon icon={Search01Icon} size={16} strokeWidth={1.5} />
-        </span>
-        <input
-          type="text"
-          value={query}
-          onChange={(e) => onQueryChange(e.target.value)}
-          placeholder="例如:想找一個安靜可以帶電腦的地方"
-          className="input input-ghost join-item flex-1 focus:outline-none focus:bg-transparent"
+        <label className="input input-ghost join-item flex-1 flex items-center gap-2 pl-3 focus-within:bg-transparent">
+          <HugeiconsIcon icon={Search01Icon} size={16} strokeWidth={1.5} className="text-base-content/55 flex-shrink-0" />
+          <input
+            type="text"
+            value={query}
+            onChange={(e) => onQueryChange(e.target.value)}
+            placeholder="例如:想找一個安靜可以帶電腦的地方"
+            className="grow focus:outline-none bg-transparent text-sm h-full"
+            disabled={loading}
+          />
+        </label>
+        <button
+          type={isClearButton ? "button" : "submit"}
+          onClick={isClearButton ? handleClear : undefined}
+          className="btn btn-neutral join-item"
           disabled={loading}
-        />
-        <button type="submit" className="btn btn-neutral join-item" disabled={loading}>
+        >
           {loading ? (
             <HugeiconsIcon icon={Loading03Icon} size={14} className="animate-spin" />
           ) : (
-            "搜尋"
+            isClearButton ? "清除" : "搜尋"
           )}
         </button>
       </form>

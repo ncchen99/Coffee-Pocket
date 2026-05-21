@@ -31,26 +31,27 @@ export default function App() {
   if (isDesktop) {
     return (
       <Routes>
-        <Route path="/login" element={<LoginPage />} />
-        <Route path="/profile" element={<DesktopProfilePage />} />
-        <Route path="/settings" element={<DesktopSettingsPage />} />
-        <Route path="/pocket" element={<DesktopPocketPage />} />
-        <Route path="*" element={<DesktopApp />} />
+        <Route path="/onboarding" element={<OnboardingPage />} />
+        <Route path="/login" element={isOnboarded() ? <LoginPage /> : <Navigate to="/onboarding" replace />} />
+        <Route path="/profile" element={isOnboarded() ? <DesktopProfilePage /> : <Navigate to="/onboarding" replace />} />
+        <Route path="/settings" element={isOnboarded() ? <DesktopSettingsPage /> : <Navigate to="/onboarding" replace />} />
+        <Route path="/pocket" element={isOnboarded() ? <DesktopPocketPage /> : <Navigate to="/onboarding" replace />} />
+        <Route path="*" element={isOnboarded() ? <DesktopApp /> : <Navigate to="/onboarding" replace />} />
       </Routes>
     );
   }
 
   return (
     <Routes>
-      <Route path="/" element={isOnboarded() ? <HomePage /> : <Navigate to="/onboarding" replace />} />
       <Route path="/onboarding" element={<OnboardingPage />} />
-      <Route path="/map" element={<MapPage />} />
-      <Route path="/filter" element={<FilterPage />} />
-      <Route path="/cafe/:id" element={<CafeDetailPage />} />
-      <Route path="/login" element={<LoginPage />} />
-      <Route path="/pocket" element={<PocketListPage />} />
-      <Route path="/profile" element={<ProfilePage />} />
-      <Route path="/settings" element={<SettingsPage />} />
+      <Route path="/" element={isOnboarded() ? <HomePage /> : <Navigate to="/onboarding" replace />} />
+      <Route path="/map" element={isOnboarded() ? <MapPage /> : <Navigate to="/onboarding" replace />} />
+      <Route path="/filter" element={isOnboarded() ? <FilterPage /> : <Navigate to="/onboarding" replace />} />
+      <Route path="/cafe/:id" element={isOnboarded() ? <CafeDetailPage /> : <Navigate to="/onboarding" replace />} />
+      <Route path="/login" element={isOnboarded() ? <LoginPage /> : <Navigate to="/onboarding" replace />} />
+      <Route path="/pocket" element={isOnboarded() ? <PocketListPage /> : <Navigate to="/onboarding" replace />} />
+      <Route path="/profile" element={isOnboarded() ? <ProfilePage /> : <Navigate to="/onboarding" replace />} />
+      <Route path="/settings" element={isOnboarded() ? <SettingsPage /> : <Navigate to="/onboarding" replace />} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );
@@ -73,7 +74,7 @@ function DesktopApp() {
   const activeId = cafeMatch?.params.id ?? null;
   const isFilterOpen = !!filterMatch;
 
-  const { selected, orSelected, toggle, setAll, query, setQuery, scenario, pickScenario, openAt, setOpenAt } =
+  const { selected, orSelected, toggle, setAll, setOrSelected, query, setQuery, scenario, pickScenario, openAt, setOpenAt, radiusM, setRadiusM } =
     useSearchSelection();
 
   // displayed 落後 activeId —— 關閉時讓內容多停留 280ms 給 exit 動畫播完。
@@ -102,7 +103,7 @@ function DesktopApp() {
     tags_or: orSelected,
     lng: location?.lng ?? null,
     lat: location?.lat ?? null,
-    radius_m: location ? 5000 : undefined,
+    radius_m: radiusM ?? 5000,
     sort: sortKey,
     open_at: openAt,
   });
@@ -117,12 +118,13 @@ function DesktopApp() {
     <div className="flex h-screen flex-col bg-base-100">
       <Topbar variant="desktop" />
       <div className="flex flex-1 overflow-hidden">
-        <div className="flex w-[28%] min-w-[400px] shrink-0">
+        <div className="flex lg:w-[26%] lg:min-w-[380px] xl:w-[25%] xl:min-w-[360px] 2xl:w-[24%] 2xl:min-w-[340px] shrink-0">
           <SearchSidebar
             activeId={activeId}
             selected={selected}
             toggle={toggle}
             setAll={setAll}
+            setOrSelected={setOrSelected}
             query={query}
             setQuery={setQuery}
             scenario={scenario}
@@ -135,6 +137,8 @@ function DesktopApp() {
             onSortChange={setSortKey}
             openAt={openAt}
             onOpenAtChange={setOpenAt}
+            radiusM={radiusM}
+            onRadiusMChange={setRadiusM}
           />
         </div>
         <div
@@ -152,11 +156,14 @@ function DesktopApp() {
                 onReset={() => {
                   setAll([]);
                   setOpenAt(null);
+                  setRadiusM(null);
                 }}
                 onClose={() => navigate("/")}
                 onApply={() => navigate("/")}
                 openAt={openAt}
                 onOpenAtChange={setOpenAt}
+                radiusM={radiusM}
+                onRadiusMChange={setRadiusM}
               />
             </div>
           ) : detailQuery.isLoading && displayed ? (

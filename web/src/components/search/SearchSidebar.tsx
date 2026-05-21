@@ -15,6 +15,7 @@ interface SearchSidebarProps {
   selected: Set<string>;
   toggle: (key: string) => void;
   setAll: (keys: string[]) => void;
+  setOrSelected: (keys: string[]) => void;
   query: string;
   setQuery: (v: string) => void;
   /** 目前選中的快速場景 key,null 表示未選。 */
@@ -29,6 +30,8 @@ interface SearchSidebarProps {
   onSortChange: (key: SortKey) => void;
   openAt: string | null;
   onOpenAtChange: (val: string | null) => void;
+  radiusM: number | null;
+  onRadiusMChange: (v: number | null) => void;
 }
 
 const SORT_OPTIONS: { value: SortKey; label: string }[] = [
@@ -42,6 +45,7 @@ export function SearchSidebar({
   selected,
   toggle,
   setAll,
+  setOrSelected,
   query,
   setQuery,
   scenario,
@@ -54,6 +58,7 @@ export function SearchSidebar({
   onSortChange,
   openAt,
   onOpenAtChange,
+  onRadiusMChange,
 }: SearchSidebarProps) {
   const activeScenario = scenario ? SCENARIO_BY_KEY[scenario] : null;
   const headingText = isLoading
@@ -86,9 +91,19 @@ export function SearchSidebar({
             onQueryChange={setQuery}
             selected={selected}
             onToggle={toggle}
-            onSubmit={(parsed, parsedOpenAt) => {
+          onSubmit={(parsed, softTags, parsedOpenAt, distanceKm) => {
               setAll(parsed);
+              // soft_tags are OR-match bonuses: they affect ranking but never
+              // exclude cafes. We store them as orSelected so they go through
+              // the p_tags_or path in the RPC, not the p_tags AND filter.
+              setOrSelected(softTags);
               onOpenAtChange(parsedOpenAt);
+              onRadiusMChange(distanceKm != null ? distanceKm * 1000 : null);
+            }}
+            onClear={() => {
+              setAll([]);
+              onOpenAtChange(null);
+              onRadiusMChange(null);
             }}
           />
         </section>

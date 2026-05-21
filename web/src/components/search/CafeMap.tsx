@@ -1,7 +1,7 @@
 import { useEffect, useRef } from "react";
 import mapboxgl from "mapbox-gl";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Navigation03Icon } from "@hugeicons/core-free-icons";
+import { Navigation03Icon, Add01Icon, Remove01Icon } from "@hugeicons/core-free-icons";
 import { useUserLocation } from "@/context/UserLocationContext";
 import {
   MAPBOX_TOKEN,
@@ -206,7 +206,6 @@ export function CafeMap({
       config: { basemap: configForTheme(initialTheme) } as never,
     });
     map.addControl(new mapboxgl.AttributionControl({ compact: true }), "bottom-right");
-    map.addControl(new mapboxgl.NavigationControl({ showCompass: false }), "top-right");
 
     // 確保 style 載入後設定一次(初始 config 在某些版本/快取狀態下會被忽略)
     map.on("style.load", () => applyStandardConfig(map, readTheme()));
@@ -350,11 +349,35 @@ export function CafeMap({
   return (
     <div className={`relative h-full w-full ${className ?? ""}`}>
       <div ref={container} className="h-full w-full" />
-      <div className="absolute right-2.5 top-[80px] z-10 flex flex-col gap-2">
+      <div className="absolute right-2.5 top-2.5 z-10 flex flex-col gap-2">
+        {/* 縮放按鈕組 */}
+        <div className="flex flex-col rounded-lg shadow-md border border-base-content/10 overflow-hidden bg-base-100">
+          <button
+            type="button"
+            onClick={() => mapRef.current?.zoomIn()}
+            className="btn btn-square btn-sm border-0 bg-base-100 text-base-content hover:bg-base-200 transition-colors duration-200 rounded-none h-8 w-8"
+            aria-label="放大"
+            title="放大"
+          >
+            <HugeiconsIcon icon={Add01Icon} size={16} strokeWidth={1.5} />
+          </button>
+          <div className="h-[1px] bg-base-content/10 w-full" />
+          <button
+            type="button"
+            onClick={() => mapRef.current?.zoomOut()}
+            className="btn btn-square btn-sm border-0 bg-base-100 text-base-content hover:bg-base-200 transition-colors duration-200 rounded-none h-8 w-8"
+            aria-label="縮小"
+            title="縮小"
+          >
+            <HugeiconsIcon icon={Remove01Icon} size={16} strokeWidth={1.5} />
+          </button>
+        </div>
+
+        {/* 定位按鈕 */}
         <button
           type="button"
           onClick={handleLocateClick}
-          className="btn btn-square btn-sm border border-base-content/10 bg-base-100 shadow-md text-base-content hover:bg-base-200 transition-colors duration-200"
+          className="btn btn-square btn-sm border border-base-content/10 bg-base-100 shadow-md text-base-content hover:bg-base-200 transition-colors duration-200 h-8 w-8"
           aria-label="回到現在位置"
           title="回到現在位置"
         >

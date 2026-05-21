@@ -186,7 +186,9 @@
 }
 
 /* ─────────────────────────────────────
- * 讓 .badge-neutral 標籤在淺色與深色模式下都呈現「淺色底、深色字」
+ * 讓 .badge-neutral 標籤在淺色與深色模式下有最舒服的對比：
+ *   - 淺色模式 (coffee-paper) 呈現「淺色底、深色字」
+ *   - 深色模式 (coffee-roast) 呈現「暗色底、亮色字」（底色比背景 base-100 稍淡）
  * ────────────────────────────────── */
 [data-theme="coffee-paper"] .badge-neutral {
   background-color: oklch(var(--b3)) !important;
@@ -195,8 +197,8 @@
 }
 
 [data-theme="coffee-roast"] .badge-neutral {
-  background-color: oklch(var(--p)) !important;
-  color: oklch(var(--pc)) !important;
+  background-color: oklch(var(--b3)) !important;
+  color: oklch(var(--bc)) !important;
   border-color: transparent !important;
 }
 

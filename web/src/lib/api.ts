@@ -18,17 +18,22 @@ import type {
 // ===========================================================================
 
 export interface ParsedPrompt {
-  /** Frontend short keys, ready to feed into `setAll`. */
+  /** Frontend short keys for hard (AND) filters. */
   tags: string[];
-  /** DB tag_keys as returned by the LLM. */
+  /** DB tag_keys for hard (AND) filters, as returned by the LLM. */
   db_tags: string[];
+  /** Frontend short keys for soft (OR bonus) filters — affect ranking only, never exclude. */
+  soft_tags: string[];
+  /** DB tag_keys for soft (OR bonus) filters. */
+  db_soft_tags: string[];
   rationale: string;
   open_at: string | null;
+  distance_km: number | null;
 }
 
 export async function parsePrompt(query: string): Promise<ParsedPrompt> {
   const q = query.trim();
-  if (!q) return { tags: [], db_tags: [], rationale: "", open_at: null };
+  if (!q) return { tags: [], db_tags: [], soft_tags: [], db_soft_tags: [], rationale: "", open_at: null, distance_km: null };
 
   const { data, error } = await supabase.functions.invoke("parse-prompt", {
     body: {
@@ -37,12 +42,17 @@ export async function parsePrompt(query: string): Promise<ParsedPrompt> {
     },
   });
   if (error) throw error;
-  const dbTags: string[] = Array.isArray(data?.tags) ? data.tags : [];
+  const dbHardTags: string[] = Array.isArray(data?.hard_tags) ? data.hard_tags :
+    (Array.isArray(data?.tags) ? data.tags : []); // backward-compat
+  const dbSoftTags: string[] = Array.isArray(data?.soft_tags) ? data.soft_tags : [];
   return {
-    db_tags: dbTags,
-    tags: dbKeysToFilter(dbTags),
+    db_tags: dbHardTags,
+    tags: dbKeysToFilter(dbHardTags),
+    db_soft_tags: dbSoftTags,
+    soft_tags: dbKeysToFilter(dbSoftTags),
     rationale: typeof data?.rationale === "string" ? data.rationale : "",
     open_at: typeof data?.open_at === "string" ? data.open_at : null,
+    distance_km: typeof data?.distance_km === "number" ? data.distance_km : null,
   };
 }
 

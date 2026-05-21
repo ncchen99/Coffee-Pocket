@@ -1,15 +1,17 @@
 import { useCallback, useState } from "react";
 
-/** 集中管理「搜尋條件 + 自然語言 query + 場景 + 時間」狀態的小 hook。 */
-export function useSearchSelection(initial?: string[]) {
+/** 集中管理「搜尋條件 + 自然語言 query + 場景 + 時間 + 距離」狀態的小 hook。 */
+export function useSearchSelection(initial?: string[], initialRadiusM?: number | null) {
   const [selected, setSelected] = useState<Set<string>>(new Set(initial ?? []));
-  /** OR-match 條件，只由 pickScenario 設定；任何手動互動都會清空。 */
+  /** OR-match 條件；由 pickScenario 或語意搜尋的 soft_tags 設定；任何手動互動都會清空。 */
   const [orSelected, setOrSelected] = useState<string[]>([]);
   const [query, setQuery] = useState("");
   /** 目前選中的快速場景 (work / late / group / discover);手動改 chip 後清掉。 */
   const [scenario, setScenario] = useState<string | null>(null);
   /** 指定時間篩選 (ISO-8601 格式，null 表示不限時間) */
   const [openAt, setOpenAt] = useState<string | null>(null);
+  /** 指定距離篩選 (公尺，null 表示預設 5000) */
+  const [radiusM, setRadiusM] = useState<number | null>(initialRadiusM ?? null);
 
   const toggle = useCallback((key: string) => {
     // 任何手動 chip 互動都視為脫離場景模式。
@@ -43,11 +45,14 @@ export function useSearchSelection(initial?: string[]) {
     orSelected,
     toggle,
     setAll,
+    setOrSelected,
     query,
     setQuery,
     scenario,
     pickScenario,
     openAt,
     setOpenAt,
+    radiusM,
+    setRadiusM,
   };
 }

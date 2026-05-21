@@ -43,8 +43,11 @@ export default function MapPage() {
   const [params] = useSearchParams();
   const initial = params.getAll("tag");
   const initialScenario = params.get("scenario");
-  const { selected, orSelected, toggle, scenario, pickScenario, openAt, setOpenAt } = useSearchSelection(initial);
   const initialOpenAt = params.get("open_at");
+  const initialD = params.get("d");
+  const initialRadiusM = initialD != null ? Number(initialD) * 1000 : null;
+  const { selected, orSelected, toggle, scenario, pickScenario, openAt, setOpenAt, radiusM } =
+    useSearchSelection(initial, initialRadiusM);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [sheet, setSheet] = useState<SheetMode>("half");
   const [vh, setVh] = useState(() =>
@@ -79,7 +82,7 @@ export default function MapPage() {
     tags_or: orSelected,
     lng: location?.lng ?? null,
     lat: location?.lat ?? null,
-    radius_m: location ? 5000 : undefined,
+    radius_m: radiusM ?? 5000,
     sort: location ? "distance" : undefined,
     limit: 50,
     open_at: openAt,

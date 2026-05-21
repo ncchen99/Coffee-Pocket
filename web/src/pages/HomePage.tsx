@@ -15,13 +15,14 @@ export default function HomePage() {
   const { selected, toggle, setAll, query, setQuery, scenario, pickScenario } =
     useSearchSelection();
 
-  const goSearch = (overrideTags?: string[], scenarioKey?: string | null) => {
+  const goSearch = (overrideTags?: string[], scenarioKey?: string | null, distanceKm?: number | null) => {
     const params = new URLSearchParams();
     const tags = overrideTags ?? Array.from(selected);
     tags.forEach((k) => params.append("tag", k));
     if (query) params.set("q", query);
     const s = scenarioKey === undefined ? scenario : scenarioKey;
     if (s) params.set("scenario", s);
+    if (distanceKm != null) params.set("d", String(distanceKm));
     navigate(`/map?${params.toString()}`);
   };
 
@@ -34,10 +35,10 @@ export default function HomePage() {
           onQueryChange={setQuery}
           selected={selected}
           onToggle={toggle}
-          onSubmit={(parsed) => {
+          onSubmit={(parsed, _softTags, _openAt, distanceKm) => {
             // LLM 解析後的 tags 直接覆蓋 selection 並導頁
             setAll(parsed);
-            goSearch(parsed, null);
+            goSearch(parsed, null, distanceKm);
           }}
         />
 
