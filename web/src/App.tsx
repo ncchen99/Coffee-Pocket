@@ -12,6 +12,7 @@ import { DesktopFilterPanel } from "@/components/search/DesktopFilterPanel";
 import { useSearchSelection } from "@/hooks/useSearchSelection";
 import { useCafeSearch, useCafeDetail } from "@/hooks/useCafes";
 import { useCafeActions } from "@/hooks/useCafeActions";
+import { useUserLocation } from "@/context/UserLocationContext";
 import HomePage from "./pages/HomePage";
 import MapPage from "./pages/MapPage";
 import CafeDetailPage from "./pages/CafeDetailPage";
@@ -24,14 +25,6 @@ import OnboardingPage, { isOnboarded } from "./pages/OnboardingPage";
 import DesktopProfilePage from "./pages/DesktopProfilePage";
 import DesktopPocketPage from "./pages/DesktopPocketPage";
 import DesktopSettingsPage from "./pages/DesktopSettingsPage";
-
-// 預設定位:臺南車站附近,等到接上 geolocation 之後再以 user 位置覆蓋。
-const DEFAULT_LNG = 120.205;
-const DEFAULT_LAT = 22.991;
-// 半徑放寬到 ~30km,確保安平、東區、北區、永康、仁德等行政區的咖啡廳都會被收進來。
-// 真正的「附近」會在 geolocation 接上後縮回 5km。
-const DEFAULT_RADIUS_M = 30000;
-
 export default function App() {
   const isDesktop = useIsDesktop();
 
@@ -101,14 +94,15 @@ function DesktopApp() {
     setIsScrolled(false);
   }, [activeId]);
 
+  const { location } = useUserLocation();
   const isPanelOpen = !!activeId || isFilterOpen;
 
   const searchQuery = useCafeSearch({
     tags: Array.from(selected),
     tags_or: orSelected,
-    lng: DEFAULT_LNG,
-    lat: DEFAULT_LAT,
-    radius_m: DEFAULT_RADIUS_M,
+    lng: location?.lng ?? null,
+    lat: location?.lat ?? null,
+    radius_m: location ? 5000 : undefined,
     sort: sortKey,
     open_at: openAt,
   });
@@ -208,6 +202,7 @@ function DesktopApp() {
           <CafeMap
             cafes={cafes}
             activeId={activeId}
+            userLocation={location}
             onMarkerClick={(mid) => navigate(`/cafe/${mid}`)}
           />
         </section>

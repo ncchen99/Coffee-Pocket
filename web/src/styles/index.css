@@ -146,3 +146,41 @@
 *::-webkit-scrollbar-button {
   display: none;
 }
+
+/* ─────────────────────────────────────
+ * 使用者定位 marker — 咖啡色 (coffee theme) 與脈衝動畫
+ * ────────────────────────────────── */
+.cp-user-marker {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: oklch(var(--a) / 1); /* 主題咖啡色 accent */
+  border: 2px solid oklch(var(--b1) / 1); /* 白/深色底邊框 */
+  box-shadow: 0 0 6px rgba(0, 0, 0, 0.35);
+  position: relative;
+}
+
+.cp-user-marker::after {
+  content: "";
+  position: absolute;
+  top: -2px;
+  left: -2px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 2px solid oklch(var(--a) / 0.6);
+  animation: cp-pulse 2s infinite ease-out;
+  pointer-events: none;
+}
+
+@keyframes cp-pulse {
+  0% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(2.8);
+    opacity: 0;
+  }
+}
+

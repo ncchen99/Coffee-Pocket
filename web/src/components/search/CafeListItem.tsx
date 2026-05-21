@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import { useIsDesktop } from "@/components/layout/Responsive";
 import { Placeholder, TagBadge } from "@/components/primitives";
 import type { CafeCard } from "@/types/cafe";
 import clsx from "@/lib/clsx";
@@ -25,6 +26,7 @@ export function CafeListItem({
   sortKey = "distance",
   onHover,
 }: CafeListItemProps) {
+  const isDesktop = useIsDesktop();
   const dims = {
     sm: "h-14 w-14",
     md: "h-16 w-16",
@@ -34,7 +36,7 @@ export function CafeListItem({
   // 再點一次已選中的項目就回首頁(關閉詳細區塊)。
   return (
     <Link
-      to={active ? "/" : `/cafe/${cafe.id}`}
+      to={isDesktop && active ? "/" : `/cafe/${cafe.id}`}
       onMouseEnter={() => onHover?.(cafe.id)}
       onMouseLeave={() => onHover?.(null)}
       className={clsx(

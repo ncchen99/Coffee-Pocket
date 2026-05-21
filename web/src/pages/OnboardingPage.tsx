@@ -2,8 +2,10 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Coffee02Icon } from "@hugeicons/core-free-icons";
+import { useUserLocation } from "@/context/UserLocationContext";
 
 const ONBOARDED_KEY = "cp.onboarded";
+const PERMISSION_KEY = "cp.location_permission";
 
 export function isOnboarded(): boolean {
   return localStorage.getItem(ONBOARDED_KEY) === "1";
@@ -39,21 +41,23 @@ const STEPS: Step[] = [
 export default function OnboardingPage() {
   const navigate = useNavigate();
   const [step, setStep] = useState(0);
+  const { requestLocation } = useUserLocation();
 
   const finish = () => {
     markOnboarded();
     navigate("/", { replace: true });
   };
 
-  const requestLocation = () => {
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        () => finish(),
-        () => finish(),
-      );
-    } else {
-      finish();
-    }
+  const handleRequestLocation = () => {
+    requestLocation(
+      () => finish(),
+      () => finish(),
+    );
+  };
+
+  const handleManualLocation = () => {
+    localStorage.setItem(PERMISSION_KEY, "denied");
+    finish();
   };
 
   const current = STEPS[step];
@@ -95,10 +99,10 @@ export default function OnboardingPage() {
         <div className="mt-6 space-y-2">
           {isLast ? (
             <>
-              <button type="button" onClick={requestLocation} className="btn btn-neutral btn-block">
+              <button type="button" onClick={handleRequestLocation} className="btn btn-neutral btn-block">
                 開啟定位
               </button>
-              <button type="button" onClick={finish} className="btn btn-ghost btn-block btn-sm">
+              <button type="button" onClick={handleManualLocation} className="btn btn-ghost btn-block btn-sm">
                 手動指定（預設中西區）
               </button>
             </>

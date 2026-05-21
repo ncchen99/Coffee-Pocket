@@ -2,11 +2,8 @@ import { useState } from "react";
 import { Cap, CustomSelect } from "@/components/primitives";
 import { FILTER_TAG_GROUPS, SORT_OPTIONS } from "@/data/filterTags";
 import { useCafeSearchCount } from "@/hooks/useCafes";
+import { useUserLocation } from "@/context/UserLocationContext";
 import { getTWTimeParts } from "@/lib/format";
-
-const DEFAULT_LNG = 120.205;
-const DEFAULT_LAT = 22.991;
-
 interface DesktopFilterPanelProps {
   selected: Set<string>;
   onToggle: (key: string) => void;
@@ -55,6 +52,7 @@ export function DesktopFilterPanel({
   openAt,
   onOpenAtChange,
 }: DesktopFilterPanelProps) {
+  const { location } = useUserLocation();
   const [distance, setDistance] = useState(3);
   const [sort, setSort] = useState("距離");
 
@@ -110,8 +108,8 @@ export function DesktopFilterPanel({
 
   const countQuery = useCafeSearchCount({
     tags: Array.from(selected),
-    lng: DEFAULT_LNG,
-    lat: DEFAULT_LAT,
+    lng: location?.lng ?? null,
+    lat: location?.lat ?? null,
     radius_m: distance * 1000,
     open_at: openAt,
   });
@@ -139,20 +137,28 @@ export function DesktopFilterPanel({
         {/* Distance */}
         <section className="pt-4">
           <Cap>距離</Cap>
-          <input
-            type="range"
-            min={1}
-            max={10}
-            value={distance}
-            onChange={(e) => setDistance(Number(e.target.value))}
-            className="range range-sm mt-3"
-          />
-          <div className="mt-1 flex justify-between text-[10px] text-base-content/50">
-            <span>1km</span>
-            <span>3km</span>
-            <span>5km</span>
-            <span>10km</span>
-          </div>
+          {location ? (
+            <>
+              <input
+                type="range"
+                min={1}
+                max={10}
+                value={distance}
+                onChange={(e) => setDistance(Number(e.target.value))}
+                className="range range-sm mt-3"
+              />
+              <div className="mt-1 flex justify-between text-[10px] text-base-content/50">
+                <span>1km</span>
+                <span>3km</span>
+                <span>5km</span>
+                <span>10km</span>
+              </div>
+            </>
+          ) : (
+            <div className="mt-3 rounded border border-base-content/10 bg-base-200/50 px-4 py-3 text-center text-xs text-base-content/60">
+              🔒 開啟定位後即可篩選距離
+            </div>
+          )}
         </section>
 
         <div className="divider my-3" />

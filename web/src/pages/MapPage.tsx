@@ -9,13 +9,8 @@ import { CafeMap } from "@/components/search/CafeMap";
 import { SCENARIO_BY_KEY } from "@/components/search/ScenarioGrid";
 import { useSearchSelection } from "@/hooks/useSearchSelection";
 import { useCafeSearch } from "@/hooks/useCafes";
+import { useUserLocation } from "@/context/UserLocationContext";
 import { getTWTimeParts } from "@/lib/format";
-
-const DEFAULT_LNG = 120.205;
-const DEFAULT_LAT = 22.991;
-// 與 App.tsx 同步:預設半徑 30km,涵蓋整個臺南。geolocation 接上後才縮回 5km。
-const DEFAULT_RADIUS_M = 30000;
-
 const CHIP_OPTIONS: ChipOption[] = [
   { key: "now", label: "現在營業" },
   { key: "no_limit", label: "不限時" },
@@ -76,15 +71,16 @@ export default function MapPage() {
     window.addEventListener("resize", onResize);
     return () => window.removeEventListener("resize", onResize);
   }, []);
+  const { location } = useUserLocation();
   const sheetPaddingPx = Math.round(vh * SHEET_PADDING_VH[sheet]);
 
   const searchQuery = useCafeSearch({
     tags: Array.from(selected),
     tags_or: orSelected,
-    lng: DEFAULT_LNG,
-    lat: DEFAULT_LAT,
-    radius_m: DEFAULT_RADIUS_M,
-    sort: "distance",
+    lng: location?.lng ?? null,
+    lat: location?.lat ?? null,
+    radius_m: location ? 5000 : undefined,
+    sort: location ? "distance" : undefined,
     limit: 50,
     open_at: openAt,
   });
@@ -99,7 +95,7 @@ export default function MapPage() {
       `[data-cafe-id="${activeId}"]`,
     );
     if (li) {
-      li.scrollIntoView({ behavior: "smooth", block: "nearest" });
+      li.scrollIntoView({ behavior: "smooth", block: "start" });
     }
   }, [activeId, cafes]);
 
@@ -196,6 +192,7 @@ export default function MapPage() {
           <CafeMap
             cafes={cafes}
             activeId={activeId}
+            userLocation={location}
             paddingBottom={sheetPaddingPx}
             onMarkerClick={(id) => {
               setActiveId(id);
@@ -236,7 +233,7 @@ export default function MapPage() {
           )}
           <header className="flex items-baseline justify-between px-5 pb-2">
             <h2 className="text-[15px] font-semibold">{listHeading}</h2>
-            <span className="text-xs text-base-content/55">距離 ↓</span>
+            {location && <span className="text-xs text-base-content/55">距離 ↓</span>}
           </header>
           <div className="divider my-0" />
           {searchQuery.isError ? (

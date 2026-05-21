@@ -13,6 +13,7 @@ if (hasMapboxToken) mapboxgl.accessToken = MAPBOX_TOKEN;
 interface CafeMapProps {
   cafes: CafeCard[];
   activeId?: string | null;
+  userLocation?: { lng: number; lat: number } | null;
   onMarkerClick?: (id: string) => void;
   /**
    * 視覺上會被其他面板遮蓋的邊距(px)。flyTo 會把這些邊距視為「不可見區域」,
@@ -146,6 +147,7 @@ interface MarkerHandle {
 export function CafeMap({
   cafes,
   activeId,
+  userLocation,
   onMarkerClick,
   paddingBottom = 0,
   className,
@@ -153,6 +155,8 @@ export function CafeMap({
   const container = useRef<HTMLDivElement>(null);
   const mapRef = useRef<mapboxgl.Map | null>(null);
   const markersRef = useRef<Map<string, MarkerHandle>>(new Map());
+  const userMarkerRef = useRef<mapboxgl.Marker | null>(null);
+  const hasFlownToUserRef = useRef(false);
   // onMarkerClick 在父層通常是 inline arrow,每次 render 都是新 ref。
   // 透過 ref 取最新 handler,讓 markers effect 只依賴 cafes,
   // 避免每次 activeId 變更時把所有 marker destroy + recreate
@@ -200,6 +204,10 @@ export function CafeMap({
     return () => {
       observer.disconnect();
       ro.disconnect();
+      if (userMarkerRef.current) {
+        userMarkerRef.current.remove();
+        userMarkerRef.current = null;
+      }
       map.remove();
       mapRef.current = null;
       markersRef.current.clear();
@@ -227,6 +235,39 @@ export function CafeMap({
       markersRef.current.set(c.id, { marker, circle, label });
     });
   }, [cafes]);
+
+  // user location marker
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+
+    if (userMarkerRef.current) {
+      userMarkerRef.current.remove();
+      userMarkerRef.current = null;
+    }
+
+    if (userLocation) {
+      const el = document.createElement("div");
+      el.className = "cp-user-marker";
+      const marker = new mapboxgl.Marker({ element: el, anchor: "center" })
+        .setLngLat([userLocation.lng, userLocation.lat])
+        .addTo(map);
+      userMarkerRef.current = marker;
+
+      // Fly to user location only once when coordinates are first fetched
+      if (!activeId && !hasFlownToUserRef.current) {
+        hasFlownToUserRef.current = true;
+        map.flyTo({
+          center: [userLocation.lng, userLocation.lat],
+          zoom: 14,
+          duration: 800,
+          padding: { top: 0, right: 0, bottom: paddingBottom, left: 0 },
+        });
+      }
+    } else {
+      hasFlownToUserRef.current = false;
+    }
+  }, [userLocation, activeId, paddingBottom]);
 
   // 持久化 padding —— 把 sheet 覆蓋的範圍視為「不可見區域」,
   // 不只用在 flyTo / easeTo,連手動 pan / resize 也會以此重算中心。
