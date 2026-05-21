@@ -11,7 +11,7 @@ import { useSearchSelection } from "@/hooks/useSearchSelection";
 import { useCafeSearch } from "@/hooks/useCafes";
 import { usePocketItems, usePockets } from "@/hooks/usePockets";
 import { useUserLocation } from "@/context/UserLocationContext";
-import { getTWTimeParts } from "@/lib/format";
+import { getTWTimeParts, haversineKm } from "@/lib/format";
 const CHIP_OPTIONS: ChipOption[] = [
   { key: "now", label: "現在營業" },
   { key: "no_limit", label: "不限時" },
@@ -98,7 +98,16 @@ export default function MapPage() {
   const isPocketMode = !!pocketId;
   const pocketCafes = (pocketItemsQuery.data ?? [])
     .map((item) => item.cafe)
-    .filter((c): c is NonNullable<typeof c> => !!c);
+    .filter((c): c is NonNullable<typeof c> => !!c)
+    .map((c) =>
+      // pocket items 沒帶 PostGIS 距離欄位,但卡片上仍會顯示「距離 ↓」。用 user
+      // location 在 client 端 haversine 補上,沒定位時就維持 0(顯示 "0 公尺",
+      // 列表照樣可用,只是少了排序意義)。
+      location
+        ? { ...c, distance_km: haversineKm(location, { lng: c.lng, lat: c.lat }) }
+        : c,
+    )
+    .sort((a, b) => (location ? a.distance_km - b.distance_km : 0));
   const cafes = isPocketMode ? pocketCafes : (searchQuery.data?.cafes ?? []);
   const totalCount = isPocketMode ? pocketCafes.length : (searchQuery.data?.total ?? 0);
   const activePocket = pockets?.find((p) => p.id === pocketId) ?? null;

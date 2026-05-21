@@ -3,6 +3,27 @@
 
 const TW_TZ = "Asia/Taipei";
 
+/**
+ * Haversine distance (km) — 給沒有 PostGIS 加持的列表(如 pocket items)client-side
+ * 計算距離用,讓 distance_km 不會只顯示 0 公尺。誤差比 PostGIS 大一點,但對 UI
+ * 顯示的「XX 公尺 / X.X 公里」精度而言完全夠用。
+ */
+export function haversineKm(
+  a: { lng: number; lat: number },
+  b: { lng: number; lat: number },
+): number {
+  const toRad = (deg: number) => (deg * Math.PI) / 180;
+  const R = 6371; // km
+  const dLat = toRad(b.lat - a.lat);
+  const dLng = toRad(b.lng - a.lng);
+  const lat1 = toRad(a.lat);
+  const lat2 = toRad(b.lat);
+  const h =
+    Math.sin(dLat / 2) ** 2 +
+    Math.sin(dLng / 2) ** 2 * Math.cos(lat1) * Math.cos(lat2);
+  return 2 * R * Math.asin(Math.sqrt(h));
+}
+
 /** 將公里數轉為易讀字串：<1km 顯示「XX0 公尺」(四捨五入到十位)，≥1km 顯示「X.X 公里」。 */
 export function formatDistance(km: number): string {
   if (!Number.isFinite(km) || km < 0) return "";

@@ -14,6 +14,7 @@ import { useCafeSearch, useCafeDetail } from "@/hooks/useCafes";
 import { usePocketItems } from "@/hooks/usePockets";
 import { useCafeActions } from "@/hooks/useCafeActions";
 import { useUserLocation } from "@/context/UserLocationContext";
+import { haversineKm } from "@/lib/format";
 import HomePage from "./pages/HomePage";
 import MapPage from "./pages/MapPage";
 import CafeDetailPage from "./pages/CafeDetailPage";
@@ -134,17 +135,41 @@ function DesktopApp() {
   const pocketItemsQuery = usePocketItems(pocketId);
   const pocketCafes = (pocketItemsQuery.data ?? [])
     .map((item) => item.cafe)
-    .filter((c): c is NonNullable<typeof c> => !!c);
-  const cafes = isPocketMode ? pocketCafes : (searchQuery.data?.cafes ?? []);
+    .filter((c): c is NonNullable<typeof c> => !!c)
+    .map((c) =>
+      // pocket items 沒有 PostGIS 算好的距離,client-side 用 haversine 補,
+      // 否則 SearchSidebar 顯示「距離 ↓」但每筆都是 0 公尺。
+      location
+        ? { ...c, distance_km: haversineKm(location, { lng: c.lng, lat: c.lat }) }
+        : c,
+    )
+    .sort((a, b) => (location ? a.distance_km - b.distance_km : 0));
+  const baseCafes = isPocketMode ? pocketCafes : (searchQuery.data?.cafes ?? []);
+
+  const detailQuery = useCafeDetail(displayed);
+  const cafe = detailQuery.data ?? null;
+
+  // 確保被選中的咖啡廳(從 URL slug 解析)一定有 marker 可顯示。
+  //   情境:從口袋名單點某家店進 /cafe/:slug,但這家店可能不在 searchQuery
+  //   的當前結果裡(被 tag/距離/keyword 過濾掉),也不在 pocketCafes 裡(沒帶
+  //   pocket 參數時)。如果不補,使用者會看到右側詳細欄,但地圖上沒有對應的
+  //   咖啡色圖標 —— 無法定位、無法 highlight。把 detail 抓回來的那筆塞進
+  //   cafes 尾端,讓 CafeMap 建出 marker,後續 active highlight 才有作用。
+  const cafes =
+    cafe && !baseCafes.some((c) => c.id === cafe.id)
+      ? [
+          ...baseCafes,
+          location
+            ? { ...cafe, distance_km: haversineKm(location, { lng: cafe.lng, lat: cafe.lat }) }
+            : cafe,
+        ]
+      : baseCafes;
   const totalCount = isPocketMode ? pocketCafes.length : (searchQuery.data?.total ?? 0);
 
   // 把 URL 上的 ident (slug / UUID) 對到 cafes 列表中的 UUID,
   // 讓 CafeMap / SearchSidebar 的 active 比對仍走 cafe.id。
   const activeId =
     cafes.find((c) => c.slug === activeIdent || c.id === activeIdent)?.id ?? activeIdent;
-
-  const detailQuery = useCafeDetail(displayed);
-  const cafe = detailQuery.data ?? null;
   const actions = useCafeActions(cafe?.id ?? null);
 
   return (
