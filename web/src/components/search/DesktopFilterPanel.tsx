@@ -1,6 +1,10 @@
 import { useState } from "react";
 import { Cap } from "@/components/primitives";
 import { FILTER_TAG_GROUPS, SORT_OPTIONS } from "@/data/filterTags";
+import { useCafeSearchCount } from "@/hooks/useCafes";
+
+const DEFAULT_LNG = 120.205;
+const DEFAULT_LAT = 22.991;
 
 interface DesktopFilterPanelProps {
   selected: Set<string>;
@@ -24,7 +28,13 @@ export function DesktopFilterPanel({ selected, onToggle, onReset, onApply, onClo
     setSort("距離");
   };
 
-  const mockCount = Math.max(1, 12 - selected.size * 2);
+  const countQuery = useCafeSearchCount({
+    tags: Array.from(selected),
+    lng: DEFAULT_LNG,
+    lat: DEFAULT_LAT,
+    radius_m: distance * 1000,
+  });
+  const count = countQuery.data ?? 0;
 
   return (
     <div className="flex h-full flex-col">
@@ -112,7 +122,7 @@ export function DesktopFilterPanel({ selected, onToggle, onReset, onApply, onClo
           onClick={() => onApply?.()}
           className="btn btn-neutral btn-sm btn-block"
         >
-          顯示 {mockCount} 間 →
+          顯示 {countQuery.isLoading ? "…" : count} 間 →
         </button>
       </div>
     </div>

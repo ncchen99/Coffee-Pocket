@@ -1,9 +1,26 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { ArrowLeft02Icon } from "@hugeicons/core-free-icons";
 import { Cap, CustomSelect, ConfirmModal } from "@/components/primitives";
 import { useAuth } from "@/hooks/useAuth";
+import { useUserPreferences, useUpdateUserPreferences } from "@/hooks/useProfile";
+
+function applyTheme(themeVal: string) {
+  if (themeVal === "light") {
+    document.documentElement.setAttribute("data-theme", "coffee-paper");
+    localStorage.setItem("cp.theme", "coffee-paper");
+  } else if (themeVal === "dark") {
+    document.documentElement.setAttribute("data-theme", "coffee-roast");
+    localStorage.setItem("cp.theme", "coffee-roast");
+  } else {
+    localStorage.removeItem("cp.theme");
+    const prefer = window.matchMedia("(prefers-color-scheme: dark)").matches
+      ? "coffee-roast"
+      : "coffee-paper";
+    document.documentElement.setAttribute("data-theme", prefer);
+  }
+}
 
 /**
  * 設定頁 — 支援手機版佈局，搭載客製化下拉選單與直角極簡登出確認 Modal。
@@ -12,37 +29,55 @@ export default function SettingsPage() {
   const navigate = useNavigate();
   const { user, signOut } = useAuth();
 
-  // 狀態管理與持久化
+  // 狀態管理與持久化(已登入優先讀 DB,fallback 到 localStorage)
   const [themeVal, setThemeVal] = useState(() => localStorage.getItem("cp.settings.theme") ?? "system");
   const [distance, setDistance] = useState(() => localStorage.getItem("cp.settings.distance") ?? "3");
   const [view, setView] = useState(() => localStorage.getItem("cp.settings.view") ?? "map");
   const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
 
+  const { data: prefs } = useUserPreferences(user?.id ?? null);
+  const updatePrefs = useUpdateUserPreferences();
+
+  // 首次從 DB 載入時 mirror 到本地 state + theme
+  useEffect(() => {
+    if (!prefs) return;
+    if (prefs.theme) {
+      setThemeVal(prefs.theme);
+      localStorage.setItem("cp.settings.theme", prefs.theme);
+      applyTheme(prefs.theme);
+    }
+    if (prefs.default_distance_km != null) {
+      setDistance(String(prefs.default_distance_km));
+      localStorage.setItem("cp.settings.distance", String(prefs.default_distance_km));
+    }
+    if (prefs.default_view) {
+      setView(prefs.default_view);
+      localStorage.setItem("cp.settings.view", prefs.default_view);
+    }
+  }, [prefs]);
+
+  const persistToDb = (patch: Parameters<typeof updatePrefs.mutate>[0]["prefs"]) => {
+    if (!user) return;
+    updatePrefs.mutate({ userId: user.id, prefs: patch });
+  };
+
   const handleThemeChange = (val: string) => {
     setThemeVal(val);
     localStorage.setItem("cp.settings.theme", val);
-    
-    if (val === "light") {
-      document.documentElement.setAttribute("data-theme", "coffee-paper");
-      localStorage.setItem("cp.theme", "coffee-paper");
-    } else if (val === "dark") {
-      document.documentElement.setAttribute("data-theme", "coffee-roast");
-      localStorage.setItem("cp.theme", "coffee-roast");
-    } else {
-      localStorage.removeItem("cp.theme");
-      const prefer = window.matchMedia("(prefers-color-scheme: dark)").matches ? "coffee-roast" : "coffee-paper";
-      document.documentElement.setAttribute("data-theme", prefer);
-    }
+    applyTheme(val);
+    persistToDb({ theme: val as "system" | "light" | "dark" });
   };
 
   const handleDistanceChange = (val: string) => {
     setDistance(val);
     localStorage.setItem("cp.settings.distance", val);
+    persistToDb({ default_distance_km: Number(val) });
   };
 
   const handleViewChange = (val: string) => {
     setView(val);
     localStorage.setItem("cp.settings.view", val);
+    persistToDb({ default_view: val as "map" | "list" });
   };
 
   const handleConfirmLogout = () => {

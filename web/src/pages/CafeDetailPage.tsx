@@ -7,7 +7,7 @@ import {
   AlertCircleIcon,
 } from "@hugeicons/core-free-icons";
 import { CafeDetailContent } from "@/components/cafe/CafeDetailContent";
-import { mockCafeDetail } from "@/data/mockCafes";
+import { useCafeDetail } from "@/hooks/useCafes";
 
 /**
  * 手機版 cafe 詳細頁。
@@ -16,14 +16,26 @@ import { mockCafeDetail } from "@/data/mockCafes";
 export default function CafeDetailPage() {
   const { id = "" } = useParams();
   const navigate = useNavigate();
-  const cafe = mockCafeDetail(id);
+  const { data: cafe, isLoading, isError } = useCafeDetail(id);
+
+  if (isLoading) {
+    return (
+      <div className="flex min-h-screen flex-col bg-base-100 p-5 space-y-3">
+        <div className="h-12 bg-base-200 animate-pulse rounded" />
+        <div className="h-48 bg-base-200 animate-pulse rounded" />
+        <div className="h-6 bg-base-200 animate-pulse rounded w-1/2" />
+        <div className="h-4 bg-base-200 animate-pulse rounded w-3/4" />
+        <div className="h-24 bg-base-200 animate-pulse rounded" />
+      </div>
+    );
+  }
 
   if (!cafe) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-base-100">
         <div role="alert" className="alert alert-warning max-w-sm">
           <HugeiconsIcon icon={AlertCircleIcon} size={18} strokeWidth={1.5} />
-          <span>找不到這間店</span>
+          <span>{isError ? "載入失敗，請稍後再試" : "找不到這間店"}</span>
           <Link to="/" className="btn btn-sm btn-neutral">
             回首頁
           </Link>

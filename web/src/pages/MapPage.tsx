@@ -7,7 +7,10 @@ import { FilterChipBar, type ChipOption } from "@/components/search/FilterChipBa
 import { CafeListItem } from "@/components/search/CafeListItem";
 import { CafeMap } from "@/components/search/CafeMap";
 import { useSearchSelection } from "@/hooks/useSearchSelection";
-import { mockCafes } from "@/data/mockCafes";
+import { useCafeSearch } from "@/hooks/useCafes";
+
+const DEFAULT_LNG = 120.205;
+const DEFAULT_LAT = 22.991;
 
 const CHIP_OPTIONS: ChipOption[] = [
   { key: "now", label: "現在營業" },
@@ -52,6 +55,17 @@ export default function MapPage() {
     return () => window.removeEventListener("resize", onResize);
   }, []);
   const sheetPaddingPx = Math.round(vh * SHEET_PADDING_VH[sheet]);
+
+  const searchQuery = useCafeSearch({
+    tags: Array.from(selected),
+    lng: DEFAULT_LNG,
+    lat: DEFAULT_LAT,
+    radius_m: 5000,
+    sort: "distance",
+    limit: 30,
+  });
+  const cafes = searchQuery.data?.cafes ?? [];
+  const totalCount = searchQuery.data?.total ?? 0;
 
   if (isDesktop) {
     navigate(`/?${initial.map((t) => `tag=${t}`).join("&")}`, { replace: true });
@@ -106,7 +120,7 @@ export default function MapPage() {
       <div className="relative flex-1 overflow-hidden">
         <div className="absolute inset-0">
           <CafeMap
-            cafes={mockCafes}
+            cafes={cafes}
             activeId={activeId}
             paddingBottom={sheetPaddingPx}
             onMarkerClick={(id) => {
@@ -131,17 +145,37 @@ export default function MapPage() {
             <span className="block h-1 w-9 bg-base-content/30" />
           </button>
           <header className="flex items-baseline justify-between px-5 pb-2">
-            <h2 className="text-[15px] font-semibold">{mockCafes.length} 間 · 中西區</h2>
+            <h2 className="text-[15px] font-semibold">
+              {searchQuery.isLoading ? "搜尋中…" : `${totalCount} 間 · 中西區`}
+            </h2>
             <span className="text-xs text-base-content/55">距離 ↓</span>
           </header>
           <div className="divider my-0" />
-          <ul className="flex-1 divide-y divide-base-content/10 overflow-y-auto">
-            {mockCafes.map((c) => (
-              <li key={c.id}>
-                <CafeListItem cafe={c} active={c.id === activeId} />
-              </li>
-            ))}
-          </ul>
+          {searchQuery.isError ? (
+            <p className="px-5 py-6 text-center text-sm text-base-content/55">
+              載入失敗，請稍後再試
+            </p>
+          ) : searchQuery.isLoading ? (
+            <ul className="flex-1 divide-y divide-base-content/10 overflow-y-auto">
+              {Array.from({ length: 4 }).map((_, i) => (
+                <li key={i} className="px-5 py-3">
+                  <div className="h-14 bg-base-200 animate-pulse rounded" />
+                </li>
+              ))}
+            </ul>
+          ) : cafes.length === 0 ? (
+            <p className="px-5 py-6 text-center text-sm text-base-content/55">
+              找不到符合條件的咖啡店
+            </p>
+          ) : (
+            <ul className="flex-1 divide-y divide-base-content/10 overflow-y-auto">
+              {cafes.map((c) => (
+                <li key={c.id}>
+                  <CafeListItem cafe={c} active={c.id === activeId} />
+                </li>
+              ))}
+            </ul>
+          )}
         </section>
       </div>
     </div>

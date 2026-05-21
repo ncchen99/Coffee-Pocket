@@ -7,18 +7,71 @@ import {
 } from "@hugeicons/core-free-icons";
 import { Cap, Placeholder, TagBadge } from "@/components/primitives";
 import { TagConfidenceRow } from "@/components/cafe/TagConfidenceRow";
-import type { mockCafeDetail } from "@/data/mockCafes";
+import type { CafeDetail } from "@/types/cafe";
+import { useVoteTag, useClearVote, useUserVotesForCafe } from "@/hooks/useTagVote";
+import {
+  useIsCafeInPocket,
+  usePockets,
+  useAddToPocket,
+  useRemoveFromPocket,
+} from "@/hooks/usePockets";
+import { useAuth } from "@/hooks/useAuth";
 
 interface CafeDetailContentProps {
-  cafe: NonNullable<ReturnType<typeof mockCafeDetail>>;
+  cafe: CafeDetail;
   isDesktop: boolean;
 }
 
 /** 詳細頁主體 — 桌面中間欄與手機 main 共用。 */
 export function CafeDetailContent({ cafe, isDesktop }: CafeDetailContentProps) {
+  const { user } = useAuth();
+  const { data: userVotes } = useUserVotesForCafe(user ? cafe.id : null);
+  const voteMutation = useVoteTag();
+  const clearVoteMutation = useClearVote();
+
+  const { data: inPocket } = useIsCafeInPocket(user ? cafe.id : null);
+  const { data: pockets } = usePockets();
+  const addMutation = useAddToPocket();
+  const removeMutation = useRemoveFromPocket();
+
+  const handleVote = (key: string, vote: "up" | "down") => {
+    if (!user) return;
+    const v: 1 | -1 = vote === "up" ? 1 : -1;
+    const current = userVotes?.[key];
+    if (current === v) {
+      clearVoteMutation.mutate({ cafeId: cafe.id, tagKey: key });
+    } else {
+      voteMutation.mutate({ cafeId: cafe.id, tagKey: key, vote: v });
+    }
+  };
+
+  const togglePocket = () => {
+    if (!user) return;
+    if (inPocket) {
+      removeMutation.mutate({ pocketId: inPocket.pocketId, cafeId: cafe.id });
+    } else {
+      // pick first pocket, or create a default if none exists
+      const first = pockets?.[0];
+      if (first) {
+        addMutation.mutate({ pocketId: first.id, cafeId: cafe.id });
+      } else {
+        // No pocket yet — front-end can prompt user to create one. For now, no-op.
+      }
+    }
+  };
+
+  const photos = cafe.photos ?? [];
+  const topTags = cafe.top_tags ?? [];
+
   return (
     <>
-      <Placeholder ratio="16/9" label="hero" />
+      {cafe.cover_url ? (
+        <div className="aspect-[16/9] w-full overflow-hidden bg-base-200">
+          <img src={cafe.cover_url} alt="" className="h-full w-full object-cover" />
+        </div>
+      ) : (
+        <Placeholder ratio="16/9" label="hero" />
+      )}
 
       <section className="px-5 pt-5">
         <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
@@ -26,15 +79,20 @@ export function CafeDetailContent({ cafe, isDesktop }: CafeDetailContentProps) {
           <div
             className={`badge badge-outline ${cafe.open_now ? "text-success" : "text-base-content/55"}`}
           >
-            {cafe.open_now ? `營業中 · ${cafe.closes_at} 打烊` : "今日已休"}
+            {cafe.open_now
+              ? cafe.closes_at
+                ? `營業中 · ${cafe.closes_at} 打烊`
+                : "營業中"
+              : "今日已休"}
           </div>
         </div>
         <p className="mt-1 text-xs text-base-content/55">
-          {cafe.address} · {cafe.distance_km}km
+          {cafe.address}
+          {cafe.distance_km ? ` · ${cafe.distance_km}km` : ""}
         </p>
 
         <div className="mt-3 flex flex-wrap gap-1.5">
-          {cafe.top_tags.map((t) => (
+          {topTags.map((t) => (
             <TagBadge key={t} variant="neutral">
               {t}
             </TagBadge>
@@ -42,47 +100,69 @@ export function CafeDetailContent({ cafe, isDesktop }: CafeDetailContentProps) {
         </div>
       </section>
 
-      <div className="divider mx-5" />
-
-      <section className="px-5">
-        <Cap>AI 摘要</Cap>
-        <div
-          role="status"
-          className="alert alert-info bg-base-200 mt-2 text-base-content border border-base-content/10"
-        >
-          <span className="text-sm leading-relaxed">{cafe.ai_summary}</span>
-        </div>
-        <p className="mt-2 font-mono text-[10px] text-base-content/45">
-          based on 8 Google reviews · Cafe Nomad fields
-        </p>
-      </section>
-
-      <div className="divider mx-5" />
-
-      <section className="px-5">
-        <Cap>標籤與證據</Cap>
-        <ul className="mt-2 divide-y divide-base-content/10">
-          {cafe.tags.map((t) => (
-            <li key={t.key}>
-              <TagConfidenceRow tag={t} />
-            </li>
-          ))}
-        </ul>
-      </section>
-
-      <div className="divider mx-5" />
-
-      <section className="px-5">
-        <Cap>營業時間</Cap>
-        <dl className="mt-2 divide-y divide-base-content/10">
-          {Object.entries(cafe.hours).map(([day, hr]) => (
-            <div key={day} className="flex justify-between py-1.5 text-sm">
-              <dt className="text-base-content/65">{day}</dt>
-              <dd className="font-mono text-xs text-base-content/80">{hr}</dd>
+      {cafe.ai_summary ? (
+        <>
+          <div className="divider mx-5" />
+          <section className="px-5">
+            <Cap>AI 摘要</Cap>
+            <div
+              role="status"
+              className="alert alert-info bg-base-200 mt-2 text-base-content border border-base-content/10"
+            >
+              <span className="text-sm leading-relaxed">{cafe.ai_summary}</span>
             </div>
-          ))}
-        </dl>
-      </section>
+          </section>
+        </>
+      ) : null}
+
+      {photos.length > 0 && (
+        <>
+          <div className="divider mx-5" />
+          <section className="px-5">
+            <Cap>照片</Cap>
+            <div className="mt-2 grid grid-cols-3 gap-2">
+              {photos.slice(0, 6).map((src) => (
+                <div key={src} className="aspect-square overflow-hidden bg-base-200">
+                  <img src={src} alt="" className="h-full w-full object-cover" />
+                </div>
+              ))}
+            </div>
+          </section>
+        </>
+      )}
+
+      {cafe.tags.length > 0 && (
+        <>
+          <div className="divider mx-5" />
+          <section className="px-5">
+            <Cap>標籤與證據</Cap>
+            <ul className="mt-2 divide-y divide-base-content/10">
+              {cafe.tags.map((t) => (
+                <li key={t.key}>
+                  <TagConfidenceRow tag={t} onVote={handleVote} />
+                </li>
+              ))}
+            </ul>
+          </section>
+        </>
+      )}
+
+      {Object.keys(cafe.hours).length > 0 && (
+        <>
+          <div className="divider mx-5" />
+          <section className="px-5">
+            <Cap>營業時間</Cap>
+            <dl className="mt-2 divide-y divide-base-content/10">
+              {Object.entries(cafe.hours).map(([day, hr]) => (
+                <div key={day} className="flex justify-between py-1.5 text-sm">
+                  <dt className="text-base-content/65">{day}</dt>
+                  <dd className="font-mono text-xs text-base-content/80">{hr}</dd>
+                </div>
+              ))}
+            </dl>
+          </section>
+        </>
+      )}
 
       <div className="divider mx-5" />
 
@@ -105,8 +185,13 @@ export function CafeDetailContent({ cafe, isDesktop }: CafeDetailContentProps) {
           <button type="button" className="btn btn-outline">
             回報問題
           </button>
-          <button type="button" className="btn btn-neutral">
-            加入口袋
+          <button
+            type="button"
+            onClick={togglePocket}
+            disabled={!user || addMutation.isPending || removeMutation.isPending}
+            className={`btn ${inPocket ? "btn-outline" : "btn-neutral"}`}
+          >
+            {inPocket ? `已在「${inPocket.pocketName}」` : "加入口袋"}
           </button>
         </div>
       )}

@@ -5,12 +5,23 @@ import { Settings01Icon, Mail01Icon, Logout01Icon } from "@hugeicons/core-free-i
 import { Cap, ConfirmModal } from "@/components/primitives";
 import { MobileTabBar } from "@/components/layout/MobileTabBar";
 import { useAuth } from "@/hooks/useAuth";
+import { useUserStats, useContributions } from "@/hooks/useProfile";
 
-const MOCK_CONTRIBUTIONS = [
-  { id: "1", text: "修正「窩 café」插座資訊", time: "2 天前", status: "已被採用" },
-  { id: "2", text: "新增「kinks coffee」", time: "1 週前", status: "待審核" },
-  { id: "3", text: "為「老房子」投票安靜", time: "2 週前", status: "" },
-];
+function relativeTime(iso: string): string {
+  const now = Date.now();
+  const t = new Date(iso).getTime();
+  const diff = Math.max(0, now - t);
+  const min = Math.floor(diff / 60000);
+  if (min < 1) return "剛剛";
+  if (min < 60) return `${min} 分鐘前`;
+  const hr = Math.floor(min / 60);
+  if (hr < 24) return `${hr} 小時前`;
+  const d = Math.floor(hr / 24);
+  if (d < 30) return `${d} 天前`;
+  const w = Math.floor(d / 7);
+  if (w < 8) return `${w} 週前`;
+  return new Date(iso).toLocaleDateString();
+}
 
 /**
  * 個人頁 — 顯示使用者口袋數量、貢獻紀錄、設定入口。
@@ -18,6 +29,11 @@ const MOCK_CONTRIBUTIONS = [
 export default function ProfilePage() {
   const { user, signOut } = useAuth();
   const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
+  const { data: stats } = useUserStats(user?.id ?? null);
+  const { data: contributions = [], isLoading: contributionsLoading } = useContributions(
+    user?.id ?? null,
+    10,
+  );
 
   if (!user) {
     return (
@@ -63,15 +79,17 @@ export default function ProfilePage() {
         <Cap>我的數字</Cap>
         <div className="mt-3 grid grid-cols-3 divide-x divide-base-content/10 text-center">
           <div>
-            <p className="text-xl font-bold">7</p>
+            <p className="text-xl font-bold">{stats?.pocket_items_count ?? 0}</p>
             <p className="text-xs text-base-content/55">收藏</p>
           </div>
           <div>
-            <p className="text-xl font-bold">3</p>
+            <p className="text-xl font-bold">{stats?.pocket_count ?? 0}</p>
             <p className="text-xs text-base-content/55">口袋</p>
           </div>
           <div>
-            <p className="text-xl font-bold">21</p>
+            <p className="text-xl font-bold">
+              {(stats?.edits_count ?? 0) + (stats?.votes_count ?? 0)}
+            </p>
             <p className="text-xs text-base-content/55">貢獻</p>
           </div>
         </div>
@@ -80,17 +98,30 @@ export default function ProfilePage() {
       {/* Contributions */}
       <section className="flex-1 border-b border-base-content/10 px-5 py-4">
         <Cap>我的貢獻</Cap>
-        <ul className="mt-3 divide-y divide-base-content/10">
-          {MOCK_CONTRIBUTIONS.map((c) => (
-            <li key={c.id} className="py-2">
-              <p className="text-sm">{c.text}</p>
-              <p className="mt-0.5 text-[11px] text-base-content/50">
-                {c.time}
-                {c.status && ` · ${c.status}`}
-              </p>
-            </li>
-          ))}
-        </ul>
+        {contributionsLoading ? (
+          <ul className="mt-3 space-y-2">
+            {Array.from({ length: 3 }).map((_, i) => (
+              <li key={i} className="h-10 bg-base-200 animate-pulse rounded" />
+            ))}
+          </ul>
+        ) : contributions.length === 0 ? (
+          <p className="mt-3 text-sm text-base-content/55">還沒有貢獻紀錄</p>
+        ) : (
+          <ul className="mt-3 divide-y divide-base-content/10">
+            {contributions.map((c) => (
+              <li key={c.id} className="py-2">
+                <p className="text-sm">
+                  {c.detail}
+                  {c.cafe_name && ` · ${c.cafe_name}`}
+                </p>
+                <p className="mt-0.5 text-[11px] text-base-content/50">
+                  {relativeTime(c.created_at)}
+                  {c.status && ` · ${c.status}`}
+                </p>
+              </li>
+            ))}
+          </ul>
+        )}
       </section>
 
       {/* Menu */}

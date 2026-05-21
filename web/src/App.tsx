@@ -9,7 +9,7 @@ import { SearchSidebar } from "@/components/search/SearchSidebar";
 import { CafeDetailContent } from "@/components/cafe/CafeDetailContent";
 import { DesktopFilterPanel } from "@/components/search/DesktopFilterPanel";
 import { useSearchSelection } from "@/hooks/useSearchSelection";
-import { mockCafes, mockCafeDetail } from "@/data/mockCafes";
+import { useCafeSearch, useCafeDetail } from "@/hooks/useCafes";
 import HomePage from "./pages/HomePage";
 import MapPage from "./pages/MapPage";
 import CafeDetailPage from "./pages/CafeDetailPage";
@@ -22,6 +22,10 @@ import OnboardingPage, { isOnboarded } from "./pages/OnboardingPage";
 import DesktopProfilePage from "./pages/DesktopProfilePage";
 import DesktopPocketPage from "./pages/DesktopPocketPage";
 import DesktopSettingsPage from "./pages/DesktopSettingsPage";
+
+// 預設定位:臺南車站附近,等到接上 geolocation 之後再以 user 位置覆蓋。
+const DEFAULT_LNG = 120.205;
+const DEFAULT_LAT = 22.991;
 
 export default function App() {
   const isDesktop = useIsDesktop();
@@ -91,7 +95,19 @@ function DesktopApp() {
   }, [activeId]);
 
   const isPanelOpen = !!activeId || isFilterOpen;
-  const cafe = displayed ? mockCafeDetail(displayed) : null;
+
+  const searchQuery = useCafeSearch({
+    tags: Array.from(selected),
+    lng: DEFAULT_LNG,
+    lat: DEFAULT_LAT,
+    radius_m: 5000,
+    sort: "distance",
+  });
+  const cafes = searchQuery.data?.cafes ?? [];
+  const totalCount = searchQuery.data?.total ?? 0;
+
+  const detailQuery = useCafeDetail(displayed);
+  const cafe = detailQuery.data ?? null;
 
   return (
     <div className="flex h-screen flex-col bg-base-100">
@@ -105,6 +121,10 @@ function DesktopApp() {
             setAll={setAll}
             query={query}
             setQuery={setQuery}
+            cafes={cafes}
+            totalCount={totalCount}
+            isLoading={searchQuery.isLoading}
+            isError={searchQuery.isError}
           />
         </div>
         <div
@@ -123,6 +143,13 @@ function DesktopApp() {
                 onClose={() => navigate("/")}
                 onApply={() => navigate("/")}
               />
+            </div>
+          ) : detailQuery.isLoading && displayed ? (
+            <div className="cp-anim-slide-in h-full p-6 space-y-3">
+              <div className="h-40 bg-base-200 animate-pulse rounded" />
+              <div className="h-6 bg-base-200 animate-pulse rounded w-1/2" />
+              <div className="h-4 bg-base-200 animate-pulse rounded w-3/4" />
+              <div className="h-20 bg-base-200 animate-pulse rounded" />
             </div>
           ) : cafe ? (
             <div key={cafe.id} className="cp-anim-slide-in relative h-full flex flex-col">
@@ -148,18 +175,17 @@ function DesktopApp() {
               </div>
             </div>
           ) : displayed ? (
-            // displayed 有值但 mockCafeDetail 回 null —— 顯示找不到提示。
             <div className="flex h-full items-center justify-center p-6">
               <div role="alert" className="alert alert-warning max-w-sm">
                 <HugeiconsIcon icon={AlertCircleIcon} size={18} strokeWidth={1.5} />
-                <span>找不到這間店</span>
+                <span>{detailQuery.isError ? "載入失敗，請稍後再試" : "找不到這間店"}</span>
               </div>
             </div>
           ) : null}
         </div>
         <section className="relative flex-1 overflow-hidden">
           <CafeMap
-            cafes={mockCafes}
+            cafes={cafes}
             activeId={activeId}
             onMarkerClick={(mid) => navigate(`/cafe/${mid}`)}
           />

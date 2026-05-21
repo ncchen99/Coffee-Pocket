@@ -4,6 +4,10 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import { Cancel01Icon } from "@hugeicons/core-free-icons";
 import { Cap } from "@/components/primitives";
 import { FILTER_TAG_GROUPS, SORT_OPTIONS } from "@/data/filterTags";
+import { useCafeSearchCount } from "@/hooks/useCafes";
+
+const DEFAULT_LNG = 120.205;
+const DEFAULT_LAT = 22.991;
 
 /**
  * 進階篩選頁 — 手機全螢幕,多標籤交叉篩選,底部即時筆數。
@@ -28,8 +32,13 @@ export default function FilterPage() {
     setSort("距離");
   };
 
-  // Mock count based on selections
-  const mockCount = Math.max(1, 12 - selected.size * 2);
+  const countQuery = useCafeSearchCount({
+    tags: Array.from(selected),
+    lng: DEFAULT_LNG,
+    lat: DEFAULT_LAT,
+    radius_m: distance * 1000,
+  });
+  const count = countQuery.data ?? 0;
 
   const apply = () => {
     const params = new URLSearchParams();
@@ -130,7 +139,7 @@ export default function FilterPage() {
           清除全部
         </button>
         <button type="button" onClick={apply} className="btn btn-neutral">
-          顯示 {mockCount} 間 →
+          顯示 {countQuery.isLoading ? "…" : count} 間 →
         </button>
       </div>
     </div>
