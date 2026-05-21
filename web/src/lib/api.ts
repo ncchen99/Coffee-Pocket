@@ -115,12 +115,14 @@ export async function searchCafes(params: SearchParams): Promise<SearchResult> {
   const cafes: CafeCard[] = rows.map((row) => {
     let open_now = row.open_now ?? false;
     let closes_at = row.closes_at ?? undefined;
+    let opens_at: string | undefined;
 
     if (row.business_hours) {
       const targetDate = params.open_at ? new Date(params.open_at) : new Date();
       const status = isCafeOpenAt(row.business_hours, targetDate);
       open_now = status.open_now;
       closes_at = status.closes_at ?? undefined;
+      opens_at = status.opens_at ?? undefined;
     }
 
     return {
@@ -131,6 +133,7 @@ export async function searchCafes(params: SearchParams): Promise<SearchResult> {
       distance_km: row.distance_m != null ? row.distance_m / 1000 : 0,
       open_now,
       closes_at,
+      opens_at,
       lng: row.lng,
       lat: row.lat,
       google_rating: row.google_rating,
@@ -258,6 +261,7 @@ export async function fetchCafeDetail(id: string): Promise<CafeDetail | null> {
     lat: d.lat,
     open_now: twStatus.open_now,
     closes_at: twStatus.closes_at ?? undefined,
+    opens_at: twStatus.opens_at ?? undefined,
     distance_km: 0,
     top_tags: topTagKeys.map(dbTagLabel),
     tags,

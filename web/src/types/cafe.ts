@@ -26,6 +26,7 @@ export interface CafeCard {
   distance_km: number;
   open_now: boolean;
   closes_at?: string; // "23:00"
+  opens_at?: string; // "09:00" — 今天稍後才開門時設定
   lng: number;
   lat: number;
   google_rating?: number | null;

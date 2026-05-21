@@ -95,15 +95,21 @@ export function CafeListItem({
         )}
         <div
           className={clsx(
-            "mt-1 text-[11px]",
-            cafe.open_now ? "text-success font-medium" : "text-error font-medium"
+            "mt-1 text-[11px] font-medium",
+            cafe.open_now
+              ? "text-success"
+              : cafe.opens_at
+                ? "text-warning"
+                : "text-error"
           )}
         >
           {cafe.open_now
             ? cafe.closes_at
               ? `營業中 · 至 ${cafe.closes_at}`
               : "營業中"
-            : "已休息"}
+            : cafe.opens_at
+              ? `尚未營業 · ${cafe.opens_at} 開門`
+              : "已休息"}
         </div>
       </div>
     </Link>

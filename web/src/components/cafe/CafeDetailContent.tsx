@@ -90,13 +90,17 @@ export function CafeDetailContent({ cafe, isDesktop, actions }: CafeDetailConten
         <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
           <h2 className="text-2xl font-bold tracking-tight">{cafe.name}</h2>
           <div
-            className={`badge badge-outline ${cafe.open_now ? "text-success" : "text-error"}`}
+            className={`badge badge-outline ${
+              cafe.open_now ? "text-success" : cafe.opens_at ? "text-warning" : "text-error"
+            }`}
           >
             {cafe.open_now
               ? cafe.closes_at
                 ? `營業中 · ${cafe.closes_at} 打烊`
                 : "營業中"
-              : "已休息"}
+              : cafe.opens_at
+                ? `尚未營業 · ${cafe.opens_at} 開門`
+                : "已休息"}
           </div>
         </div>
 

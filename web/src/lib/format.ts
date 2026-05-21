@@ -182,44 +182,53 @@ export function getTWTimeParts(date: Date = new Date()): TWTimeParts {
 export interface CafeOpenStatus {
   open_now: boolean;
   closes_at: string | null;
+  /** 若今天稍後才開門，回傳開門時間（HH:mm）；否則 null。 */
+  opens_at: string | null;
 }
 
 /** 判斷咖啡廳在指定的時間點（預設為目前臺灣時間）是否營業，並計算當前的打烊時間。 */
 export function isCafeOpenAt(businessHours: any, date: Date = new Date()): CafeOpenStatus {
   if (!businessHours || typeof businessHours !== "object") {
-    return { open_now: false, closes_at: null };
+    return { open_now: false, closes_at: null, opens_at: null };
   }
 
   const { weekday, hour, minute } = getTWTimeParts(date);
   const rawSlots = lookupDaySlots(businessHours, weekday);
   if (rawSlots == null) {
-    return { open_now: false, closes_at: null };
+    return { open_now: false, closes_at: null, opens_at: null };
   }
   const slots = Array.isArray(rawSlots) ? rawSlots : [rawSlots];
   if (slots.length === 0) {
-    return { open_now: false, closes_at: null };
+    return { open_now: false, closes_at: null, opens_at: null };
   }
 
   const currentMinutes = hour * 60 + minute;
+  let nextOpenMin = Infinity;
+  let nextOpenText: string | null = null;
 
   for (const slot of slots) {
     const parsed = parseSlot(slot);
     if (!parsed) continue;
-    const { openMin, closeMin, closeText } = parsed;
+    const { openMin, closeMin, closeText, openText } = parsed;
 
     if (closeMin > openMin) {
       if (currentMinutes >= openMin && currentMinutes < closeMin) {
-        return { open_now: true, closes_at: closeText };
+        return { open_now: true, closes_at: closeText, opens_at: null };
       }
     } else {
       // 跨夜時段 (如 18:00 - 02:00)
       if (currentMinutes >= openMin || currentMinutes < closeMin) {
-        return { open_now: true, closes_at: closeText };
+        return { open_now: true, closes_at: closeText, opens_at: null };
       }
+    }
+
+    if (openMin > currentMinutes && openMin < nextOpenMin) {
+      nextOpenMin = openMin;
+      nextOpenText = openText;
     }
   }
 
-  return { open_now: false, closes_at: null };
+  return { open_now: false, closes_at: null, opens_at: nextOpenText };
 }
 
 /** 在 business_hours 物件中尋找指定星期的時段 — 容忍 monday/mon/MON/週一 等多種 key 形式。 */
@@ -259,7 +268,9 @@ function toMinutes(t: string): number {
 }
 
 /** 將單一時段轉成 {openMin, closeMin, closeText}。支援 {open,close} 物件或 "09:00–22:00" 字串。 */
-function parseSlot(slot: any): { openMin: number; closeMin: number; closeText: string } | null {
+function parseSlot(
+  slot: any,
+): { openMin: number; closeMin: number; closeText: string; openText: string } | null {
   if (!slot) return null;
   if (typeof slot === "string") {
     const s = slot.trim();
@@ -269,13 +280,18 @@ function parseSlot(slot: any): { openMin: number; closeMin: number; closeText: s
     const openMin = toMinutes(parts[0]);
     const closeMin = toMinutes(parts[1]);
     if (openMin < 0 || closeMin < 0) return null;
-    return { openMin, closeMin, closeText: formatTime(parts[1]) };
+    return { openMin, closeMin, closeText: formatTime(parts[1]), openText: formatTime(parts[0]) };
   }
   if (typeof slot === "object" && slot.open && slot.close) {
     const openMin = toMinutes(String(slot.open));
     const closeMin = toMinutes(String(slot.close));
     if (openMin < 0 || closeMin < 0) return null;
-    return { openMin, closeMin, closeText: formatTime(String(slot.close)) };
+    return {
+      openMin,
+      closeMin,
+      closeText: formatTime(String(slot.close)),
+      openText: formatTime(String(slot.open)),
+    };
   }
   return null;
 }
