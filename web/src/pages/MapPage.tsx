@@ -20,7 +20,7 @@ const CHIP_OPTIONS: ChipOption[] = [
   { key: "now", label: "現在營業" },
   { key: "no_limit", label: "不限時" },
   { key: "socket", label: "有插座" },
-  { key: "quiet", label: "安靜" },
+  { key: "study", label: "適合讀書" },
 ];
 
 type SheetMode = "peek" | "half" | "full";
@@ -48,7 +48,7 @@ export default function MapPage() {
   const [params] = useSearchParams();
   const initial = params.getAll("tag");
   const initialScenario = params.get("scenario");
-  const { selected, toggle, scenario, pickScenario, openAt, setOpenAt } = useSearchSelection(initial);
+  const { selected, orSelected, toggle, scenario, pickScenario, openAt, setOpenAt } = useSearchSelection(initial);
   const initialOpenAt = params.get("open_at");
   const [activeId, setActiveId] = useState<string | null>(null);
   const [sheet, setSheet] = useState<SheetMode>("half");
@@ -80,6 +80,7 @@ export default function MapPage() {
 
   const searchQuery = useCafeSearch({
     tags: Array.from(selected),
+    tags_or: orSelected,
     lng: DEFAULT_LNG,
     lat: DEFAULT_LAT,
     radius_m: DEFAULT_RADIUS_M,

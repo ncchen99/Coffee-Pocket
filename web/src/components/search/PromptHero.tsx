@@ -7,7 +7,7 @@ import { parsePrompt } from "@/lib/api";
 const PROMPT_TAGS: { key: string; label: string; accent?: boolean }[] = [
   { key: "no_limit", label: "不限時" },
   { key: "socket", label: "有插座" },
-  { key: "quiet", label: "安靜" },
+  { key: "study", label: "適合讀書" },
   { key: "late_night", label: "22:00 後" },
   { key: "near_3km", label: "3km 內" },
   { key: "group_4", label: "4 人" },

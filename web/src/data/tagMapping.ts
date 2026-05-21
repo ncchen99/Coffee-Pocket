@@ -9,7 +9,6 @@
 export const FILTER_TO_DB: Record<string, string> = {
   socket: "socket_available",
   no_limit: "time_limit",
-  quiet: "noise_level",
   study: "study_friendly",
   chat: "discussion_friendly",
   reserve: "reservable",
@@ -40,7 +39,6 @@ export const DB_TAG_LABEL: Record<string, string> = {
   discussion_friendly: "適合討論",
   group_chat_friendly: "適合多人",
   time_limit: "不限時",
-  noise_level: "安靜",
 };
 
 export function dbTagLabel(key: string): string {

@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Cancel01Icon } from "@hugeicons/core-free-icons";
-import { Cap } from "@/components/primitives";
+import { Cap, CustomSelect } from "@/components/primitives";
 import { FILTER_TAG_GROUPS, SORT_OPTIONS } from "@/data/filterTags";
 import { useCafeSearchCount } from "@/hooks/useCafes";
 import { getTWTimeParts } from "@/lib/format";
@@ -204,29 +204,19 @@ export default function FilterPage() {
           </div>
 
           {timeMode === "specific" && (
-            <div className="mt-3 flex gap-2 rounded-lg bg-base-200 p-2.5 cp-anim-fade-in">
-              <select
+            <div className="mt-3 flex gap-2 cp-anim-fade-in">
+              <CustomSelect
+                options={WEEKDAY_OPTIONS}
                 value={selDay}
-                onChange={(e) => handleSpecificChange(e.target.value, selHour)}
-                className="select select-bordered select-xs flex-1 max-w-[120px] bg-base-100 font-semibold"
-              >
-                {WEEKDAY_OPTIONS.map((opt) => (
-                  <option key={opt.value} value={opt.value}>
-                    {opt.label}
-                  </option>
-                ))}
-              </select>
-              <select
+                onChange={(v) => handleSpecificChange(v, selHour)}
+                widthClass="flex-1 max-w-[120px]"
+              />
+              <CustomSelect
+                options={HOUR_OPTIONS.map((h) => ({ value: h, label: h }))}
                 value={selHour}
-                onChange={(e) => handleSpecificChange(selDay, e.target.value)}
-                className="select select-bordered select-xs flex-1 bg-base-100 font-semibold"
-              >
-                {HOUR_OPTIONS.map((h) => (
-                  <option key={h} value={h}>
-                    {h}
-                  </option>
-                ))}
-              </select>
+                onChange={(v) => handleSpecificChange(selDay, v)}
+                widthClass="flex-1"
+              />
             </div>
           )}
         </section>

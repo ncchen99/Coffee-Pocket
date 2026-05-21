@@ -25,6 +25,7 @@ export function useCafeDetail(id: string | null | undefined) {
 
 export function useCafeSearchCount(params: {
   tags?: string[];
+  tags_or?: string[];
   lng?: number | null;
   lat?: number | null;
   radius_m?: number;

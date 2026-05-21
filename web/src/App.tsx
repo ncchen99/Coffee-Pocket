@@ -80,7 +80,7 @@ function DesktopApp() {
   const activeId = cafeMatch?.params.id ?? null;
   const isFilterOpen = !!filterMatch;
 
-  const { selected, toggle, setAll, query, setQuery, scenario, pickScenario, openAt, setOpenAt } =
+  const { selected, orSelected, toggle, setAll, query, setQuery, scenario, pickScenario, openAt, setOpenAt } =
     useSearchSelection();
 
   // displayed 落後 activeId —— 關閉時讓內容多停留 280ms 給 exit 動畫播完。
@@ -105,6 +105,7 @@ function DesktopApp() {
 
   const searchQuery = useCafeSearch({
     tags: Array.from(selected),
+    tags_or: orSelected,
     lng: DEFAULT_LNG,
     lat: DEFAULT_LAT,
     radius_m: DEFAULT_RADIUS_M,

@@ -51,7 +51,9 @@ export async function parsePrompt(query: string): Promise<ParsedPrompt> {
 // ===========================================================================
 
 export interface SearchParams {
-  tags?: string[]; // frontend short keys (e.g. "socket")
+  tags?: string[]; // frontend short keys (e.g. "socket") — AND
+  /** OR-match (任一符合即可)。用於場景組合，例如「聊天聚會」= 適合討論 OR 適合多人。 */
+  tags_or?: string[];
   lng?: number | null;
   lat?: number | null;
   radius_m?: number; // default 5000
@@ -82,6 +84,7 @@ interface CafeSearchRow {
 }
 
 function rpcArgsForSearch(params: SearchParams) {
+  const orTags = filterKeysToDb(params.tags_or ?? []);
   return {
     p_tags: filterKeysToDb(params.tags ?? []),
     p_lng: params.lng ?? null,
@@ -91,6 +94,7 @@ function rpcArgsForSearch(params: SearchParams) {
     p_limit: params.limit ?? 50,
     p_offset: params.offset ?? 0,
     p_open_at: params.open_at ?? null,
+    p_tags_or: orTags.length > 0 ? orTags : null,
   };
 }
 
@@ -129,12 +133,14 @@ export async function searchCafes(params: SearchParams): Promise<SearchResult> {
 export async function searchCafesCount(
   params: Omit<SearchParams, "sort" | "limit" | "offset">,
 ): Promise<number> {
+  const orTags = filterKeysToDb(params.tags_or ?? []);
   const { data, error } = await supabase.rpc("cafes_search_count", {
     p_tags: filterKeysToDb(params.tags ?? []),
     p_lng: params.lng ?? null,
     p_lat: params.lat ?? null,
     p_radius_m: params.radius_m ?? 5000,
     p_open_at: params.open_at ?? null,
+    p_tags_or: orTags.length > 0 ? orTags : null,
   });
   if (error) throw error;
   return Number(data ?? 0);

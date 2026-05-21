@@ -18,10 +18,9 @@ export const FILTER_TAG_GROUPS: TagGroup[] = [
     tags: [
       { key: "socket", label: "有插座" },
       { key: "no_limit", label: "不限時" },
-      { key: "quiet", label: "安靜" },
+      { key: "study", label: "適合讀書" },
       { key: "wifi", label: "Wi-Fi" },
       { key: "big_table", label: "大桌面" },
-      { key: "study", label: "適合讀書" },
     ],
   },
   {

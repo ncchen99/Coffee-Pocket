@@ -11,17 +11,45 @@ export interface Scenario {
   key: string;
   title: string;
   sub: string;
+  /** AND — 全部必須符合 */
   tags: string[];
+  /** OR — 任一符合即可（前端 short key） */
+  tagsOr?: string[];
+  /** 場景觸發的時間點 (ISO-8601)。null = 不套用時間篩選。 */
+  resolveOpenAt?: () => string | null;
   icon: typeof LaptopIcon;
 }
 
+function todayAt20(): string {
+  // 以臺灣時區 (UTC+8) 為基準，取「今天 20:00」
+  const now = new Date();
+  const taipei = new Date(now.toLocaleString("en-US", { timeZone: "Asia/Taipei" }));
+  const y = taipei.getFullYear();
+  const m = String(taipei.getMonth() + 1).padStart(2, "0");
+  const d = String(taipei.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}T20:00:00+08:00`;
+}
+
 export const SCENARIOS: Scenario[] = [
-  // tags use frontend short keys (data/filterTags.ts) so filterKeysToDb 能正確轉換。
-  { key: "work", title: "工作 / 讀書", sub: "插座・安靜・不限時", tags: ["socket", "quiet", "no_limit"], icon: LaptopIcon },
-  // late_night 需要「目前開到 22:00 後」的概念,後端目前沒有 open_at 參數,
-  // 暫以「不限時」approximate,讓不同場景產生不同的篩選結果。
-  { key: "late", title: "深夜咖啡", sub: "晚上仍開・可久坐", tags: ["no_limit"], icon: MoonIcon },
-  { key: "group", title: "聊天聚會", sub: "適合多人・可訂位", tags: ["group", "reserve"], icon: UserMultipleIcon },
+  { key: "work", title: "工作 / 讀書", sub: "插座・讀書・不限時", tags: ["socket", "study", "no_limit"], icon: LaptopIcon },
+  // 深夜咖啡 — 晚上 8 點後仍營業
+  {
+    key: "late",
+    title: "深夜咖啡",
+    sub: "晚上 8 點後仍開",
+    tags: [],
+    resolveOpenAt: todayAt20,
+    icon: MoonIcon,
+  },
+  // 聊天聚會 — 適合討論 OR 適合多人，並且不限時
+  {
+    key: "group",
+    title: "聊天聚會",
+    sub: "適合討論／多人・不限時",
+    tags: ["no_limit"],
+    tagsOr: ["chat", "group"],
+    icon: UserMultipleIcon,
+  },
   { key: "discover", title: "今天去哪", sub: "隨機・在你附近", tags: [], icon: SparklesIcon },
 ];
 
