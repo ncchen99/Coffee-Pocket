@@ -6,10 +6,12 @@ interface TagConfidenceRowProps {
   tag: TagWithConfidence;
   userVote?: 1 | -1;
   onVote?: (key: TagWithConfidence["key"], vote: "up" | "down") => void;
+  /** 未登入時不顯示按讚 / 倒讚按鈕,避免誤導(按了也不能用)。 */
+  showVoteButtons?: boolean;
 }
 
 /** 單一 platform tag 的信心 + 投票列。 */
-export function TagConfidenceRow({ tag, userVote, onVote }: TagConfidenceRowProps) {
+export function TagConfidenceRow({ tag, userVote, onVote, showVoteButtons = true }: TagConfidenceRowProps) {
   const pct = Math.round(tag.confidence * 100);
   const isUpvoted = userVote === 1;
   const isDownvoted = userVote === -1;
@@ -29,24 +31,26 @@ export function TagConfidenceRow({ tag, userVote, onVote }: TagConfidenceRowProp
           </span>
         </div>
       </div>
-      <div className="join">
-        <button
-          type="button"
-          aria-label="同意"
-          onClick={() => onVote?.(tag.key, "up")}
-          className={`btn btn-xs join-item ${isUpvoted ? "btn-primary" : "btn-outline"}`}
-        >
-          <HugeiconsIcon icon={ThumbsUpIcon} size={12} strokeWidth={1.5} />
-        </button>
-        <button
-          type="button"
-          aria-label="不同意"
-          onClick={() => onVote?.(tag.key, "down")}
-          className={`btn btn-xs join-item ${isDownvoted ? "btn-primary" : "btn-outline"}`}
-        >
-          <HugeiconsIcon icon={ThumbsDownIcon} size={12} strokeWidth={1.5} />
-        </button>
-      </div>
+      {showVoteButtons && (
+        <div className="join">
+          <button
+            type="button"
+            aria-label="同意"
+            onClick={() => onVote?.(tag.key, "up")}
+            className={`btn btn-xs join-item ${isUpvoted ? "btn-primary" : "btn-outline"}`}
+          >
+            <HugeiconsIcon icon={ThumbsUpIcon} size={12} strokeWidth={1.5} />
+          </button>
+          <button
+            type="button"
+            aria-label="不同意"
+            onClick={() => onVote?.(tag.key, "down")}
+            className={`btn btn-xs join-item ${isDownvoted ? "btn-primary" : "btn-outline"}`}
+          >
+            <HugeiconsIcon icon={ThumbsDownIcon} size={12} strokeWidth={1.5} />
+          </button>
+        </div>
+      )}
     </div>
   );
 }

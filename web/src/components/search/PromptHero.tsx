@@ -126,8 +126,14 @@ export function PromptHero({
         return;
       }
 
-      if (!parsed || (parsed.tags.length === 0 && !parsed.open_at && parsed.distance_km === null)) {
-        setHint(`找不到「${q}」相關咖啡廳，也沒抓到對應條件，請試試「有插座」「安靜」「不限時」等關鍵字`);
+      if (
+        !parsed ||
+        (parsed.tags.length === 0 &&
+          parsed.soft_tags.length === 0 &&
+          !parsed.open_at &&
+          parsed.distance_km === null)
+      ) {
+        setHint(`找不到「${q}」相關咖啡廳，也沒抓到對應條件，請試試「有插座」「適合讀書」「不限時」等關鍵字`);
       } else {
         setHint(parsed.rationale || null);
       }

@@ -56,7 +56,7 @@ export default function CafeDetailPage() {
     );
   }
 
-  const { inPocket, pocketDisabled, handlePocketClick } = actions;
+  const { inPocket, pocketDisabled, handlePocketClick, user } = actions;
 
   return (
     <div className="flex min-h-screen flex-col bg-base-100">
@@ -83,19 +83,21 @@ export default function CafeDetailPage() {
           >
             <HugeiconsIcon icon={LinkForwardIcon} size={16} strokeWidth={1.5} />
           </button>
-          <button
-            type="button"
-            onClick={handlePocketClick}
-            disabled={pocketDisabled}
-            aria-label={inPocket ? "已加入口袋" : "加入口袋"}
-            className={`btn btn-ghost btn-sm btn-square ${inPocket ? "text-primary" : ""}`}
-          >
-            <HugeiconsIcon
-              icon={inPocket ? BookmarkCheck02Icon : Bookmark02Icon}
-              size={18}
-              strokeWidth={1.5}
-            />
-          </button>
+          {user && (
+            <button
+              type="button"
+              onClick={handlePocketClick}
+              disabled={pocketDisabled}
+              aria-label={inPocket ? "已加入口袋" : "加入口袋"}
+              className={`btn btn-ghost btn-sm btn-square ${inPocket ? "text-primary" : ""}`}
+            >
+              <HugeiconsIcon
+                icon={inPocket ? BookmarkCheck02Icon : Bookmark02Icon}
+                size={18}
+                strokeWidth={1.5}
+              />
+            </button>
+          )}
         </div>
       </header>
       <main>

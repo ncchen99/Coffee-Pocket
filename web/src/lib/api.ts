@@ -537,7 +537,13 @@ export async function addCafeTag(cafeId: string, tagKey: string): Promise<void> 
 }
 
 export async function deleteCafeTag(cafeId: string, tagKey: string): Promise<void> {
-  await clearVote(cafeId, tagKey);
+  // 由 RPC 在伺服端原子完成「清票 + (若無證據且無他人附議)刪 cafe_tags 列」。
+  // 純前端 supabase.from('cafe_tags').delete() 走不通,因為 0015 撤銷了 DELETE policy。
+  const { error } = await supabase.rpc("remove_cafe_tag", {
+    p_cafe_id: cafeId,
+    p_tag_key: tagKey,
+  });
+  if (error) throw error;
 }
 
 export async function fetchUserVotes(cafeId: string): Promise<Record<string, 1 | -1>> {

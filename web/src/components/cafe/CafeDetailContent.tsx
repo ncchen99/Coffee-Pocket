@@ -188,21 +188,24 @@ export function CafeDetailContent({ cafe, isDesktop, actions }: CafeDetailConten
       </section>
 
       {/* === 2. 行動按鈕：加入口袋 / 分享 / Google 導航 === */}
+      {/* 未登入時,「加入口袋」與「回報問題」等需登入功能一律不顯示,避免誤導。 */}
       <section className="px-5 pt-4">
         <div className="flex gap-2">
-          <button
-            type="button"
-            onClick={handlePocketClick}
-            disabled={pocketDisabled}
-            className={`btn btn-sm flex-1 gap-1.5 rounded-none ${inPocket ? "btn-neutral" : "btn-outline"}`}
-          >
-            <HugeiconsIcon
-              icon={inPocket ? BookmarkCheck02Icon : Bookmark02Icon}
-              size={14}
-              strokeWidth={1.5}
-            />
-            <span className="truncate">{pocketLabel}</span>
-          </button>
+          {user && (
+            <button
+              type="button"
+              onClick={handlePocketClick}
+              disabled={pocketDisabled}
+              className={`btn btn-sm flex-1 gap-1.5 rounded-none ${inPocket ? "btn-neutral" : "btn-outline"}`}
+            >
+              <HugeiconsIcon
+                icon={inPocket ? BookmarkCheck02Icon : Bookmark02Icon}
+                size={14}
+                strokeWidth={1.5}
+              />
+              <span className="truncate">{pocketLabel}</span>
+            </button>
+          )}
           <button
             type="button"
             onClick={() => shareUrl(window.location.href, cafe.name)}
@@ -256,16 +259,17 @@ export function CafeDetailContent({ cafe, isDesktop, actions }: CafeDetailConten
       <section className="px-5">
         <div className="flex items-center justify-between">
           <Cap>標籤與證據</Cap>
-          <button
-            type="button"
-            onClick={() => setIsAddTagOpen(true)}
-            disabled={!user}
-            title={user ? "新增標籤" : "請先登入以新增標籤"}
-            className="btn btn-ghost btn-xs text-primary hover:bg-primary/10 gap-1 rounded-none px-2 font-medium flex items-center disabled:opacity-50"
-          >
-            <HugeiconsIcon icon={Add01Icon} size={12} strokeWidth={2} />
-            新增標籤
-          </button>
+          {user && (
+            <button
+              type="button"
+              onClick={() => setIsAddTagOpen(true)}
+              title="新增標籤"
+              className="btn btn-ghost btn-xs text-primary hover:bg-primary/10 gap-1 rounded-none px-2 font-medium flex items-center"
+            >
+              <HugeiconsIcon icon={Add01Icon} size={12} strokeWidth={2} />
+              新增標籤
+            </button>
+          )}
         </div>
         {stableTags.length > 0 ? (
           <ul className="mt-2 divide-y divide-base-content/10">
@@ -275,6 +279,7 @@ export function CafeDetailContent({ cafe, isDesktop, actions }: CafeDetailConten
                   tag={t}
                   userVote={userVotes?.[t.key]}
                   onVote={handleVote}
+                  showVoteButtons={!!user}
                 />
               </li>
             ))}
@@ -328,18 +333,19 @@ export function CafeDetailContent({ cafe, isDesktop, actions }: CafeDetailConten
         </>
       )}
 
-      {/* === 4. 回報問題(放最底) === */}
-      <section className="px-5 pt-6 pb-8">
-        <button
-          type="button"
-          onClick={openReport}
-          disabled={!user}
-          className="btn btn-ghost btn-sm w-full gap-1.5 rounded-none text-base-content/55 hover:text-base-content"
-        >
-          <HugeiconsIcon icon={AlertCircleIcon} size={14} strokeWidth={1.5} />
-          回報問題
-        </button>
-      </section>
+      {/* === 4. 回報問題(放最底,僅登入使用者可見) === */}
+      {user && (
+        <section className="px-5 pt-6 pb-8">
+          <button
+            type="button"
+            onClick={openReport}
+            className="btn btn-ghost btn-sm w-full gap-1.5 rounded-none text-base-content/55 hover:text-base-content"
+          >
+            <HugeiconsIcon icon={AlertCircleIcon} size={14} strokeWidth={1.5} />
+            回報問題
+          </button>
+        </section>
+      )}
 
       <AddTagModal
         isOpen={isAddTagOpen}
