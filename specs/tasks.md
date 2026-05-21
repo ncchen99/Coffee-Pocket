@@ -35,27 +35,27 @@
 
 - [x] 啟用 Supabase Auth Google OAuth (對應 [login.md](../designs/wireframes/pages/login.md))
 - [x] 啟用 Apple OAuth (iOS PWA / 行動端) - [x] 這個部分決定不做
-- [ ] `users` 表觸發器:auth.users → public.users (自動同步 display_name / avatar)
-- [ ] RLS 政策:`cafes` public read;`edits` / `pockets` / `pocket_items` owner-only write
+- [x] `users` 表觸發器:auth.users → public.users (自動同步 display_name / avatar)
+- [x] RLS 政策:`cafes` public read;`edits` / `pockets` / `pocket_items` owner-only write
 
 ### 2.2 Schema 補完
 
-- [ ] `pockets` (id, user_id, name, emoji, sort_order)
-- [ ] `pocket_items` (pocket_id, cafe_id, personal_note, added_at)
-- [ ] `edits` 擴充:status (pending / approved / rejected)、reviewer_id、reviewed_at、source_url / source_image
-- [ ] `tag_votes` (cafe_id, tag_key, user_id, vote, created_at) — 對應 [cafe-detail](../designs/wireframes/pages/cafe-detail.md) 與 [cafe-edit](../designs/wireframes/pages/cafe-edit.md) 的標籤投票
-- [ ] `reports` (cafe_id, reporter_id, type: closed/duplicate/wrong, note)
+- [x] `pockets` (id, user_id, name, emoji, sort_order)
+- [x] `pocket_items` (pocket_id, cafe_id, personal_note, added_at)
+- [x] `edits` 擴充:status (pending / approved / rejected)、reviewer_id、reviewed_at、source_url / source_image
+- [x] `tag_votes` (cafe_id, tag_key, user_id, vote, created_at) — 對應 [cafe-detail](../designs/wireframes/pages/cafe-detail.md) 與 [cafe-edit](../designs/wireframes/pages/cafe-edit.md) 的標籤投票
+- [x] `reports` (cafe_id, reporter_id, type: closed/duplicate/wrong, note)
 
 ### 2.3 Edge Functions (Deno)
 
 > 統一放 `supabase/functions/<name>/index.ts`。Edge Function 只做 thin layer,重活留給 Postgres / Python worker。
 
-- [ ] `search-cafes` — 多標籤交叉 + PostGIS 距離 + 時間 + 排序;input: `{tags, center, radius_km, at_time, sort}` → 直接走 SQL RPC,< 200ms
+- [x] `search-cafes` — 多標籤交叉 + PostGIS 距離 + 時間 + 排序;input: `{tags, center, radius_km, at_time, sort}` → 直接走 SQL RPC,< 200ms
 - [ ] `cafe-detail` — 單店完整資訊 + tags with evidence + AI 摘要 + 即時營業狀態
 - [ ] `submit-edit` — 寫入 `edits` (pending),回傳 ticket id ([cafe-edit.md](../designs/wireframes/pages/cafe-edit.md) §提交後)
 - [ ] `submit-cafe` — 新店家送審 + 觸發後端 AI 標籤 pipeline ([cafe-add.md](../designs/wireframes/pages/cafe-add.md))
 - [ ] `vote-tag` — 對標籤 👍/👎,寫入 `tag_votes`,連續 N 次 👎 後 client 顯示「直接修」CTA
-- [ ] `ai-summary` — 呼叫 LLM 生成情境式摘要,結果 cache 進 `cafes.ai_summary` (TTL 30 天);Edge Function 只負責 cache 命中 / 失誤調用
+- [ ] `ai-summary` — 呼叫 LLM 生成情境式摘要,結果 cache 進 `cafes.ai_summary` (TTL 3000 天);Edge Function 只負責 cache 命中 / 失誤調用
 - [ ] `nearby-resolve` — 反向地理:lat/lng → 臺南行政區名稱 (定位失敗 fallback 用,見 [empty-error.md](../designs/wireframes/pages/empty-error.md))
 - [ ] `export-pocket` — 匯出單一使用者的所有 pockets → JSON ([settings.md](../designs/wireframes/pages/settings.md))
 - [ ] `delete-account` — GDPR 級刪除:auth.users + 級聯清掉 pockets / edits / votes
@@ -74,38 +74,38 @@
 
 ### 3.1 專案 / 設計系統
 
-- [ ] Vite + React + TypeScript 專案骨架
-- [ ] Tailwind + daisyUI 安裝;custom theme `coffee-paper` / `coffee-roast` 對應 requirements §4.2
-- [ ] Hugeicons 安裝 (`@hugeicons/react` + `@hugeicons/core-free-icons`),建立 `<Icon name="..." />` 包裝
-- [ ] 沿用 `wf-primitives.jsx` 的概念元件 → 改寫成正式 React component:`Pill` / `Divider` / `Ann` / `Box` / `MobileFrame` / `Cap`
-- [ ] React Router 結構,layout = MobileShell / DesktopShell (媒體查詢切換)
-- [ ] React Query client + Supabase client (`@supabase/supabase-js`) 設定
-- [ ] Auth Context (Supabase Auth session listener)
+- [x] Vite + React + TypeScript 專案骨架
+- [x] Tailwind + daisyUI 安裝;custom theme `coffee-paper` / `coffee-roast` 對應 requirements §4.2
+- [x] Hugeicons 安裝 (`@hugeicons/react` + `@hugeicons/core-free-icons`),建立 `<Icon name="..." />` 包裝
+- [x] 沿用 `wf-primitives.jsx` 的概念元件 → 改寫成正式 React component:`Pill` / `Divider` / `Ann` / `Box` / `MobileFrame` / `Cap`
+- [x] React Router 結構,layout = MobileShell / DesktopShell (媒體查詢切換)
+- [x] React Query client + Supabase client (`@supabase/supabase-js`) 設定
+- [x] Auth Context (Supabase Auth session listener)
 - [ ] i18n 基礎 (zh-TW / en) — 文案集中
 
 ### 3.2 頁面實作 (對應 wireframe)
 
-- [ ] **Onboarding** — 3 頁 carousel + localStorage `onboarded_at` ([onboarding.md](../designs/wireframes/pages/onboarding.md))
-- [ ] **Home / 搜尋入口** — 移植 `wf-home.jsx` 為實際組件,接 `search-cafes`
-- [ ] **Mobile 地圖 + Bottom Sheet** — 移植 `wf-mobile.jsx`,Mapbox + react-spring drag
-- [ ] **Desktop 左列右地圖** — 移植 `wf-desktop.jsx`,Mapbox + 同步 hover state
-- [ ] **Advanced Filter** — 多 tag chip + 即時筆數 ([advanced-filter.md](../designs/wireframes/pages/advanced-filter.md));每改一項 debounce 200ms 重打 `search-cafes`
-- [ ] **Cafe Detail** — sticky topbar + hero carousel + 即時營業狀態 + evidence drawer ([cafe-detail.md](../designs/wireframes/pages/cafe-detail.md))
-- [ ] **Cafe Edit** — diff 視覺化 + 來源附件 ([cafe-edit.md](../designs/wireframes/pages/cafe-edit.md));打 `submit-edit`
-- [ ] **Cafe Add** — 3 步驟 + Google Places autocomplete ([cafe-add.md](../designs/wireframes/pages/cafe-add.md));打 `submit-cafe`
-- [ ] **Pocket List** — chip 切換不同口袋 + 列表 / 地圖 view toggle ([pocket-list.md](../designs/wireframes/pages/pocket-list.md))
-- [ ] **Login** — Supabase Auth modal,Google + Apple ([login.md](../designs/wireframes/pages/login.md))
-- [ ] **Profile** — 統計 + 貢獻 timeline ([profile.md](../designs/wireframes/pages/profile.md))
-- [ ] **Settings** — 即時生效;主題透過 daisyUI `data-theme` 切;呼叫 `export-pocket` / `delete-account` ([settings.md](../designs/wireframes/pages/settings.md))
+- [x] **Onboarding** — 3 頁 carousel + localStorage `onboarded_at` ([onboarding.md](../designs/wireframes/pages/onboarding.md))
+- [x] **Home / 搜尋入口** — 移植 `wf-home.jsx` 為實際組件,接 `search-cafes`
+- [x] **Mobile 地圖 + Bottom Sheet** — 移植 `wf-mobile.jsx`,Mapbox + react-spring drag
+- [x] **Desktop 左列右地圖** — 移植 `wf-desktop.jsx`,Mapbox + 同步 hover state
+- [x] **Advanced Filter** — 多 tag chip + 即時筆數 ([advanced-filter.md](../designs/wireframes/pages/advanced-filter.md));每改一項 debounce 200ms 重打 `search-cafes`
+- [x] **Cafe Detail** — sticky topbar + hero carousel + 即時營業狀態 + evidence drawer ([cafe-detail.md](../designs/wireframes/pages/cafe-detail.md))
+- [x] **Cafe Edit** — diff 視覺化 + 來源附件 ([cafe-edit.md](../designs/wireframes/pages/cafe-edit.md));打 `submit-edit`
+- [x] **Cafe Add** — 3 步驟 + Google Places autocomplete ([cafe-add.md](../designs/wireframes/pages/cafe-add.md));打 `submit-cafe`
+- [x] **Pocket List** — chip 切換不同口袋 + 列表 / 地圖 view toggle ([pocket-list.md](../designs/wireframes/pages/pocket-list.md))
+- [x] **Login** — Supabase Auth modal,Google + Apple ([login.md](../designs/wireframes/pages/login.md))
+- [x] **Profile** — 統計 + 貢獻 timeline ([profile.md](../designs/wireframes/pages/profile.md))
+- [x] **Settings** — 即時生效;主題透過 daisyUI `data-theme` 切;呼叫 `export-pocket` / `delete-account` ([settings.md](../designs/wireframes/pages/settings.md))
 - [ ] **Empty / Error 元件** — 6 場景共用 `<EmptyState icon=... title=... primary=... secondary=... />` ([empty-error.md](../designs/wireframes/pages/empty-error.md))
 
 ### 3.3 跨頁互動
 
-- [ ] 地圖 Marker ↔ 列表 hover 同步 (Desktop)
-- [ ] Bottom Sheet 三段式 (peek / half / full),手勢 + 鍵盤可達 (Mobile)
+- [x] 地圖 Marker ↔ 列表 hover 同步 (Desktop)
+- [x] Bottom Sheet 三段式 (peek / half / full),手勢 + 鍵盤可達 (Mobile)
 - [ ] Toast / 通知系統 (daisyUI `toast`)
-- [ ] Skeleton loading (daisyUI `skeleton`) 取代 spinner
-- [ ] 全站 dark mode 切換 (`data-theme` + 系統偵測)
+- [x] Skeleton loading (daisyUI `skeleton`) 取代 spinner
+- [x] 全站 dark mode 切換 (`data-theme` + 系統偵測)
 
 ---
 
