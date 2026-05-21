@@ -33,6 +33,10 @@ export interface CafeCard {
   /** 原始營業時間 JSON,讓列表能在 render 時即時計算營業狀態,
    *  避免 React Query 快取使顯示落後實際時間 (e.g. 剛過打烊還顯示營業中)。 */
   business_hours?: any;
+  /** 以下三個欄位只在口袋名單情境下填入，其他列表為 undefined */
+  address?: string | null;
+  google_review_count?: number | null;
+  price_level?: string | null;
 }
 
 /**

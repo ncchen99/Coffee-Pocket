@@ -1,9 +1,10 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Add01Icon, Location01Icon, StarIcon } from "@hugeicons/core-free-icons";
-import { TagBadge, InputModal } from "@/components/primitives";
+import { Add01Icon, Location01Icon } from "@hugeicons/core-free-icons";
+import { InputModal } from "@/components/primitives";
 import { DesktopPageLayout } from "@/components/layout/DesktopPageLayout";
+import { PocketCafeCard } from "@/components/search/PocketCafeCard";
 import { useAuth } from "@/hooks/useAuth";
 import { usePockets, usePocketItems, useCreatePocket } from "@/hooks/usePockets";
 
@@ -25,10 +26,6 @@ export default function DesktopPocketPage() {
   }, [pockets, activePocketId]);
 
   const { data: items = [], isLoading: itemsLoading } = usePocketItems(activePocketId);
-
-  const handleCreate = () => {
-    setIsCreateOpen(true);
-  };
 
   const handleSubmitCreate = (name: string) => {
     createPocket.mutate({ name });
@@ -60,7 +57,7 @@ export default function DesktopPocketPage() {
         </div>
         <button
           type="button"
-          onClick={handleCreate}
+          onClick={() => setIsCreateOpen(true)}
           className="btn btn-ghost btn-sm btn-square"
           aria-label="新口袋"
         >
@@ -94,7 +91,7 @@ export default function DesktopPocketPage() {
             <p className="text-base-content/55">還沒有口袋名單</p>
             <button
               type="button"
-              onClick={handleCreate}
+              onClick={() => setIsCreateOpen(true)}
               className="btn btn-neutral btn-sm mt-3"
             >
               建立第一個口袋
@@ -102,9 +99,14 @@ export default function DesktopPocketPage() {
           </div>
         ) : itemsLoading ? (
           <ul className="divide-y divide-base-content/10 rounded-xl border border-base-content/10 overflow-hidden">
-            {Array.from({ length: 3 }).map((_, i) => (
-              <li key={i} className="px-5 py-3">
-                <div className="h-12 bg-base-200 animate-pulse rounded" />
+            {Array.from({ length: 4 }).map((_, i) => (
+              <li key={i} className="flex gap-3 px-4 py-3">
+                <div className="h-20 w-20 shrink-0 bg-base-200 animate-pulse rounded-sm" />
+                <div className="flex-1 space-y-2 pt-1">
+                  <div className="h-4 bg-base-200 animate-pulse rounded w-3/4" />
+                  <div className="h-3 bg-base-200 animate-pulse rounded w-1/2" />
+                  <div className="h-3 bg-base-200 animate-pulse rounded w-2/3" />
+                </div>
               </li>
             ))}
           </ul>
@@ -115,32 +117,13 @@ export default function DesktopPocketPage() {
           </div>
         ) : (
           <ul className="divide-y divide-base-content/10 rounded-xl border border-base-content/10 overflow-hidden">
-            {items.map((item) => (
-              <li key={item.id}>
-                <Link
-                  to={`/cafe/${item.cafe_id}`}
-                  className="block px-5 py-3 hover:bg-base-200/60 transition-colors"
-                >
-                  <div className="flex items-baseline justify-between">
-                    <span className="font-semibold">{item.cafe?.name ?? "—"}</span>
-                    {item.cafe?.google_rating != null && (
-                      <span className="text-xs text-base-content/55 flex items-center gap-0.5">
-                        <HugeiconsIcon icon={StarIcon} size={11} className="text-warning fill-warning" />
-                        <span className="font-semibold text-warning">{item.cafe.google_rating.toFixed(1)}</span>
-                      </span>
-                    )}
-                  </div>
-                  <div className="mt-1 flex flex-wrap gap-1">
-                    {(item.cafe?.top_tags ?? []).map((t) => (
-                      <TagBadge key={t} variant="ghost" size="sm">{t}</TagBadge>
-                    ))}
-                  </div>
-                  {item.personal_note && (
-                    <p className="mt-1 text-xs text-base-content/55">✎ {item.personal_note}</p>
-                  )}
-                </Link>
-              </li>
-            ))}
+            {items.map((item) =>
+              item.cafe ? (
+                <li key={item.id}>
+                  <PocketCafeCard cafe={item.cafe} personalNote={item.personal_note} />
+                </li>
+              ) : null
+            )}
           </ul>
         )}
       </div>
@@ -156,6 +139,7 @@ export default function DesktopPocketPage() {
           在地圖上看這個口袋
         </button>
       </div>
+
       <InputModal
         isOpen={isCreateOpen}
         onClose={() => setIsCreateOpen(false)}

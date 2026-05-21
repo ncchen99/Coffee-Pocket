@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Search01Icon, Loading03Icon } from "@hugeicons/core-free-icons";
 import { TagChip } from "@/components/primitives";
@@ -59,6 +59,11 @@ interface PromptHeroProps {
   /** 目前的時間篩選；與「22:00 後」chip 雙向綁定。 */
   openAt?: string | null;
   onOpenAtChange?: (val: string | null) => void;
+  /**
+   * 外部觸發清除提示文字。每次值改變（遞增計數或時間戳）時，
+   * 清掉「找到 N 間店…」等 hint，避免切換標籤 / 場景後顯示舊的搜尋狀態。
+   */
+  resetHintTrigger?: number;
 }
 
 /** 對話式 hero — 桌面 (compact) / 手機共用。 */
@@ -72,12 +77,24 @@ export function PromptHero({
   compact = false,
   openAt,
   onOpenAtChange,
+  resetHintTrigger,
 }: PromptHeroProps) {
   const lateNightTarget = todayAt22();
   const isLateNightActive = openAt === lateNightTarget;
   const [loading, setLoading] = useState(false);
   const [hint, setHint] = useState<string | null>(null);
   const [lastSubmittedQuery, setLastSubmittedQuery] = useState("");
+
+  // 外部（chip / 場景點擊）觸發 → 清除 hint。
+  // 用 ref 跳過 mount 時的初始執行（trigger=0 不應清除）。
+  const prevResetRef = useRef<number | undefined>(undefined);
+  useEffect(() => {
+    if (prevResetRef.current !== undefined && resetHintTrigger !== prevResetRef.current) {
+      setHint(null);
+      setLastSubmittedQuery("");
+    }
+    prevResetRef.current = resetHintTrigger;
+  }, [resetHintTrigger]);
 
   const handleSubmit = async () => {
     const q = query.trim();

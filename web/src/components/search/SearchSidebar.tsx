@@ -74,6 +74,20 @@ export function SearchSidebar({
   const sortRef = useRef<HTMLDivElement>(null);
   const currentSortLabel = SORT_OPTIONS.find((o) => o.value === sortKey)?.label ?? "按距離";
 
+  // 直接在 chip / 場景點擊 handler 裡遞増，而非監聴 selected/scenario 變化，
+  // 避免搜尋提交也會觸發（setAll 建立新 Set 導致參考變變）。
+  const [hintResetKey, setHintResetKey] = useState(0);
+
+  const handleToggle = (key: string) => {
+    setHintResetKey((k) => k + 1);
+    toggle(key);
+  };
+
+  const handlePickScenario = (s: Parameters<typeof pickScenario>[0]) => {
+    setHintResetKey((k) => k + 1);
+    pickScenario(s);
+  };
+
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
       if (sortRef.current && !sortRef.current.contains(e.target as Node)) {
@@ -93,10 +107,11 @@ export function SearchSidebar({
             query={query}
             onQueryChange={setQuery}
             selected={selected}
-            onToggle={toggle}
+            onToggle={handleToggle}
             openAt={openAt}
             onOpenAtChange={onOpenAtChange}
-          onSubmit={(parsed, softTags, parsedOpenAt, distanceKm, kw) => {
+            resetHintTrigger={hintResetKey}
+            onSubmit={(parsed, softTags, parsedOpenAt, distanceKm, kw) => {
               if (kw) {
                 // 關鍵字模式 — 清掉其他條件，只保留 keyword。
                 setAll([]);
@@ -120,13 +135,14 @@ export function SearchSidebar({
               onRadiusMChange(null);
               onKeywordChange?.(null);
             }}
+
           />
         </section>
 
         <div className="px-5 pt-5">
           <Cap>快速場景</Cap>
           <div className="mt-2">
-            <ScenarioGrid layout="grid" activeKey={scenario} onPick={pickScenario} />
+            <ScenarioGrid layout="grid" activeKey={scenario} onPick={handlePickScenario} />
           </div>
         </div>
 

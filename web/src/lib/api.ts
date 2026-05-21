@@ -329,31 +329,57 @@ export async function fetchPockets(): Promise<Pocket[]> {
 }
 
 export async function fetchPocketItems(pocketId: string): Promise<PocketItem[]> {
+  // Step 1: pocket items + cafe base info (top_tags 不是 cafes 表的欄位，不能用 join 取得)
   const { data, error } = await supabase
     .from("pocket_items")
     .select(
-      "id, pocket_id, cafe_id, personal_note, added_at, cafe:cafes(id, name, cover_image_url, location, google_rating)",
+      "id, pocket_id, cafe_id, personal_note, added_at, cafe:cafes(id, name, address, cover_image_url, google_rating, google_review_count, price_level, business_hours)",
     )
     .eq("pocket_id", pocketId)
     .order("added_at", { ascending: false });
   if (error) throw error;
-  return (data ?? []).map((row: any) => {
+  const rows = data ?? [];
+
+  // Step 2: batch-fetch top tags from cafe_tags for all cafe_ids
+  const cafeIds = rows.map((r: any) => r.cafe_id).filter(Boolean) as string[];
+  const topTagsMap: Record<string, string[]> = {};
+  if (cafeIds.length > 0) {
+    const { data: tagRows, error: tagError } = await supabase
+      .from("cafe_tags")
+      .select("cafe_id, tag_key, confidence")
+      .in("cafe_id", cafeIds)
+      .or(
+        "and(tag_type.eq.boolean,bool_value.eq.true),and(tag_type.eq.score,score_value.gte.50),and(tag_type.eq.structured,tag_key.eq.time_limit)"
+      )
+      .order("confidence", { ascending: false });
+    if (!tagError && tagRows) {
+      // Group by cafe_id, keep top 3 by confidence
+      for (const row of tagRows as any[]) {
+        const list = topTagsMap[row.cafe_id] ?? [];
+        if (list.length < 3) list.push(row.tag_key);
+        topTagsMap[row.cafe_id] = list;
+      }
+    }
+  }
+
+  return rows.map((row: any) => {
     const c = row.cafe;
     let cafe: CafeCard | undefined;
     if (c) {
-      // location is a postgis point; we don't have lng/lat reliably parsed
-      // here. Frontend list views currently ignore distance/open_now in
-      // pocket lists per spec.
       cafe = {
         id: c.id,
         name: c.name,
         cover_url: c.cover_image_url ?? null,
-        top_tags: [],
+        top_tags: (topTagsMap[c.id] ?? []).map(dbTagLabel),
         distance_km: 0,
         open_now: false,
         lng: 0,
         lat: 0,
         google_rating: c.google_rating ?? null,
+        google_review_count: c.google_review_count ?? null,
+        price_level: c.price_level ?? null,
+        address: c.address ?? null,
+        business_hours: c.business_hours ?? null,
       };
     }
     return {
@@ -366,6 +392,7 @@ export async function fetchPocketItems(pocketId: string): Promise<PocketItem[]> 
     };
   });
 }
+
 
 export async function createPocket(input: { name: string; emoji?: string | null }): Promise<Pocket> {
   const userId = await requireUserId();
