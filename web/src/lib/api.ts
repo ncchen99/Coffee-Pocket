@@ -23,14 +23,18 @@ export interface ParsedPrompt {
   /** DB tag_keys as returned by the LLM. */
   db_tags: string[];
   rationale: string;
+  open_at: string | null;
 }
 
 export async function parsePrompt(query: string): Promise<ParsedPrompt> {
   const q = query.trim();
-  if (!q) return { tags: [], db_tags: [], rationale: "" };
+  if (!q) return { tags: [], db_tags: [], rationale: "", open_at: null };
 
   const { data, error } = await supabase.functions.invoke("parse-prompt", {
-    body: { query: q },
+    body: {
+      query: q,
+      current_time: new Date().toISOString()
+    },
   });
   if (error) throw error;
   const dbTags: string[] = Array.isArray(data?.tags) ? data.tags : [];
@@ -38,6 +42,7 @@ export async function parsePrompt(query: string): Promise<ParsedPrompt> {
     db_tags: dbTags,
     tags: dbKeysToFilter(dbTags),
     rationale: typeof data?.rationale === "string" ? data.rationale : "",
+    open_at: typeof data?.open_at === "string" ? data.open_at : null,
   };
 }
 
@@ -53,6 +58,7 @@ export interface SearchParams {
   sort?: "distance" | "rating" | "popular";
   limit?: number; // default 50
   offset?: number;
+  open_at?: string | null;
 }
 
 export interface SearchResult {
@@ -72,6 +78,7 @@ interface CafeSearchRow {
   lat: number;
   google_rating: number | null;
   total_count: number | null;
+  business_hours?: any;
 }
 
 function rpcArgsForSearch(params: SearchParams) {
@@ -83,6 +90,7 @@ function rpcArgsForSearch(params: SearchParams) {
     p_sort: params.sort ?? "distance",
     p_limit: params.limit ?? 50,
     p_offset: params.offset ?? 0,
+    p_open_at: params.open_at ?? null,
   };
 }
 
@@ -90,18 +98,30 @@ export async function searchCafes(params: SearchParams): Promise<SearchResult> {
   const { data, error } = await supabase.rpc("cafes_search", rpcArgsForSearch(params));
   if (error) throw error;
   const rows = (data ?? []) as CafeSearchRow[];
-  const cafes: CafeCard[] = rows.map((row) => ({
-    id: row.id,
-    name: row.name,
-    cover_url: row.cover_image_url,
-    top_tags: (row.top_tags ?? []).map(dbTagLabel),
-    distance_km: row.distance_m != null ? row.distance_m / 1000 : 0,
-    open_now: row.open_now ?? false,
-    closes_at: row.closes_at ?? undefined,
-    lng: row.lng,
-    lat: row.lat,
-    google_rating: row.google_rating,
-  }));
+  const cafes: CafeCard[] = rows.map((row) => {
+    let open_now = row.open_now ?? false;
+    let closes_at = row.closes_at ?? undefined;
+
+    if (row.business_hours) {
+      const targetDate = params.open_at ? new Date(params.open_at) : new Date();
+      const status = isCafeOpenAt(row.business_hours, targetDate);
+      open_now = status.open_now;
+      closes_at = status.closes_at ?? undefined;
+    }
+
+    return {
+      id: row.id,
+      name: row.name,
+      cover_url: row.cover_image_url,
+      top_tags: (row.top_tags ?? []).map(dbTagLabel),
+      distance_km: row.distance_m != null ? row.distance_m / 1000 : 0,
+      open_now,
+      closes_at,
+      lng: row.lng,
+      lat: row.lat,
+      google_rating: row.google_rating,
+    };
+  });
   const total = rows[0]?.total_count ?? 0;
   return { cafes, total };
 }
@@ -114,6 +134,7 @@ export async function searchCafesCount(
     p_lng: params.lng ?? null,
     p_lat: params.lat ?? null,
     p_radius_m: params.radius_m ?? 5000,
+    p_open_at: params.open_at ?? null,
   });
   if (error) throw error;
   return Number(data ?? 0);
@@ -123,7 +144,7 @@ export async function searchCafesCount(
 // Cafe Detail
 // ===========================================================================
 
-import { normalizeDayLabel, formatTimeRange, formatTime } from "./format";
+import { normalizeDayLabel, formatTimeRange, formatTime, isCafeOpenAt } from "./format";
 
 function isClosedString(t: string): boolean {
   return t === "" || /^(closed|休|公休|休息|off)$/i.test(t.trim());
@@ -200,6 +221,8 @@ export async function fetchCafeDetail(id: string): Promise<CafeDetail | null> {
     evidence_count: t.evidence_count ?? 0,
   }));
 
+  const twStatus = isCafeOpenAt(d.business_hours, new Date());
+
   return {
     id: d.id,
     name: d.name,
@@ -212,10 +235,13 @@ export async function fetchCafeDetail(id: string): Promise<CafeDetail | null> {
     hours: normalizeHours(d.business_hours),
     ai_summary: d.summary_ai ?? undefined,
     google_rating: d.google_rating ?? null,
+    google_review_count: d.google_review_count ?? null,
+    price_level: d.price_level ?? null,
     business_status: d.business_status ?? null,
     lng: d.lng,
     lat: d.lat,
-    open_now: false, // not provided by cafe_detail; UI may compute from hours
+    open_now: twStatus.open_now,
+    closes_at: twStatus.closes_at ?? undefined,
     distance_km: 0,
     top_tags: topTagKeys.map(dbTagLabel),
     tags,

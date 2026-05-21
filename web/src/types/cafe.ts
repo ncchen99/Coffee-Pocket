@@ -60,6 +60,8 @@ export interface CafeDetail extends CafeCard {
   ai_summary?: string;
   photos: string[];
   business_status?: string | null;
+  google_review_count?: number | null;
+  price_level?: string | null;
 }
 
 // ----- Pockets -----

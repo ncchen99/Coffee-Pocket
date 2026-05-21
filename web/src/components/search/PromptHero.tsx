@@ -18,11 +18,8 @@ interface PromptHeroProps {
   onQueryChange: (v: string) => void;
   selected: Set<string>;
   onToggle: (key: string) => void;
-  /**
-   * 提交時呼叫。會收到 LLM 解析出的 frontend short keys。
-   * 父層通常會把這些 keys 餵進 `setAll(...)` 並/或導頁。
-   */
-  onSubmit: (parsedTags: string[]) => void;
+  /** 提交時呼叫，會收到 LLM 解析出的 frontend short keys 和相對時間點。 */
+  onSubmit: (parsedTags: string[], openAt: string | null) => void;
   compact?: boolean;
 }
 
@@ -41,22 +38,22 @@ export function PromptHero({
   const handleSubmit = async () => {
     const q = query.trim();
     if (!q) {
-      onSubmit([]);
+      onSubmit([], null);
       return;
     }
     setLoading(true);
     setHint(null);
     try {
       const parsed = await parsePrompt(q);
-      if (parsed.tags.length === 0) {
+      if (parsed.tags.length === 0 && !parsed.open_at) {
         setHint("沒抓到對應條件,請試試「有插座」「安靜」「不限時」等關鍵字");
       } else {
         setHint(parsed.rationale || null);
       }
-      onSubmit(parsed.tags);
+      onSubmit(parsed.tags, parsed.open_at);
     } catch (e) {
       setHint("語意分析失敗,改用手動篩選試試");
-      onSubmit([]);
+      onSubmit([], null);
     } finally {
       setLoading(false);
     }

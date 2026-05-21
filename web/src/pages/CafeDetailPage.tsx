@@ -1,18 +1,17 @@
-import { useState } from "react";
 import { Link, useParams, useNavigate } from "react-router-dom";
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
   ArrowLeft02Icon,
-  Share01Icon,
-  BookmarkAdd01Icon,
-  BookmarkCheck01Icon,
-  Tick02Icon,
+  LinkForwardIcon,
+  Bookmark02Icon,
+  BookmarkCheck02Icon,
   AlertCircleIcon,
 } from "@hugeicons/core-free-icons";
 import { CafeDetailContent } from "@/components/cafe/CafeDetailContent";
 import { CafeActionModals } from "@/components/cafe/CafeActionModals";
 import { useCafeDetail } from "@/hooks/useCafes";
 import { useCafeActions } from "@/hooks/useCafeActions";
+import { shareUrl } from "@/lib/share";
 
 /**
  * 手機版 cafe 詳細頁。
@@ -24,34 +23,9 @@ export default function CafeDetailPage() {
   const { data: cafe, isLoading, isError } = useCafeDetail(id);
 
   const actions = useCafeActions(id || null);
-  const [copied, setCopied] = useState(false);
 
-  const handleShare = async () => {
-    const url = window.location.href;
-    try {
-      await navigator.clipboard.writeText(url);
-      setCopied(true);
-      return;
-    } catch {
-      // 在 iframe / 未取得焦點時 Clipboard API 會失敗,改用 execCommand 後援。
-    }
-    try {
-      const ta = document.createElement("textarea");
-      ta.value = url;
-      ta.style.position = "fixed";
-      ta.style.opacity = "0";
-      document.body.appendChild(ta);
-      ta.select();
-      const ok = document.execCommand("copy");
-      document.body.removeChild(ta);
-      if (ok) {
-        setCopied(true);
-        return;
-      }
-    } catch {
-      // ignore
-    }
-    window.prompt("複製此網址", url);
+  const handleShare = () => {
+    shareUrl(window.location.href, cafe?.name);
   };
 
   if (isLoading) {
@@ -102,15 +76,10 @@ export default function CafeDetailPage() {
           <button
             type="button"
             onClick={handleShare}
-            aria-label={copied ? "已複製連結" : "分享"}
-            className={`btn btn-ghost btn-sm gap-1 ${copied ? "text-success" : ""}`}
+            aria-label="分享"
+            className="btn btn-ghost btn-sm btn-square"
           >
-            <HugeiconsIcon
-              icon={copied ? Tick02Icon : Share01Icon}
-              size={16}
-              strokeWidth={1.5}
-            />
-            {copied && <span className="text-xs">已複製連結</span>}
+            <HugeiconsIcon icon={LinkForwardIcon} size={16} strokeWidth={1.5} />
           </button>
           <button
             type="button"
@@ -120,7 +89,7 @@ export default function CafeDetailPage() {
             className={`btn btn-ghost btn-sm btn-square ${inPocket ? "text-primary" : ""}`}
           >
             <HugeiconsIcon
-              icon={inPocket ? BookmarkCheck01Icon : BookmarkAdd01Icon}
+              icon={inPocket ? BookmarkCheck02Icon : Bookmark02Icon}
               size={18}
               strokeWidth={1.5}
             />

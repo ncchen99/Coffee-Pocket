@@ -28,6 +28,7 @@ export function useCafeSearchCount(params: {
   lng?: number | null;
   lat?: number | null;
   radius_m?: number;
+  open_at?: string | null;
 }) {
   return useQuery({
     queryKey: ["cafes", "count", params],

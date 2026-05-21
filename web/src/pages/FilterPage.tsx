@@ -1,22 +1,79 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Cancel01Icon } from "@hugeicons/core-free-icons";
 import { Cap } from "@/components/primitives";
 import { FILTER_TAG_GROUPS, SORT_OPTIONS } from "@/data/filterTags";
 import { useCafeSearchCount } from "@/hooks/useCafes";
+import { getTWTimeParts } from "@/lib/format";
 
 const DEFAULT_LNG = 120.205;
 const DEFAULT_LAT = 22.991;
+
+const WEEKDAY_TO_DATE_STR: Record<string, string> = {
+  monday: "2026-05-18",
+  tuesday: "2026-05-19",
+  wednesday: "2026-05-20",
+  thursday: "2026-05-21",
+  friday: "2026-05-22",
+  saturday: "2026-05-23",
+  sunday: "2026-05-24",
+};
+
+const WEEKDAY_OPTIONS = [
+  { value: "monday", label: "週一" },
+  { value: "tuesday", label: "週二" },
+  { value: "wednesday", label: "週三" },
+  { value: "thursday", label: "週四" },
+  { value: "friday", label: "週五" },
+  { value: "saturday", label: "週六" },
+  { value: "sunday", label: "週日" },
+];
+
+const HOUR_OPTIONS = Array.from({ length: 24 }, (_, i) => {
+  const h = String(i).padStart(2, "0");
+  return `${h}:00`;
+});
 
 /**
  * 進階篩選頁 — 手機全螢幕,多標籤交叉篩選,底部即時筆數。
  */
 export default function FilterPage() {
   const navigate = useNavigate();
-  const [selected, setSelected] = useState<Set<string>>(new Set());
-  const [distance, setDistance] = useState(3);
+  const [params] = useSearchParams();
+
+  const initialTags = params.getAll("tag");
+  const initialOpenAt = params.get("open_at");
+  const initialDist = Number(params.get("d") || "3");
+
+  const [selected, setSelected] = useState<Set<string>>(new Set(initialTags));
+  const [distance, setDistance] = useState(initialDist);
   const [sort, setSort] = useState("距離");
+  const [openAt, setOpenAt] = useState<string | null>(initialOpenAt);
+
+  // 初始化時間模式與選定時間
+  const initialMode = !openAt
+    ? "any"
+    : openAt.startsWith("2026-05-")
+    ? "specific"
+    : "now";
+
+  const [timeMode, setTimeMode] = useState<"any" | "now" | "specific">(initialMode);
+
+  let initDay = "monday";
+  let initHour = "12:00";
+  if (openAt && openAt.startsWith("2026-05-")) {
+    try {
+      const parts = getTWTimeParts(new Date(openAt));
+      initDay = parts.weekday;
+      initHour = `${String(parts.hour).padStart(2, "0")}:00`;
+    } catch (e) {
+      // fallback
+    }
+  }
+
+  const [selDay, setSelDay] = useState(initDay);
+  const [selHour, setSelHour] = useState(initHour);
 
   const toggle = (tag: string) => {
     setSelected((prev) => {
@@ -26,10 +83,31 @@ export default function FilterPage() {
     });
   };
 
+  const handleTimeModeChange = (mode: "any" | "now" | "specific") => {
+    setTimeMode(mode);
+    if (mode === "any") {
+      setOpenAt(null);
+    } else if (mode === "now") {
+      setOpenAt(new Date().toISOString());
+    } else {
+      const dateStr = WEEKDAY_TO_DATE_STR[selDay];
+      setOpenAt(`${dateStr}T${selHour}:00+08:00`);
+    }
+  };
+
+  const handleSpecificChange = (day: string, hour: string) => {
+    setSelDay(day);
+    setSelHour(hour);
+    const dateStr = WEEKDAY_TO_DATE_STR[day];
+    setOpenAt(`${dateStr}T${hour}:00+08:00`);
+  };
+
   const reset = () => {
     setSelected(new Set());
     setDistance(3);
     setSort("距離");
+    setTimeMode("any");
+    setOpenAt(null);
   };
 
   const countQuery = useCafeSearchCount({
@@ -37,14 +115,18 @@ export default function FilterPage() {
     lng: DEFAULT_LNG,
     lat: DEFAULT_LAT,
     radius_m: distance * 1000,
+    open_at: openAt,
   });
   const count = countQuery.data ?? 0;
 
   const apply = () => {
-    const params = new URLSearchParams();
-    selected.forEach((t) => params.append("tag", t));
-    params.set("d", String(distance));
-    navigate(`/map?${params.toString()}`);
+    const nextParams = new URLSearchParams();
+    selected.forEach((t) => nextParams.append("tag", t));
+    nextParams.set("d", String(distance));
+    if (openAt) {
+      nextParams.set("open_at", openAt);
+    }
+    navigate(`/map?${nextParams.toString()}`);
   };
 
   return (
@@ -90,6 +172,63 @@ export default function FilterPage() {
             <span>5km</span>
             <span>10km</span>
           </div>
+        </section>
+
+        <div className="divider" />
+
+        {/* Operating Hours */}
+        <section className="mb-4">
+          <Cap>營業時間</Cap>
+          <div className="mt-2 flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => handleTimeModeChange("any")}
+              className={`btn btn-sm ${timeMode === "any" ? "btn-neutral" : "btn-ghost border border-base-content/15"}`}
+            >
+              不限時間
+            </button>
+            <button
+              type="button"
+              onClick={() => handleTimeModeChange("now")}
+              className={`btn btn-sm ${timeMode === "now" ? "btn-neutral" : "btn-ghost border border-base-content/15"}`}
+            >
+              現在營業中
+            </button>
+            <button
+              type="button"
+              onClick={() => handleTimeModeChange("specific")}
+              className={`btn btn-sm ${timeMode === "specific" ? "btn-neutral" : "btn-ghost border border-base-content/15"}`}
+            >
+              指定時間...
+            </button>
+          </div>
+
+          {timeMode === "specific" && (
+            <div className="mt-3 flex gap-2 rounded-lg bg-base-200 p-2.5 cp-anim-fade-in">
+              <select
+                value={selDay}
+                onChange={(e) => handleSpecificChange(e.target.value, selHour)}
+                className="select select-bordered select-xs flex-1 max-w-[120px] bg-base-100 font-semibold"
+              >
+                {WEEKDAY_OPTIONS.map((opt) => (
+                  <option key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </option>
+                ))}
+              </select>
+              <select
+                value={selHour}
+                onChange={(e) => handleSpecificChange(selDay, e.target.value)}
+                className="select select-bordered select-xs flex-1 bg-base-100 font-semibold"
+              >
+                {HOUR_OPTIONS.map((h) => (
+                  <option key={h} value={h}>
+                    {h}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
         </section>
 
         <div className="divider" />

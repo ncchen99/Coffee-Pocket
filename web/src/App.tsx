@@ -80,7 +80,7 @@ function DesktopApp() {
   const activeId = cafeMatch?.params.id ?? null;
   const isFilterOpen = !!filterMatch;
 
-  const { selected, toggle, setAll, query, setQuery, scenario, pickScenario } =
+  const { selected, toggle, setAll, query, setQuery, scenario, pickScenario, openAt, setOpenAt } =
     useSearchSelection();
 
   // displayed 落後 activeId —— 關閉時讓內容多停留 280ms 給 exit 動畫播完。
@@ -109,6 +109,7 @@ function DesktopApp() {
     lat: DEFAULT_LAT,
     radius_m: DEFAULT_RADIUS_M,
     sort: sortKey,
+    open_at: openAt,
   });
   const cafes = searchQuery.data?.cafes ?? [];
   const totalCount = searchQuery.data?.total ?? 0;
@@ -137,6 +138,8 @@ function DesktopApp() {
             isError={searchQuery.isError}
             sortKey={sortKey}
             onSortChange={setSortKey}
+            openAt={openAt}
+            onOpenAtChange={setOpenAt}
           />
         </div>
         <div
@@ -151,9 +154,14 @@ function DesktopApp() {
               <DesktopFilterPanel
                 selected={selected}
                 onToggle={toggle}
-                onReset={() => setAll([])}
+                onReset={() => {
+                  setAll([]);
+                  setOpenAt(null);
+                }}
                 onClose={() => navigate("/")}
                 onApply={() => navigate("/")}
+                openAt={openAt}
+                onOpenAtChange={setOpenAt}
               />
             </div>
           ) : detailQuery.isLoading && displayed ? (

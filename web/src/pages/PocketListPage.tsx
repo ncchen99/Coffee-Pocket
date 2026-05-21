@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Add01Icon, Location01Icon } from "@hugeicons/core-free-icons";
+import { Add01Icon, Location01Icon, StarIcon } from "@hugeicons/core-free-icons";
 import { TagBadge, InputModal } from "@/components/primitives";
 import { MobileTabBar } from "@/components/layout/MobileTabBar";
 import { useAuth } from "@/hooks/useAuth";
@@ -128,8 +128,9 @@ export default function PocketListPage() {
                   <div className="flex items-baseline justify-between">
                     <span className="font-semibold">{item.cafe?.name ?? "—"}</span>
                     {item.cafe?.google_rating != null && (
-                      <span className="text-xs text-base-content/55">
-                        ★ {item.cafe.google_rating.toFixed(1)}
+                      <span className="text-xs text-base-content/55 flex items-center gap-0.5">
+                        <HugeiconsIcon icon={StarIcon} size={11} className="text-warning fill-warning" />
+                        <span className="font-semibold text-warning">{item.cafe.google_rating.toFixed(1)}</span>
                       </span>
                     )}
                   </div>

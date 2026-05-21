@@ -1,11 +1,13 @@
 import { useCallback, useState } from "react";
 
-/** 集中管理「搜尋條件 + 自然語言 query + 場景」狀態的小 hook。 */
+/** 集中管理「搜尋條件 + 自然語言 query + 場景 + 時間」狀態的小 hook。 */
 export function useSearchSelection(initial?: string[]) {
   const [selected, setSelected] = useState<Set<string>>(new Set(initial ?? []));
   const [query, setQuery] = useState("");
   /** 目前選中的快速場景 (work / late / group / discover);手動改 chip 後清掉。 */
   const [scenario, setScenario] = useState<string | null>(null);
+  /** 指定時間篩選 (ISO-8601 格式，null 表示不限時間) */
+  const [openAt, setOpenAt] = useState<string | null>(null);
 
   const toggle = useCallback((key: string) => {
     // 任何手動 chip 互動都視為脫離場景模式。
@@ -27,5 +29,5 @@ export function useSearchSelection(initial?: string[]) {
     setSelected(new Set(s.tags));
   }, []);
 
-  return { selected, toggle, setAll, query, setQuery, scenario, pickScenario };
+  return { selected, toggle, setAll, query, setQuery, scenario, pickScenario, openAt, setOpenAt };
 }

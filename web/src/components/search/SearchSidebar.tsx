@@ -6,6 +6,7 @@ import { PromptHero } from "./PromptHero";
 import { ScenarioGrid, SCENARIO_BY_KEY, type Scenario } from "./ScenarioGrid";
 import { CafeListItem } from "./CafeListItem";
 import { Cap } from "@/components/primitives";
+import { getTWTimeParts } from "@/lib/format";
 import type { CafeCard } from "@/types/cafe";
 
 export type SortKey = "distance" | "rating";
@@ -27,12 +28,34 @@ interface SearchSidebarProps {
   isError?: boolean;
   sortKey: SortKey;
   onSortChange: (key: SortKey) => void;
+  openAt: string | null;
+  onOpenAtChange: (val: string | null) => void;
 }
 
 const SORT_OPTIONS: { value: SortKey; label: string }[] = [
   { value: "distance", label: "按距離" },
   { value: "rating", label: "按評分" },
 ];
+
+function formatOpenAtLabel(openAt: string | null): string {
+  if (!openAt) return "";
+  if (!openAt.startsWith("2026-05-")) return "現在營業中";
+  try {
+    const parts = getTWTimeParts(new Date(openAt));
+    const labels: Record<string, string> = {
+      monday: "週一",
+      tuesday: "週二",
+      wednesday: "週三",
+      thursday: "週四",
+      friday: "週五",
+      saturday: "週六",
+      sunday: "週日",
+    };
+    return `${labels[parts.weekday] || "特定時間"} ${parts.timeStr}`;
+  } catch {
+    return "特定時間";
+  }
+}
 
 /** 桌面左欄 — 首頁與咖啡廳詳細頁共用,點咖啡廳時不會改版 */
 export function SearchSidebar({
@@ -50,6 +73,8 @@ export function SearchSidebar({
   isError,
   sortKey,
   onSortChange,
+  openAt,
+  onOpenAtChange,
 }: SearchSidebarProps) {
   const activeScenario = scenario ? SCENARIO_BY_KEY[scenario] : null;
   const headingText = isLoading
@@ -82,7 +107,10 @@ export function SearchSidebar({
             onQueryChange={setQuery}
             selected={selected}
             onToggle={toggle}
-            onSubmit={(parsed) => setAll(parsed)}
+            onSubmit={(parsed, parsedOpenAt) => {
+              setAll(parsed);
+              onOpenAtChange(parsedOpenAt);
+            }}
           />
         </section>
 
@@ -95,7 +123,12 @@ export function SearchSidebar({
 
         <div className="px-5 pt-3">
           <Link
-            to="/filter"
+            to={(() => {
+              const p = new URLSearchParams();
+              selected.forEach((t) => p.append("tag", t));
+              if (openAt) p.set("open_at", openAt);
+              return `/filter?${p.toString()}`;
+            })()}
             className="btn btn-ghost btn-xs text-base-content/55 gap-1"
           >
             ⚙ 進階篩選
@@ -105,6 +138,23 @@ export function SearchSidebar({
         <div className="divider mx-5 my-3" />
 
         <section className="pb-6">
+          {openAt && (
+            <div className="mx-5 mb-3 flex items-center justify-between rounded-lg bg-info/10 border border-info/20 px-3 py-2 text-xs text-info cp-anim-fade-in">
+              <span className="flex items-center gap-1.5 font-medium">
+                <span>🕒</span>
+                <span>營業時間篩選：{formatOpenAtLabel(openAt)}</span>
+              </span>
+              <button
+                type="button"
+                onClick={() => onOpenAtChange(null)}
+                className="btn btn-ghost btn-xs btn-circle h-5 w-5 min-h-0 text-base-content/60 hover:text-base-content"
+                aria-label="清除時間篩選"
+              >
+                ✕
+              </button>
+            </div>
+          )}
+
           <header className="flex items-baseline justify-between px-5 pb-2">
             <h3 className="text-sm font-semibold">{headingText}</h3>
             {/* 排序切換 — 仿 Topbar 頭貼的 dropdown 樣式 */}

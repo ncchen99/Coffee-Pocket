@@ -72,7 +72,7 @@ export function useCafeActions(cafeId: string | null) {
     );
   };
 
-  const pocketLabel = inPocket ? `已在「${inPocket.pocketName}」` : "加入口袋";
+  const pocketLabel = inPocket ? "已儲存" : "加入口袋";
   const pocketDisabled = !user || addMutation.isPending || removeMutation.isPending;
 
   return {

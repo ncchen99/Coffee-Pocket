@@ -78,6 +78,27 @@ export function formatTimeRange(raw: string): string {
   return s;
 }
 
+/**
+ * 將原始 price_level (例如 "$200-400"、"$$"、" 200~400 "、"NT$150-300") 正規化為
+ * 緊湊顯示字串「$200–400」/「$$」。無法解析時回傳 trim 後原文，空值回 null。
+ */
+export function formatPriceLevel(raw: string | null | undefined): string | null {
+  if (!raw) return null;
+  const s = String(raw).trim();
+  if (!s) return null;
+
+  const range = s.match(/(\d{2,5})\s*[-–~〜~到]\s*(\d{2,5})/);
+  if (range) return `$${range[1]}–${range[2]}`;
+
+  const single = s.match(/(\d{2,5})/);
+  if (single) return `$${single[1]}`;
+
+  const dollars = s.match(/^\$+$/);
+  if (dollars) return dollars[0];
+
+  return s;
+}
+
 export interface DayHours {
   /** 標準化後的中文星期 (週一…週日)。 */
   label: string;
@@ -106,4 +127,155 @@ export function orderHoursFromToday(
       hours: hours[label],
       isToday: label === today,
     }));
+}
+
+export interface TWTimeParts {
+  weekday: "sunday" | "monday" | "tuesday" | "wednesday" | "thursday" | "friday" | "saturday";
+  timeStr: string; // "HH:MM" e.g., "15:30"
+  hour: number;
+  minute: number;
+}
+
+/** 取得任意時間點在臺灣時區的詳細時間與星期資訊。 */
+export function getTWTimeParts(date: Date = new Date()): TWTimeParts {
+  const formatter = new Intl.DateTimeFormat("en-US", {
+    timeZone: TW_TZ,
+    weekday: "long",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  });
+
+  const parts = formatter.formatToParts(date);
+  let weekdayVal = "";
+  let hourVal = "";
+  let minuteVal = "";
+
+  for (const part of parts) {
+    if (part.type === "weekday") weekdayVal = part.value.toLowerCase();
+    if (part.type === "hour") hourVal = part.value;
+    if (part.type === "minute") minuteVal = part.value;
+  }
+
+  if (!weekdayVal) {
+    const enWeekday = new Intl.DateTimeFormat("en-US", { timeZone: TW_TZ, weekday: "long" }).format(date);
+    weekdayVal = enWeekday.toLowerCase();
+  }
+  if (!hourVal || !minuteVal) {
+    const twTime = new Date(date.toLocaleString("en-US", { timeZone: TW_TZ }));
+    hourVal = String(twTime.getHours()).padStart(2, "0");
+    minuteVal = String(twTime.getMinutes()).padStart(2, "0");
+  }
+
+  const hour = parseInt(hourVal, 10);
+  const minute = parseInt(minuteVal, 10);
+  const timeStr = `${hourVal}:${minuteVal}`;
+
+  return {
+    weekday: weekdayVal as TWTimeParts["weekday"],
+    timeStr,
+    hour,
+    minute,
+  };
+}
+
+export interface CafeOpenStatus {
+  open_now: boolean;
+  closes_at: string | null;
+}
+
+/** 判斷咖啡廳在指定的時間點（預設為目前臺灣時間）是否營業，並計算當前的打烊時間。 */
+export function isCafeOpenAt(businessHours: any, date: Date = new Date()): CafeOpenStatus {
+  if (!businessHours || typeof businessHours !== "object") {
+    return { open_now: false, closes_at: null };
+  }
+
+  const { weekday, hour, minute } = getTWTimeParts(date);
+  const rawSlots = lookupDaySlots(businessHours, weekday);
+  if (rawSlots == null) {
+    return { open_now: false, closes_at: null };
+  }
+  const slots = Array.isArray(rawSlots) ? rawSlots : [rawSlots];
+  if (slots.length === 0) {
+    return { open_now: false, closes_at: null };
+  }
+
+  const currentMinutes = hour * 60 + minute;
+
+  for (const slot of slots) {
+    const parsed = parseSlot(slot);
+    if (!parsed) continue;
+    const { openMin, closeMin, closeText } = parsed;
+
+    if (closeMin > openMin) {
+      if (currentMinutes >= openMin && currentMinutes < closeMin) {
+        return { open_now: true, closes_at: closeText };
+      }
+    } else {
+      // 跨夜時段 (如 18:00 - 02:00)
+      if (currentMinutes >= openMin || currentMinutes < closeMin) {
+        return { open_now: true, closes_at: closeText };
+      }
+    }
+  }
+
+  return { open_now: false, closes_at: null };
+}
+
+/** 在 business_hours 物件中尋找指定星期的時段 — 容忍 monday/mon/MON/週一 等多種 key 形式。 */
+function lookupDaySlots(businessHours: Record<string, any>, weekday: string): any {
+  const w = weekday.toLowerCase();
+  const candidates = [w, w.slice(0, 3), w.slice(0, 4), w.toUpperCase(), w.slice(0, 3).toUpperCase()];
+  const zh: Record<string, string> = {
+    monday: "週一",
+    tuesday: "週二",
+    wednesday: "週三",
+    thursday: "週四",
+    friday: "週五",
+    saturday: "週六",
+    sunday: "週日",
+  };
+  if (zh[w]) candidates.push(zh[w]);
+  for (const k of candidates) {
+    if (k in businessHours) return businessHours[k];
+  }
+  // 最後 fallback：對所有 key 做 normalize 比較
+  for (const k of Object.keys(businessHours)) {
+    if (normalizeDayLabel(k) === (zh[w] ?? "")) return businessHours[k];
+  }
+  return null;
+}
+
+function toMinutes(t: string): number {
+  const s = t.trim();
+  if (s.includes(":")) {
+    const [h, m] = s.split(":");
+    return parseInt(h, 10) * 60 + parseInt(m, 10);
+  }
+  if (s.length === 4 && /^\d+$/.test(s)) {
+    return parseInt(s.slice(0, 2), 10) * 60 + parseInt(s.slice(2), 10);
+  }
+  return -1;
+}
+
+/** 將單一時段轉成 {openMin, closeMin, closeText}。支援 {open,close} 物件或 "09:00–22:00" 字串。 */
+function parseSlot(slot: any): { openMin: number; closeMin: number; closeText: string } | null {
+  if (!slot) return null;
+  if (typeof slot === "string") {
+    const s = slot.trim();
+    if (/^(closed|休|公休|休息|off)$/i.test(s)) return null;
+    const parts = s.split(/\s*[-–~〜~到]\s*/);
+    if (parts.length !== 2) return null;
+    const openMin = toMinutes(parts[0]);
+    const closeMin = toMinutes(parts[1]);
+    if (openMin < 0 || closeMin < 0) return null;
+    return { openMin, closeMin, closeText: formatTime(parts[1]) };
+  }
+  if (typeof slot === "object" && slot.open && slot.close) {
+    const openMin = toMinutes(String(slot.open));
+    const closeMin = toMinutes(String(slot.close));
+    if (openMin < 0 || closeMin < 0) return null;
+    return { openMin, closeMin, closeText: formatTime(String(slot.close)) };
+  }
+  return null;
 }

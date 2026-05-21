@@ -3,6 +3,8 @@ import { Placeholder, TagBadge } from "@/components/primitives";
 import type { CafeCard } from "@/types/cafe";
 import clsx from "@/lib/clsx";
 import { formatDistance } from "@/lib/format";
+import { HugeiconsIcon } from "@hugeicons/react";
+import { StarIcon } from "@hugeicons/core-free-icons";
 
 interface CafeListItemProps {
   cafe: CafeCard;
@@ -62,27 +64,35 @@ export function CafeListItem({
           <span className={clsx("truncate font-semibold", size === "lg" ? "text-base" : "text-sm")}>
             {cafe.name}
           </span>
-          <span className="font-mono text-xs text-base-content/55 shrink-0">
+          <span className="font-mono text-xs text-base-content/55 shrink-0 flex items-center gap-0.5">
             {sortKey === "rating"
-              ? cafe.google_rating != null
-                ? `★ ${cafe.google_rating.toFixed(1)}`
-                : "—"
+              ? cafe.google_rating != null ? (
+                  <>
+                    <HugeiconsIcon icon={StarIcon} size={11} className="text-warning fill-warning" />
+                    <span className="font-semibold text-warning">{cafe.google_rating.toFixed(1)}</span>
+                  </>
+                ) : (
+                  "—"
+                )
               : formatDistance(cafe.distance_km)}
           </span>
         </div>
-        <div className="mt-0.5 text-xs text-base-content/65 truncate">
-          {cafe.top_tags.join(" · ")}
-        </div>
-        <div className="mt-0.5 text-[11px] text-base-content/45">
-          {cafe.open_now ? `營業中 · 至 ${cafe.closes_at}` : "今日已休"}
-        </div>
-        {size === "lg" && (
-          <div className="mt-2 flex flex-wrap gap-1">
+        {cafe.top_tags.length > 0 && (
+          <div className="mt-1 flex flex-wrap gap-1">
             {cafe.top_tags.map((t) => (
-              <TagBadge key={t}>{t}</TagBadge>
+              <TagBadge key={t} variant="neutral" size="sm">
+                {t}
+              </TagBadge>
             ))}
           </div>
         )}
+        <div className="mt-1 text-[11px] text-base-content/45">
+          {cafe.open_now
+            ? cafe.closes_at
+              ? `營業中 · 至 ${cafe.closes_at}`
+              : "營業中"
+            : "今日已休"}
+        </div>
       </div>
     </Link>
   );

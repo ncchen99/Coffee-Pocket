@@ -3,17 +3,19 @@ import {
   InstagramIcon,
   Call02Icon,
   Location01Icon,
-  BookmarkAdd01Icon,
-  BookmarkCheck01Icon,
+  Bookmark02Icon,
+  BookmarkCheck02Icon,
   AlertCircleIcon,
-  StarIcon,
+  LinkForwardIcon,
+  Navigation03Icon,
 } from "@hugeicons/core-free-icons";
-import { Cap, Placeholder, TagBadge } from "@/components/primitives";
+import { Cap, Placeholder, StarRating, TagBadge } from "@/components/primitives";
 import { TagConfidenceRow } from "@/components/cafe/TagConfidenceRow";
 import type { CafeDetail } from "@/types/cafe";
 import { useVoteTag, useClearVote, useUserVotesForCafe } from "@/hooks/useTagVote";
 import { useAuth } from "@/hooks/useAuth";
-import { formatDistance, orderHoursFromToday } from "@/lib/format";
+import { formatDistance, formatPriceLevel, orderHoursFromToday } from "@/lib/format";
+import { shareUrl } from "@/lib/share";
 import type { CafeActions } from "@/hooks/useCafeActions";
 
 interface CafeDetailContentProps {
@@ -77,65 +79,102 @@ export function CafeDetailContent({ cafe, isDesktop, actions }: CafeDetailConten
           </div>
         </div>
 
-        {/* 評分 + 距離 */}
-        <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-base-content/65">
-          {cafe.google_rating != null && (
-            <span className="inline-flex items-center gap-1 font-mono">
-              <HugeiconsIcon icon={StarIcon} size={12} strokeWidth={1.5} className="text-warning" />
-              {cafe.google_rating.toFixed(1)}
-              <span className="text-base-content/45">/ Google</span>
-            </span>
-          )}
-          {cafe.distance_km != null && (
-            <span className="font-mono">{formatDistance(cafe.distance_km)}</span>
-          )}
-        </div>
-
-        {/* 地址 — 直接做為地圖連結 */}
-        {mapLinkProps ? (
-          <a
-            {...mapLinkProps}
-            className="mt-2 -mx-1 flex items-start gap-1.5 rounded px-1 py-0.5 text-xs text-base-content/70 hover:bg-base-200 hover:text-base-content transition-colors"
-          >
-            <HugeiconsIcon
-              icon={Location01Icon}
-              size={13}
-              strokeWidth={1.5}
-              className="mt-px shrink-0 text-base-content/55"
-            />
-            <span className="flex-1 leading-relaxed">{cafe.address}</span>
-            <span className="shrink-0 text-[11px] text-base-content/45 underline-offset-2 hover:underline">
-              在 Google Maps 開啟
-            </span>
-          </a>
-        ) : (
-          <p className="mt-1 text-xs text-base-content/55">{cafe.address}</p>
+        {/* 評分 / 星星 / 評論數 / 價位 */}
+        {(cafe.google_rating != null || cafe.price_level) && (
+          <div className="mt-1.5 flex items-center gap-2 text-xs text-base-content/70">
+            {cafe.google_rating != null && (
+              <>
+                <span className="font-mono text-sm font-semibold text-base-content">
+                  {cafe.google_rating.toFixed(1)}
+                </span>
+                <StarRating value={cafe.google_rating} size={14} />
+                {cafe.google_review_count != null && (
+                  <span className="font-mono text-base-content/55">
+                    ({cafe.google_review_count.toLocaleString()})
+                  </span>
+                )}
+              </>
+            )}
+            {formatPriceLevel(cafe.price_level) && (
+              <span className="ml-auto font-mono text-base-content/75">
+                {formatPriceLevel(cafe.price_level)}
+              </span>
+            )}
+          </div>
         )}
+
+        {/* 距離 */}
+        {cafe.distance_km != null && cafe.distance_km > 0 && (
+          <div className="mt-1 text-xs font-mono text-base-content/55">
+            {formatDistance(cafe.distance_km)}
+          </div>
+        )}
+
+        {/* 地址 */}
+        <div className="mt-2 flex items-start gap-1.5 px-1 text-xs text-base-content/70">
+          <HugeiconsIcon
+            icon={Location01Icon}
+            size={13}
+            strokeWidth={1.5}
+            className="mt-px shrink-0 text-base-content/55"
+          />
+          <span className="flex-1 leading-relaxed">{cafe.address}</span>
+        </div>
 
         <div className="mt-3 flex flex-wrap gap-1.5">
           {topTags.map((t) => (
-            <TagBadge key={t} variant="neutral">
+            <TagBadge key={t} variant="neutral" size="md">
               {t}
             </TagBadge>
           ))}
         </div>
       </section>
 
-      {/* === 2. 加入口袋 === */}
+      {/* === 2. 行動按鈕：加入口袋 / 分享 / Google 導航 === */}
       <section className="px-5 pt-4">
-        <button
-          type="button"
-          onClick={handlePocketClick}
-          disabled={pocketDisabled}
-          className={`btn btn-sm w-full gap-1.5 rounded-none ${inPocket ? "btn-outline" : "btn-neutral"}`}
-        >
-          <HugeiconsIcon
-            icon={inPocket ? BookmarkCheck01Icon : BookmarkAdd01Icon}
-            size={14}
-            strokeWidth={1.5}
-          />
-          {pocketLabel}
-        </button>
+        <div className="flex gap-2">
+          <button
+            type="button"
+            onClick={handlePocketClick}
+            disabled={pocketDisabled}
+            className={`btn btn-sm flex-1 gap-1.5 rounded-none ${inPocket ? "btn-outline" : "btn-neutral"}`}
+          >
+            <HugeiconsIcon
+              icon={inPocket ? BookmarkCheck02Icon : Bookmark02Icon}
+              size={14}
+              strokeWidth={1.5}
+            />
+            <span className="truncate">{pocketLabel}</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => shareUrl(window.location.href, cafe.name)}
+            className="btn btn-sm btn-outline flex-1 gap-1.5 rounded-none"
+            aria-label="分享咖啡廳"
+          >
+            <HugeiconsIcon icon={LinkForwardIcon} size={14} strokeWidth={1.5} />
+            <span className="truncate">分享</span>
+          </button>
+          {mapLinkProps ? (
+            <a
+              {...mapLinkProps}
+              className="btn btn-sm btn-outline flex-1 gap-1.5 rounded-none"
+              aria-label="在 Google Maps 開啟"
+            >
+              <HugeiconsIcon icon={Navigation03Icon} size={14} strokeWidth={1.5} />
+              <span className="truncate">地圖開啟</span>
+            </a>
+          ) : (
+            <button
+              type="button"
+              disabled
+              className="btn btn-sm btn-outline flex-1 gap-1.5 rounded-none"
+            >
+              <HugeiconsIcon icon={Navigation03Icon} size={14} strokeWidth={1.5} />
+              <span className="truncate">地圖開啟</span>
+            </button>
+          )}
+        </div>
       </section>
 
       {/* === 3. AI 摘要 === */}
