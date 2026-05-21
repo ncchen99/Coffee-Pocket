@@ -1,14 +1,13 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { HugeiconsIcon } from "@hugeicons/react";
-import { ArrowLeft02Icon } from "@hugeicons/core-free-icons";
 import { Cap, CustomSelect, ConfirmModal } from "@/components/primitives";
+import { DesktopPageLayout } from "@/components/layout/DesktopPageLayout";
 import { useAuth } from "@/hooks/useAuth";
 
 /**
- * 設定頁 — 支援手機版佈局，搭載客製化下拉選單與直角極簡登出確認 Modal。
+ * 桌面版設定頁 — 採用 DesktopPageLayout 呈現，且符合直角極簡風格。
  */
-export default function SettingsPage() {
+export default function DesktopSettingsPage() {
   const navigate = useNavigate();
   const { user, signOut } = useAuth();
 
@@ -50,29 +49,20 @@ export default function SettingsPage() {
   };
 
   return (
-    <div className="flex min-h-screen flex-col bg-base-100">
-      <header className="navbar sticky top-0 z-30 min-h-12 border-b border-base-content/10 bg-base-100/95 px-2 backdrop-blur">
-        <div className="navbar-start">
-          <button
-            type="button"
-            onClick={() => navigate(-1)}
-            className="btn btn-ghost btn-sm btn-square rounded-none"
-            aria-label="返回"
-          >
-            <HugeiconsIcon icon={ArrowLeft02Icon} size={18} strokeWidth={1.5} />
-          </button>
+    <DesktopPageLayout>
+      {/* Header */}
+      <div className="flex items-baseline justify-between pb-5 border-b border-base-content/10 mb-6">
+        <div>
+          <h1 className="text-xl font-bold text-base-content">設定</h1>
+          <p className="mt-0.5 text-xs text-base-content/55">變更立即生效，不需「儲存」</p>
         </div>
-        <div className="navbar-center">
-          <h1 className="text-sm font-semibold text-base-content">設定</h1>
-        </div>
-        <div className="navbar-end" />
-      </header>
+      </div>
 
-      <main className="flex-1 overflow-y-auto">
+      <div className="space-y-6">
         {/* 外觀 */}
-        <section className="px-5 pt-5">
+        <section className="rounded-xl border border-base-content/10 p-5 bg-base-100/50">
           <Cap>外觀</Cap>
-          <div className="mt-3">
+          <div className="mt-4">
             <SettingRow label="主題">
               <CustomSelect
                 options={[
@@ -88,12 +78,10 @@ export default function SettingsPage() {
           </div>
         </section>
 
-        <div className="divider mx-5 my-4" />
-
         {/* 搜尋預設 */}
-        <section className="px-5">
+        <section className="rounded-xl border border-base-content/10 p-5 bg-base-100/50">
           <Cap>搜尋預設</Cap>
-          <div className="mt-3 space-y-4">
+          <div className="mt-4 space-y-4">
             <SettingRow label="預設距離">
               <CustomSelect
                 options={[
@@ -121,15 +109,13 @@ export default function SettingsPage() {
           </div>
         </section>
 
-        <div className="divider mx-5 my-4" />
-
         {/* 帳號 */}
-        <section className="px-5">
+        <section className="rounded-xl border border-base-content/10 p-5 bg-base-100/50">
           <Cap>帳號</Cap>
-          <div className="mt-3">
+          <div className="mt-4">
             {user ? (
               <SettingRow label="目前帳號">
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-4">
                   <span className="text-sm text-base-content/70">{user.email}</span>
                   <button
                     type="button"
@@ -154,17 +140,15 @@ export default function SettingsPage() {
           </div>
         </section>
 
-        <div className="divider mx-5 my-4" />
-
         {/* 關於 */}
-        <section className="px-5 pb-10">
+        <section className="p-5">
           <Cap>關於</Cap>
-          <div className="mt-3 space-y-1 text-sm text-base-content/55">
+          <div className="mt-3 space-y-1 text-xs text-base-content/50">
             <p>版本 0.0.1</p>
             <p>咖啡口袋 · Coffee Pocket</p>
           </div>
         </section>
-      </main>
+      </div>
 
       {/* 登出確認 Modal */}
       <ConfirmModal
@@ -177,14 +161,14 @@ export default function SettingsPage() {
         cancelText="取消"
         confirmButtonClass="btn-error"
       />
-    </div>
+    </DesktopPageLayout>
   );
 }
 
 function SettingRow({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div className="flex items-center justify-between py-1">
-      <span className="text-sm text-base-content">{label}</span>
+      <span className="text-sm font-medium text-base-content/85">{label}</span>
       {children}
     </div>
   );

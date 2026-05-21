@@ -2,7 +2,7 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import { Search01Icon } from "@hugeicons/core-free-icons";
 import { TagChip } from "@/components/primitives";
 
-const PROMPT_TAGS = [
+const PROMPT_TAGS: { key: string; label: string; accent?: boolean }[] = [
   { key: "no_limit", label: "不限時" },
   { key: "socket", label: "有插座" },
   { key: "quiet", label: "安靜" },

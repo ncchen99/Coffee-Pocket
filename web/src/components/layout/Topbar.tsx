@@ -35,7 +35,7 @@ export function Topbar({ variant = "desktop" }: TopbarProps) {
         <Link to="/" className="flex items-center gap-2">
           <HugeiconsIcon icon={Coffee02Icon} size={22} strokeWidth={1.5} />
           <span className="text-lg font-semibold tracking-tight">咖啡口袋</span>
-          <span className="hidden lg:inline font-mono text-[10px] uppercase tracking-widest text-base-content/55 ml-1">
+          <span className="hidden lg:inline font-mono text-[10px] uppercase tracking-widest text-base-content/55 ml-1 relative top-[1.5px]">
             Tainan · 臺南
           </span>
         </Link>

@@ -2,3 +2,6 @@ export { Cap } from "./Cap";
 export { Placeholder } from "./Placeholder";
 export { TagChip } from "./TagChip";
 export { TagBadge } from "./TagBadge";
+export { CustomSelect } from "./CustomSelect";
+export { ConfirmModal } from "./ConfirmModal";
+

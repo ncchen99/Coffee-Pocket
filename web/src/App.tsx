@@ -21,6 +21,7 @@ import FilterPage from "./pages/FilterPage";
 import OnboardingPage, { isOnboarded } from "./pages/OnboardingPage";
 import DesktopProfilePage from "./pages/DesktopProfilePage";
 import DesktopPocketPage from "./pages/DesktopPocketPage";
+import DesktopSettingsPage from "./pages/DesktopSettingsPage";
 
 export default function App() {
   const isDesktop = useIsDesktop();
@@ -30,7 +31,7 @@ export default function App() {
       <Routes>
         <Route path="/login" element={<LoginPage />} />
         <Route path="/profile" element={<DesktopProfilePage />} />
-        <Route path="/settings" element={<SettingsPage />} />
+        <Route path="/settings" element={<DesktopSettingsPage />} />
         <Route path="/pocket" element={<DesktopPocketPage />} />
         <Route path="*" element={<DesktopApp />} />
       </Routes>
