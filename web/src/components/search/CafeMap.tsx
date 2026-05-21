@@ -319,7 +319,7 @@ export function CafeMap({
     // easeTo 校正中心。手機則一律帶入 sheet 的 padding,讓咖啡廳落在可見區域中心。
     map.flyTo({
       center: [cafe.lng, cafe.lat],
-      zoom: 15,
+      zoom: 16,
       duration: 600,
       padding: { top: 0, right: 0, bottom: paddingBottom, left: 0 },
     });

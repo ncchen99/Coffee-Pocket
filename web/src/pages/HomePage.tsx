@@ -20,11 +20,12 @@ export default function HomePage() {
     scenarioKey?: string | null,
     distanceKm?: number | null,
     overrideOpenAt?: string | null,
+    keyword?: string | null,
   ) => {
     const params = new URLSearchParams();
     const tags = overrideTags ?? Array.from(selected);
     tags.forEach((k) => params.append("tag", k));
-    if (query) params.set("q", query);
+    if (keyword) params.set("q", keyword);
     const s = scenarioKey === undefined ? scenario : scenarioKey;
     if (s) params.set("scenario", s);
     if (distanceKm != null) params.set("d", String(distanceKm));
@@ -44,7 +45,13 @@ export default function HomePage() {
           onToggle={toggle}
           openAt={openAt}
           onOpenAtChange={setOpenAt}
-          onSubmit={(parsed, _softTags, parsedOpenAt, distanceKm) => {
+          onSubmit={(parsed, _softTags, parsedOpenAt, distanceKm, keyword) => {
+            if (keyword) {
+              setAll([]);
+              setOpenAt(null);
+              goSearch([], null, null, null, keyword);
+              return;
+            }
             // LLM 解析後的 tags 直接覆蓋 selection 並導頁
             setAll(parsed);
             setOpenAt(parsedOpenAt);

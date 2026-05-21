@@ -112,7 +112,7 @@
 
 ## Phase 4:AI 摘要與個人化
 
-- [ ] **AI 摘要產生 pipeline** (Python pipeline，寫入 `cafes.summary_ai` 欄位)
+- [x] **AI 摘要產生 pipeline** (Python pipeline，寫入 `cafes.summary_ai` 欄位)
   - 目前 `summary_ai` 全為 null;前端在資料庫串接階段先跳過此區塊不顯示
   - 待 pipeline 完成後，前端 cafe detail 頁的 AI 摘要區塊會自動顯示
 - [ ] AI 摘要 caching (Edge Function `ai-summary` + Postgres 欄位)

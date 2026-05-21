@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
   InstagramIcon,
@@ -14,7 +14,7 @@ import {
 import { Cap, Placeholder, StarRating, TagBadge } from "@/components/primitives";
 import { TagConfidenceRow } from "@/components/cafe/TagConfidenceRow";
 import { AddTagModal } from "@/components/cafe/AddTagModal";
-import type { CafeDetail } from "@/types/cafe";
+import type { CafeDetail, PlatformTagKey } from "@/types/cafe";
 import { useVoteTag, useClearVote, useUserVotesForCafe, useDeleteCafeTag } from "@/hooks/useTagVote";
 import { useAuth } from "@/hooks/useAuth";
 import { formatDistance, formatPriceLevel, orderHoursFromToday } from "@/lib/format";
@@ -67,6 +67,38 @@ export function CafeDetailContent({ cafe, isDesktop, actions }: CafeDetailConten
 
   const topTags = cafe.top_tags ?? [];
   const orderedHours = orderHoursFromToday(cafe.hours);
+
+  // 凍結標籤顯示順序 —— 投票後 confidence 會變,若直接依後端排序會讓列表跳動,
+  // 用 ref 在切到這間店時記住一次原始順序,新增的標籤(不在 snapshot 中)接在尾端。
+  const orderSnapshot = useRef<{ cafeId: string; keys: PlatformTagKey[] }>({ cafeId: "", keys: [] });
+  useEffect(() => {
+    if (orderSnapshot.current.cafeId !== cafe.id) {
+      orderSnapshot.current = { cafeId: cafe.id, keys: cafe.tags.map((t) => t.key) };
+    } else {
+      // 同一間店但出現新標籤時,把新 key 追加到尾端,既有順序不動。
+      const existing = new Set(orderSnapshot.current.keys);
+      for (const t of cafe.tags) {
+        if (!existing.has(t.key)) orderSnapshot.current.keys.push(t.key);
+      }
+    }
+  }, [cafe.id, cafe.tags]);
+
+  const stableTags = useMemo(() => {
+    const snap = orderSnapshot.current;
+    if (snap.cafeId !== cafe.id || snap.keys.length === 0) return cafe.tags;
+    const byKey = new Map(cafe.tags.map((t) => [t.key, t]));
+    const ordered: typeof cafe.tags = [];
+    for (const k of snap.keys) {
+      const t = byKey.get(k);
+      if (t) {
+        ordered.push(t);
+        byKey.delete(k);
+      }
+    }
+    // 任何尚未被 snapshot 追上的新標籤接在尾端
+    for (const t of byKey.values()) ordered.push(t);
+    return ordered;
+  }, [cafe.id, cafe.tags]);
 
   // 手機版地圖連結不加 target,讓系統能用 universal link 跳轉到 Google Maps App。
   const mapLinkProps = cafe.google_url
@@ -235,9 +267,9 @@ export function CafeDetailContent({ cafe, isDesktop, actions }: CafeDetailConten
             新增標籤
           </button>
         </div>
-        {cafe.tags.length > 0 ? (
+        {stableTags.length > 0 ? (
           <ul className="mt-2 divide-y divide-base-content/10">
-            {cafe.tags.map((t) => (
+            {stableTags.map((t) => (
               <li key={t.key}>
                 <TagConfidenceRow
                   tag={t}

@@ -1,5 +1,22 @@
 import { supabase } from "./supabase";
+import { pinyin } from "pinyin-pro";
 import { filterKeysToDb, dbTagLabel, dbKeysToFilter } from "@/data/tagMapping";
+
+/**
+ * 將使用者輸入轉成「無聲調拼音」字串，用來和後端 `cafes.name_pinyin` 做 ILIKE
+ * 比對。後端儲存格式是「空白分隔的音節 + 串接形」，所以這裡同時送兩種：
+ *   "黑浮" → "hei fu" → 命中 "hei fu ka fei heifukafei"
+ *   "heifu" → "heifu" → 命中同一條記錄的串接部分
+ * 對純英文 / 純數字輸入，pinyin-pro 會原樣回傳。
+ */
+function toQueryPinyin(q: string): string | null {
+  if (!q) return null;
+  const syllables = pinyin(q, { toneType: "none", type: "array", nonZh: "consecutive" });
+  const joined = syllables.map((s) => s.trim().toLowerCase()).filter(Boolean).join(" ");
+  if (!joined) return null;
+  // 若使用者輸入已是純 ASCII（沒中文），轉換結果會等於原字，避免多送一份。
+  return joined;
+}
 import type {
   CafeCard,
   CafeDetail,
@@ -71,6 +88,8 @@ export interface SearchParams {
   limit?: number; // default 50
   offset?: number;
   open_at?: string | null;
+  /** 關鍵字搜尋 — 對 cafe name / address 做 ILIKE 匹配。空字串視為未指定。 */
+  q?: string | null;
 }
 
 export interface SearchResult {
@@ -95,6 +114,8 @@ interface CafeSearchRow {
 
 function rpcArgsForSearch(params: SearchParams) {
   const orTags = filterKeysToDb(params.tags_or ?? []);
+  const q = (params.q ?? "").trim();
+  const qNonNull = q.length > 0 ? q : null;
   return {
     p_tags: filterKeysToDb(params.tags ?? []),
     p_lng: params.lng ?? null,
@@ -105,6 +126,8 @@ function rpcArgsForSearch(params: SearchParams) {
     p_offset: params.offset ?? 0,
     p_open_at: params.open_at ?? null,
     p_tags_or: orTags.length > 0 ? orTags : null,
+    p_q: qNonNull,
+    p_q_pinyin: qNonNull ? toQueryPinyin(qNonNull) : null,
   };
 }
 
@@ -113,30 +136,20 @@ export async function searchCafes(params: SearchParams): Promise<SearchResult> {
   if (error) throw error;
   const rows = (data ?? []) as CafeSearchRow[];
   const cafes: CafeCard[] = rows.map((row) => {
-    let open_now = row.open_now ?? false;
-    let closes_at = row.closes_at ?? undefined;
-    let opens_at: string | undefined;
-
-    if (row.business_hours) {
-      const targetDate = params.open_at ? new Date(params.open_at) : new Date();
-      const status = isCafeOpenAt(row.business_hours, targetDate);
-      open_now = status.open_now;
-      closes_at = status.closes_at ?? undefined;
-      opens_at = status.opens_at ?? undefined;
-    }
-
+    // 不在這裡固化 open_now —— React Query 會快取結果,如果在 fetch 時計算,
+    // 過了打烊時間後列表仍會顯示「營業中」。把 business_hours 原樣帶下去,
+    // 由 CafeListItem 在 render 時即時計算。
     return {
       id: row.id,
       name: row.name,
       cover_url: row.cover_image_url,
       top_tags: (row.top_tags ?? []).map(dbTagLabel),
       distance_km: row.distance_m != null ? row.distance_m / 1000 : 0,
-      open_now,
-      closes_at,
-      opens_at,
+      open_now: row.open_now ?? false,
       lng: row.lng,
       lat: row.lat,
       google_rating: row.google_rating,
+      business_hours: row.business_hours ?? null,
     };
   });
   const total = rows[0]?.total_count ?? 0;
@@ -147,6 +160,8 @@ export async function searchCafesCount(
   params: Omit<SearchParams, "sort" | "limit" | "offset">,
 ): Promise<number> {
   const orTags = filterKeysToDb(params.tags_or ?? []);
+  const q = (params.q ?? "").trim();
+  const qNonNull = q.length > 0 ? q : null;
   const { data, error } = await supabase.rpc("cafes_search_count", {
     p_tags: filterKeysToDb(params.tags ?? []),
     p_lng: params.lng ?? null,
@@ -154,6 +169,8 @@ export async function searchCafesCount(
     p_radius_m: params.radius_m !== undefined ? params.radius_m : null,
     p_open_at: params.open_at ?? null,
     p_tags_or: orTags.length > 0 ? orTags : null,
+    p_q: qNonNull,
+    p_q_pinyin: qNonNull ? toQueryPinyin(qNonNull) : null,
   });
   if (error) throw error;
   return Number(data ?? 0);

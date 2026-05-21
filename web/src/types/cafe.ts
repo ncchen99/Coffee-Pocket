@@ -30,6 +30,9 @@ export interface CafeCard {
   lng: number;
   lat: number;
   google_rating?: number | null;
+  /** 原始營業時間 JSON,讓列表能在 render 時即時計算營業狀態,
+   *  避免 React Query 快取使顯示落後實際時間 (e.g. 剛過打烊還顯示營業中)。 */
+  business_hours?: any;
 }
 
 /**

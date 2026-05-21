@@ -32,6 +32,8 @@ interface SearchSidebarProps {
   onOpenAtChange: (val: string | null) => void;
   radiusM: number | null;
   onRadiusMChange: (v: number | null) => void;
+  keyword?: string | null;
+  onKeywordChange?: (v: string | null) => void;
 }
 
 const SORT_OPTIONS: { value: SortKey; label: string }[] = [
@@ -59,6 +61,7 @@ export function SearchSidebar({
   openAt,
   onOpenAtChange,
   onRadiusMChange,
+  onKeywordChange,
 }: SearchSidebarProps) {
   const activeScenario = scenario ? SCENARIO_BY_KEY[scenario] : null;
   const headingText = isLoading
@@ -93,7 +96,15 @@ export function SearchSidebar({
             onToggle={toggle}
             openAt={openAt}
             onOpenAtChange={onOpenAtChange}
-          onSubmit={(parsed, softTags, parsedOpenAt, distanceKm) => {
+          onSubmit={(parsed, softTags, parsedOpenAt, distanceKm, kw) => {
+              if (kw) {
+                // 關鍵字模式 — 清掉其他條件，只保留 keyword。
+                setAll([]);
+                onOpenAtChange(null);
+                onRadiusMChange(null);
+                onKeywordChange?.(kw);
+                return;
+              }
               setAll(parsed);
               // soft_tags are OR-match bonuses: they affect ranking but never
               // exclude cafes. We store them as orSelected so they go through
@@ -101,11 +112,13 @@ export function SearchSidebar({
               setOrSelected(softTags);
               onOpenAtChange(parsedOpenAt);
               onRadiusMChange(distanceKm != null ? distanceKm * 1000 : null);
+              onKeywordChange?.(null);
             }}
             onClear={() => {
               setAll([]);
               onOpenAtChange(null);
               onRadiusMChange(null);
+              onKeywordChange?.(null);
             }}
           />
         </section>

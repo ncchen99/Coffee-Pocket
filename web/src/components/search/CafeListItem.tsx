@@ -3,7 +3,7 @@ import { useIsDesktop } from "@/components/layout/Responsive";
 import { Placeholder, TagBadge } from "@/components/primitives";
 import type { CafeCard } from "@/types/cafe";
 import clsx from "@/lib/clsx";
-import { formatDistance } from "@/lib/format";
+import { formatDistance, isCafeOpenAt } from "@/lib/format";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { StarIcon } from "@hugeicons/core-free-icons";
 
@@ -27,6 +27,14 @@ export function CafeListItem({
   onHover,
 }: CafeListItemProps) {
   const isDesktop = useIsDesktop();
+  // 在 render 時即時計算營業狀態 —— 避免 React Query 把 fetch 當下的時間點固化,
+  // 過了打烊時間後列表仍顯示「營業中」、與詳細頁不一致。
+  const liveStatus = cafe.business_hours
+    ? isCafeOpenAt(cafe.business_hours, new Date())
+    : { open_now: cafe.open_now, closes_at: cafe.closes_at ?? null, opens_at: cafe.opens_at ?? null };
+  const open_now = liveStatus.open_now;
+  const closes_at = liveStatus.closes_at ?? undefined;
+  const opens_at = liveStatus.opens_at ?? undefined;
   const dims = {
     sm: "h-14 w-14",
     md: "h-16 w-16",
@@ -96,19 +104,19 @@ export function CafeListItem({
         <div
           className={clsx(
             "mt-1 text-[11px] font-medium",
-            cafe.open_now
+            open_now
               ? "text-success"
-              : cafe.opens_at
+              : opens_at
                 ? "text-warning"
                 : "text-error"
           )}
         >
-          {cafe.open_now
-            ? cafe.closes_at
-              ? `營業中 · 至 ${cafe.closes_at}`
+          {open_now
+            ? closes_at
+              ? `營業中 · 至 ${closes_at}`
               : "營業中"
-            : cafe.opens_at
-              ? `尚未營業 · ${cafe.opens_at} 開門`
+            : opens_at
+              ? `尚未營業 · ${opens_at} 開門`
               : "已休息"}
         </div>
       </div>

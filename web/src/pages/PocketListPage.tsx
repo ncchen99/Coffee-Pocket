@@ -125,11 +125,11 @@ export default function PocketListPage() {
                   to={`/cafe/${item.cafe_id}`}
                   className="block px-5 py-3 active:bg-base-200/60"
                 >
-                  <div className="flex items-baseline justify-between">
-                    <span className="font-semibold">{item.cafe?.name ?? "—"}</span>
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="font-semibold leading-tight">{item.cafe?.name ?? "—"}</span>
                     {item.cafe?.google_rating != null && (
-                      <span className="text-xs text-base-content/55 flex items-center gap-0.5">
-                        <HugeiconsIcon icon={StarIcon} size={11} className="text-warning fill-warning" />
+                      <span className="text-sm text-base-content/55 flex items-center gap-1 shrink-0">
+                        <HugeiconsIcon icon={StarIcon} size={14} className="text-warning fill-warning" />
                         <span className="font-semibold text-warning">{item.cafe.google_rating.toFixed(1)}</span>
                       </span>
                     )}

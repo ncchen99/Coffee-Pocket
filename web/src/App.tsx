@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Routes, Route, Navigate, useMatch, useNavigate } from "react-router-dom";
+import { Routes, Route, Navigate, useMatch, useNavigate, useLocation } from "react-router-dom";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Cancel01Icon, AlertCircleIcon } from "@hugeicons/core-free-icons";
 import { useIsDesktop } from "@/components/layout/Responsive";
@@ -27,6 +27,10 @@ import DesktopPocketPage from "./pages/DesktopPocketPage";
 import DesktopSettingsPage from "./pages/DesktopSettingsPage";
 export default function App() {
   const isDesktop = useIsDesktop();
+  // 訂閱 location 以強制 App 在每次路由切換時 re-render —— 否則 `isOnboarded()`
+  // 只在 mount 時呼叫一次,Route element 把舊的 <Navigate to="/onboarding"> 物件
+  // 釘住,完成 onboarding 後跳轉到 "/" 仍會被推回 /onboarding。
+  useLocation();
 
   if (isDesktop) {
     return (
@@ -74,13 +78,16 @@ function DesktopApp() {
   const activeId = cafeMatch?.params.id ?? null;
   const isFilterOpen = !!filterMatch;
 
-  const { selected, orSelected, toggle, setAll, setOrSelected, query, setQuery, scenario, pickScenario, openAt, setOpenAt, radiusM, setRadiusM } =
+  const { selected, orSelected, toggle, setAll, setOrSelected, query, setQuery, scenario, pickScenario, openAt, setOpenAt, radiusM, setRadiusM, keyword, setKeyword } =
     useSearchSelection();
 
   // displayed 落後 activeId —— 關閉時讓內容多停留 280ms 給 exit 動畫播完。
   const [displayed, setDisplayed] = useState<string | null>(activeId);
   const [isScrolled, setIsScrolled] = useState(false);
   const [sortKey, setSortKey] = useState<SortKey>("distance");
+  // 中間欄轉場期間覆蓋一層模糊遮罩,避免 Mapbox 寬度漸變時的視覺跳動。
+  // 轉場結束後再 fade out。
+  const [isPanelAnimating, setIsPanelAnimating] = useState(false);
 
   useEffect(() => {
     if (activeId) {
@@ -98,6 +105,12 @@ function DesktopApp() {
   const { location } = useUserLocation();
   const isPanelOpen = !!activeId || isFilterOpen;
 
+  useEffect(() => {
+    setIsPanelAnimating(true);
+    const t = window.setTimeout(() => setIsPanelAnimating(false), 320);
+    return () => window.clearTimeout(t);
+  }, [isPanelOpen]);
+
   const searchQuery = useCafeSearch({
     tags: Array.from(selected),
     tags_or: orSelected,
@@ -107,6 +120,7 @@ function DesktopApp() {
     sort: sortKey,
     open_at: openAt,
     limit: 1000,
+    q: keyword,
   });
   const cafes = searchQuery.data?.cafes ?? [];
   const totalCount = searchQuery.data?.total ?? 0;
@@ -140,6 +154,8 @@ function DesktopApp() {
             onOpenAtChange={setOpenAt}
             radiusM={radiusM}
             onRadiusMChange={setRadiusM}
+            keyword={keyword}
+            onKeywordChange={setKeyword}
           />
         </div>
         <div
@@ -212,6 +228,15 @@ function DesktopApp() {
             activeId={activeId}
             userLocation={location}
             onMarkerClick={(mid) => navigate(`/cafe/${mid}`)}
+          />
+          {/* 中間欄展開 / 收合期間,地圖容器寬度同步漸變,Mapbox 會逐幀 resize +
+              reproject —— 視覺上像是「畫面跳動」。蓋一層模糊覆蓋層在轉場期間
+              遮住跳動,等寬度穩定 (~320ms) 再淡出,避免眼睛抓不到參考點。 */}
+          <div
+            aria-hidden
+            className={`pointer-events-none absolute inset-0 bg-base-100/40 backdrop-blur-md transition-opacity duration-300 ease-out ${
+              isPanelAnimating ? "opacity-100" : "opacity-0"
+            }`}
           />
         </section>
       </div>

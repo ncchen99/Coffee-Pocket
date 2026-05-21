@@ -2,7 +2,21 @@ import { useState } from "react";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Search01Icon, Loading03Icon } from "@hugeicons/core-free-icons";
 import { TagChip } from "@/components/primitives";
-import { parsePrompt } from "@/lib/api";
+import { parsePrompt, searchCafesCount } from "@/lib/api";
+import { TAG_LABEL_TO_KEY } from "@/data/filterTags";
+
+/** 完全等於某個標籤 label（去除多餘空白）→ 直接套用該標籤。 */
+function matchTagLabelKey(q: string): string | null {
+  const trimmed = q.replace(/\s+/g, "");
+  // 直接比對
+  if (TAG_LABEL_TO_KEY[trimmed]) return TAG_LABEL_TO_KEY[trimmed];
+  // 容忍 Wi-Fi / wifi 大小寫
+  const lower = trimmed.toLowerCase();
+  for (const [label, key] of Object.entries(TAG_LABEL_TO_KEY)) {
+    if (label.toLowerCase() === lower) return key;
+  }
+  return null;
+}
 
 const PROMPT_TAGS: { key: string; label: string; accent?: boolean }[] = [
   { key: "no_limit", label: "不限時" },
@@ -28,8 +42,18 @@ interface PromptHeroProps {
   onQueryChange: (v: string) => void;
   selected: Set<string>;
   onToggle: (key: string) => void;
-  /** 提交時呼叫，會收到 LLM 解析出的硬性 tags（AND 過濾）、軟性 tags（OR 加分）、相對時間點、與距離。 */
-  onSubmit: (parsedTags: string[], softTags: string[], openAt: string | null, distanceKm: number | null) => void;
+  /**
+   * 提交時呼叫。
+   * - parsedTags / softTags / openAt / distanceKm：場景 / LLM 解析結果。
+   * - keyword：若不為 null，表示走「店名 / 地址關鍵字搜尋」，其他欄位通常為空。
+   */
+  onSubmit: (
+    parsedTags: string[],
+    softTags: string[],
+    openAt: string | null,
+    distanceKm: number | null,
+    keyword?: string | null,
+  ) => void;
   onClear?: () => void;
   compact?: boolean;
   /** 目前的時間篩選；與「22:00 後」chip 雙向綁定。 */
@@ -59,23 +83,43 @@ export function PromptHero({
     const q = query.trim();
     if (!q) {
       setLastSubmittedQuery("");
-      onSubmit([], [], null, null);
+      onSubmit([], [], null, null, null);
       return;
     }
+
+    // 1. 完全命中標籤 label（如「有插座」「適合讀書」）→ 套用標籤，無需後端。
+    const labelKey = matchTagLabelKey(q);
+    if (labelKey) {
+      setHint(`已套用標籤「${q}」`);
+      setLastSubmittedQuery(q);
+      onSubmit([labelKey], [], null, null, null);
+      return;
+    }
+
     setLoading(true);
     setHint(null);
     try {
+      // 2. 先試店名 / 地址（含同音字）關鍵字搜尋，看是否有結果。
+      const count = await searchCafesCount({ q });
+      if (count > 0) {
+        setHint(`找到 ${count} 間店名 / 地址含「${q}」`);
+        setLastSubmittedQuery(q);
+        onSubmit([], [], null, null, q);
+        return;
+      }
+
+      // 3. 關鍵字 0 結果 → 視為情境句，丟給 LLM 解析。
       const parsed = await parsePrompt(q);
       if (parsed.tags.length === 0 && !parsed.open_at && parsed.distance_km === null) {
-        setHint("沒抓到對應條件,請試試「有插座」「安靜」「不限時」等關鍵字");
+        setHint(`找不到「${q}」相關咖啡廳，也沒抓到對應條件，請試試「有插座」「安靜」「不限時」等關鍵字`);
       } else {
         setHint(parsed.rationale || null);
       }
       setLastSubmittedQuery(q);
-      onSubmit(parsed.tags, parsed.soft_tags, parsed.open_at, parsed.distance_km);
+      onSubmit(parsed.tags, parsed.soft_tags, parsed.open_at, parsed.distance_km, null);
     } catch (e) {
-      setHint("語意分析失敗,改用手動篩選試試");
-      onSubmit([], [], null, null);
+      setHint("搜尋失敗,請稍後再試");
+      onSubmit([], [], null, null, null);
     } finally {
       setLoading(false);
     }

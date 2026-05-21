@@ -18,6 +18,14 @@
     overscroll-behavior-y: none;
   }
 
+  /* 把 input/textarea 的 placeholder 顏色從預設灰色換成沿著主題的低彩度 base-content,
+     避免在咖啡色主題下顯得突兀 */
+  input::placeholder,
+  textarea::placeholder {
+    color: oklch(var(--bc) / 0.4) !important;
+    opacity: 1;
+  }
+
   /* 降低分隔線預設刺激度 — 任何 hr / divider 都更柔和 */
   hr, .divider::before, .divider::after {
     opacity: 0.6;

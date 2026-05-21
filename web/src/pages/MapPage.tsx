@@ -46,8 +46,9 @@ export default function MapPage() {
   const initialOpenAt = params.get("open_at");
   const initialD = params.get("d");
   const initialRadiusM = initialD != null ? Number(initialD) * 1000 : null;
-  const { selected, orSelected, toggle, scenario, pickScenario, openAt, setOpenAt, radiusM } =
-    useSearchSelection(initial, initialRadiusM);
+  const initialKeyword = params.get("q");
+  const { selected, orSelected, toggle, scenario, pickScenario, openAt, setOpenAt, radiusM, keyword } =
+    useSearchSelection(initial, initialRadiusM, initialKeyword);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [sheet, setSheet] = useState<SheetMode>("half");
   const [vh, setVh] = useState(() =>
@@ -86,6 +87,7 @@ export default function MapPage() {
     sort: location ? "distance" : undefined,
     limit: 1000,
     open_at: openAt,
+    q: keyword,
   });
   const cafes = searchQuery.data?.cafes ?? [];
   const totalCount = searchQuery.data?.total ?? 0;
