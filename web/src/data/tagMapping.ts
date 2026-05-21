@@ -25,6 +25,11 @@ export function filterKeysToDb(keys: string[]): string[] {
   return keys.map((k) => FILTER_TO_DB[k]).filter(Boolean);
 }
 
+/** DB tag_keys → frontend short keys (drops unknown). */
+export function dbKeysToFilter(dbKeys: string[]): string[] {
+  return dbKeys.map((k) => DB_TO_FILTER[k]).filter(Boolean);
+}
+
 /** DB tag_key → 中文 label，用於顯示 cafe.top_tags / TagBadge */
 export const DB_TAG_LABEL: Record<string, string> = {
   socket_available: "有插座",

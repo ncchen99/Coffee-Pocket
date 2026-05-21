@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { ArrowLeft02Icon, Share01Icon, Settings01Icon } from "@hugeicons/core-free-icons";
@@ -6,11 +6,14 @@ import { useIsDesktop } from "@/components/layout/Responsive";
 import { FilterChipBar, type ChipOption } from "@/components/search/FilterChipBar";
 import { CafeListItem } from "@/components/search/CafeListItem";
 import { CafeMap } from "@/components/search/CafeMap";
+import { SCENARIO_BY_KEY } from "@/components/search/ScenarioGrid";
 import { useSearchSelection } from "@/hooks/useSearchSelection";
 import { useCafeSearch } from "@/hooks/useCafes";
 
 const DEFAULT_LNG = 120.205;
 const DEFAULT_LAT = 22.991;
+// 與 App.tsx 同步:預設半徑 30km,涵蓋整個臺南。geolocation 接上後才縮回 5km。
+const DEFAULT_RADIUS_M = 30000;
 
 const CHIP_OPTIONS: ChipOption[] = [
   { key: "now", label: "現在營業" },
@@ -43,12 +46,23 @@ export default function MapPage() {
   const navigate = useNavigate();
   const [params] = useSearchParams();
   const initial = params.getAll("tag");
-  const { selected, toggle } = useSearchSelection(initial);
+  const initialScenario = params.get("scenario");
+  const { selected, toggle, scenario, pickScenario } = useSearchSelection(initial);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [sheet, setSheet] = useState<SheetMode>("half");
   const [vh, setVh] = useState(() =>
     typeof window === "undefined" ? 0 : window.innerHeight,
   );
+  const listRef = useRef<HTMLUListElement>(null);
+
+  // 啟動時根據 URL ?scenario= 還原場景模式 (僅執行一次)
+  useEffect(() => {
+    if (initialScenario && SCENARIO_BY_KEY[initialScenario]) {
+      pickScenario(SCENARIO_BY_KEY[initialScenario]);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   useEffect(() => {
     const onResize = () => setVh(window.innerHeight);
     window.addEventListener("resize", onResize);
@@ -60,17 +74,41 @@ export default function MapPage() {
     tags: Array.from(selected),
     lng: DEFAULT_LNG,
     lat: DEFAULT_LAT,
-    radius_m: 5000,
+    radius_m: DEFAULT_RADIUS_M,
     sort: "distance",
-    limit: 30,
+    limit: 50,
   });
   const cafes = searchQuery.data?.cafes ?? [];
   const totalCount = searchQuery.data?.total ?? 0;
+  const activeScenario = scenario ? SCENARIO_BY_KEY[scenario] : null;
+
+  // 點圖標 → 自動把對應 list item 捲到可視區域,讓使用者馬上看到項目細節。
+  useEffect(() => {
+    if (!activeId) return;
+    const li = listRef.current?.querySelector<HTMLElement>(
+      `[data-cafe-id="${activeId}"]`,
+    );
+    if (li) {
+      li.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    }
+  }, [activeId, cafes]);
 
   if (isDesktop) {
     navigate(`/?${initial.map((t) => `tag=${t}`).join("&")}`, { replace: true });
     return null;
   }
+
+  const headerTitle = activeScenario
+    ? activeScenario.title
+    : selected.size > 0
+      ? `${selected.size} 個條件`
+      : "臺南";
+
+  const listHeading = searchQuery.isLoading
+    ? "搜尋中…"
+    : activeScenario
+      ? `${totalCount} 間${activeScenario.title}`
+      : `${totalCount} 間 · 臺南`;
 
   return (
     <div className="flex h-screen flex-col bg-base-100">
@@ -87,9 +125,7 @@ export default function MapPage() {
           </button>
         </div>
         <div className="navbar-center">
-          <h1 className="truncate text-sm font-semibold px-2">
-            {selected.size > 0 ? `${selected.size} 個條件 · 中西區` : "中西區"}
-          </h1>
+          <h1 className="truncate text-sm font-semibold px-2">{headerTitle}</h1>
         </div>
         <div className="navbar-end">
           <button type="button" aria-label="分享" className="btn btn-ghost btn-sm btn-square">
@@ -145,9 +181,7 @@ export default function MapPage() {
             <span className="block h-1 w-9 bg-base-content/30" />
           </button>
           <header className="flex items-baseline justify-between px-5 pb-2">
-            <h2 className="text-[15px] font-semibold">
-              {searchQuery.isLoading ? "搜尋中…" : `${totalCount} 間 · 中西區`}
-            </h2>
+            <h2 className="text-[15px] font-semibold">{listHeading}</h2>
             <span className="text-xs text-base-content/55">距離 ↓</span>
           </header>
           <div className="divider my-0" />
@@ -168,9 +202,12 @@ export default function MapPage() {
               找不到符合條件的咖啡店
             </p>
           ) : (
-            <ul className="flex-1 divide-y divide-base-content/10 overflow-y-auto">
+            <ul
+              ref={listRef}
+              className="flex-1 divide-y divide-base-content/10 overflow-y-auto"
+            >
               {cafes.map((c) => (
-                <li key={c.id}>
+                <li key={c.id} data-cafe-id={c.id}>
                   <CafeListItem cafe={c} active={c.id === activeId} />
                 </li>
               ))}

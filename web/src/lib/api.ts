@@ -1,5 +1,5 @@
 import { supabase } from "./supabase";
-import { filterKeysToDb, dbTagLabel } from "@/data/tagMapping";
+import { filterKeysToDb, dbTagLabel, dbKeysToFilter } from "@/data/tagMapping";
 import type {
   CafeCard,
   CafeDetail,
@@ -12,6 +12,34 @@ import type {
   TagWithConfidence,
   PlatformTagKey,
 } from "@/types/cafe";
+
+// ===========================================================================
+// Semantic prompt parsing (LLM → filter tags)
+// ===========================================================================
+
+export interface ParsedPrompt {
+  /** Frontend short keys, ready to feed into `setAll`. */
+  tags: string[];
+  /** DB tag_keys as returned by the LLM. */
+  db_tags: string[];
+  rationale: string;
+}
+
+export async function parsePrompt(query: string): Promise<ParsedPrompt> {
+  const q = query.trim();
+  if (!q) return { tags: [], db_tags: [], rationale: "" };
+
+  const { data, error } = await supabase.functions.invoke("parse-prompt", {
+    body: { query: q },
+  });
+  if (error) throw error;
+  const dbTags: string[] = Array.isArray(data?.tags) ? data.tags : [];
+  return {
+    db_tags: dbTags,
+    tags: dbKeysToFilter(dbTags),
+    rationale: typeof data?.rationale === "string" ? data.rationale : "",
+  };
+}
 
 // ===========================================================================
 // Search
@@ -95,37 +123,44 @@ export async function searchCafesCount(
 // Cafe Detail
 // ===========================================================================
 
-const DAY_LABEL: Record<string, string> = {
-  monday: "週一",
-  tuesday: "週二",
-  wednesday: "週三",
-  thursday: "週四",
-  friday: "週五",
-  saturday: "週六",
-  sunday: "週日",
-};
+import { normalizeDayLabel, formatTimeRange, formatTime } from "./format";
+
+function isClosedString(t: string): boolean {
+  return t === "" || /^(closed|休|公休|休息|off)$/i.test(t.trim());
+}
+
+function formatHourSegment(seg: any): string | null {
+  if (typeof seg === "string") {
+    return isClosedString(seg) ? "公休" : formatTimeRange(seg);
+  }
+  if (seg && typeof seg === "object" && "open" in seg && "close" in seg) {
+    return `${formatTime(String(seg.open))} – ${formatTime(String(seg.close))}`;
+  }
+  return null;
+}
 
 function normalizeHours(business_hours: any): Record<string, string> {
   if (!business_hours || typeof business_hours !== "object") return {};
   const out: Record<string, string> = {};
   for (const [day, val] of Object.entries(business_hours)) {
-    const label = DAY_LABEL[day.toLowerCase()] ?? day;
-    if (val == null) continue;
+    const label = normalizeDayLabel(day);
+    if (val == null) {
+      out[label] = "公休";
+      continue;
+    }
     if (typeof val === "string") {
-      out[label] = val;
+      out[label] = isClosedString(val) ? "公休" : formatTimeRange(val);
     } else if (Array.isArray(val)) {
-      out[label] = val
-        .map((seg: any) => {
-          if (typeof seg === "string") return seg;
-          if (seg && typeof seg === "object" && "open" in seg && "close" in seg) {
-            return `${seg.open} – ${seg.close}`;
-          }
-          return null;
-        })
-        .filter(Boolean)
-        .join(", ");
+      if (val.length === 0) {
+        out[label] = "公休";
+        continue;
+      }
+      const parts = val.map(formatHourSegment).filter((s): s is string => !!s);
+      // 若所有段都是「公休」就只顯示一次
+      const nonClosed = parts.filter((s) => s !== "公休");
+      out[label] = nonClosed.length > 0 ? nonClosed.join(", ") : "公休";
     } else if (typeof val === "object" && "open" in val && "close" in val) {
-      out[label] = `${(val as any).open} – ${(val as any).close}`;
+      out[label] = formatHourSegment(val) ?? "公休";
     }
   }
   return out;

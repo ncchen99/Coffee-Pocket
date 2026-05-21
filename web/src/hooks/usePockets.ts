@@ -1,6 +1,12 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import * as api from "@/lib/api";
 
+export function useSubmitReport() {
+  return useMutation({
+    mutationFn: api.submitReport,
+  });
+}
+
 export function usePockets() {
   return useQuery({
     queryKey: ["pockets"],

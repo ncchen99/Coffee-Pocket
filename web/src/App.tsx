@@ -5,11 +5,13 @@ import { Cancel01Icon, AlertCircleIcon } from "@hugeicons/core-free-icons";
 import { useIsDesktop } from "@/components/layout/Responsive";
 import { Topbar } from "@/components/layout/Topbar";
 import { CafeMap } from "@/components/search/CafeMap";
-import { SearchSidebar } from "@/components/search/SearchSidebar";
+import { SearchSidebar, type SortKey } from "@/components/search/SearchSidebar";
 import { CafeDetailContent } from "@/components/cafe/CafeDetailContent";
+import { CafeActionModals } from "@/components/cafe/CafeActionModals";
 import { DesktopFilterPanel } from "@/components/search/DesktopFilterPanel";
 import { useSearchSelection } from "@/hooks/useSearchSelection";
 import { useCafeSearch, useCafeDetail } from "@/hooks/useCafes";
+import { useCafeActions } from "@/hooks/useCafeActions";
 import HomePage from "./pages/HomePage";
 import MapPage from "./pages/MapPage";
 import CafeDetailPage from "./pages/CafeDetailPage";
@@ -26,6 +28,9 @@ import DesktopSettingsPage from "./pages/DesktopSettingsPage";
 // 預設定位:臺南車站附近,等到接上 geolocation 之後再以 user 位置覆蓋。
 const DEFAULT_LNG = 120.205;
 const DEFAULT_LAT = 22.991;
+// 半徑放寬到 ~30km,確保安平、東區、北區、永康、仁德等行政區的咖啡廳都會被收進來。
+// 真正的「附近」會在 geolocation 接上後縮回 5km。
+const DEFAULT_RADIUS_M = 30000;
 
 export default function App() {
   const isDesktop = useIsDesktop();
@@ -75,11 +80,13 @@ function DesktopApp() {
   const activeId = cafeMatch?.params.id ?? null;
   const isFilterOpen = !!filterMatch;
 
-  const { selected, toggle, setAll, query, setQuery } = useSearchSelection();
+  const { selected, toggle, setAll, query, setQuery, scenario, pickScenario } =
+    useSearchSelection();
 
   // displayed 落後 activeId —— 關閉時讓內容多停留 280ms 給 exit 動畫播完。
   const [displayed, setDisplayed] = useState<string | null>(activeId);
   const [isScrolled, setIsScrolled] = useState(false);
+  const [sortKey, setSortKey] = useState<SortKey>("distance");
 
   useEffect(() => {
     if (activeId) {
@@ -100,14 +107,15 @@ function DesktopApp() {
     tags: Array.from(selected),
     lng: DEFAULT_LNG,
     lat: DEFAULT_LAT,
-    radius_m: 5000,
-    sort: "distance",
+    radius_m: DEFAULT_RADIUS_M,
+    sort: sortKey,
   });
   const cafes = searchQuery.data?.cafes ?? [];
   const totalCount = searchQuery.data?.total ?? 0;
 
   const detailQuery = useCafeDetail(displayed);
   const cafe = detailQuery.data ?? null;
+  const actions = useCafeActions(displayed);
 
   return (
     <div className="flex h-screen flex-col bg-base-100">
@@ -121,10 +129,14 @@ function DesktopApp() {
             setAll={setAll}
             query={query}
             setQuery={setQuery}
+            scenario={scenario}
+            pickScenario={pickScenario}
             cafes={cafes}
             totalCount={totalCount}
             isLoading={searchQuery.isLoading}
             isError={searchQuery.isError}
+            sortKey={sortKey}
+            onSortChange={setSortKey}
           />
         </div>
         <div
@@ -171,7 +183,7 @@ function DesktopApp() {
                   setIsScrolled(e.currentTarget.scrollTop >= 10);
                 }}
               >
-                <CafeDetailContent cafe={cafe} isDesktop={true} />
+                <CafeDetailContent cafe={cafe} isDesktop={true} actions={actions} />
               </div>
             </div>
           ) : displayed ? (
@@ -191,6 +203,7 @@ function DesktopApp() {
           />
         </section>
       </div>
+      <CafeActionModals actions={actions} />
     </div>
   );
 }

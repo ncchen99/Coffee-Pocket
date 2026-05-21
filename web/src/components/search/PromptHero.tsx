@@ -1,6 +1,8 @@
+import { useState } from "react";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Search01Icon } from "@hugeicons/core-free-icons";
+import { Search01Icon, Loading03Icon } from "@hugeicons/core-free-icons";
 import { TagChip } from "@/components/primitives";
+import { parsePrompt } from "@/lib/api";
 
 const PROMPT_TAGS: { key: string; label: string; accent?: boolean }[] = [
   { key: "no_limit", label: "不限時" },
@@ -16,7 +18,11 @@ interface PromptHeroProps {
   onQueryChange: (v: string) => void;
   selected: Set<string>;
   onToggle: (key: string) => void;
-  onSubmit: () => void;
+  /**
+   * 提交時呼叫。會收到 LLM 解析出的 frontend short keys。
+   * 父層通常會把這些 keys 餵進 `setAll(...)` 並/或導頁。
+   */
+  onSubmit: (parsedTags: string[]) => void;
   compact?: boolean;
 }
 
@@ -29,6 +35,33 @@ export function PromptHero({
   onSubmit,
   compact = false,
 }: PromptHeroProps) {
+  const [loading, setLoading] = useState(false);
+  const [hint, setHint] = useState<string | null>(null);
+
+  const handleSubmit = async () => {
+    const q = query.trim();
+    if (!q) {
+      onSubmit([]);
+      return;
+    }
+    setLoading(true);
+    setHint(null);
+    try {
+      const parsed = await parsePrompt(q);
+      if (parsed.tags.length === 0) {
+        setHint("沒抓到對應條件,請試試「有插座」「安靜」「不限時」等關鍵字");
+      } else {
+        setHint(parsed.rationale || null);
+      }
+      onSubmit(parsed.tags);
+    } catch (e) {
+      setHint("語意分析失敗,改用手動篩選試試");
+      onSubmit([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <section>
       {!compact && (
@@ -48,7 +81,7 @@ export function PromptHero({
       <form
         onSubmit={(e) => {
           e.preventDefault();
-          onSubmit();
+          void handleSubmit();
         }}
         className="join mt-4 w-full border border-base-content/25"
       >
@@ -59,13 +92,21 @@ export function PromptHero({
           type="text"
           value={query}
           onChange={(e) => onQueryChange(e.target.value)}
-          placeholder="例如:晚上 8 點 / 安靜 / 有插座"
+          placeholder="例如:想找一個安靜可以帶電腦的地方"
           className="input input-ghost join-item flex-1 focus:outline-none focus:bg-transparent"
+          disabled={loading}
         />
-        <button type="submit" className="btn btn-neutral join-item">
-          搜尋
+        <button type="submit" className="btn btn-neutral join-item" disabled={loading}>
+          {loading ? (
+            <HugeiconsIcon icon={Loading03Icon} size={14} className="animate-spin" />
+          ) : (
+            "搜尋"
+          )}
         </button>
       </form>
+      {hint && (
+        <p className="mt-2 text-xs text-base-content/55 leading-snug">{hint}</p>
+      )}
 
       <div className="mt-3 flex flex-wrap gap-1.5">
         {PROMPT_TAGS.map((t) => (

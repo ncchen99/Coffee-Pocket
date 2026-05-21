@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Add01Icon, Location01Icon } from "@hugeicons/core-free-icons";
-import { TagBadge } from "@/components/primitives";
+import { TagBadge, InputModal } from "@/components/primitives";
 import { DesktopPageLayout } from "@/components/layout/DesktopPageLayout";
 import { useAuth } from "@/hooks/useAuth";
 import { usePockets, usePocketItems, useCreatePocket } from "@/hooks/usePockets";
@@ -15,6 +15,7 @@ export default function DesktopPocketPage() {
   const navigate = useNavigate();
   const { data: pockets, isLoading: pocketsLoading } = usePockets();
   const [activePocketId, setActivePocketId] = useState<string | null>(null);
+  const [isCreateOpen, setIsCreateOpen] = useState(false);
   const createPocket = useCreatePocket();
 
   useEffect(() => {
@@ -26,8 +27,10 @@ export default function DesktopPocketPage() {
   const { data: items = [], isLoading: itemsLoading } = usePocketItems(activePocketId);
 
   const handleCreate = () => {
-    const name = window.prompt("新口袋名稱");
-    if (!name) return;
+    setIsCreateOpen(true);
+  };
+
+  const handleSubmitCreate = (name: string) => {
     createPocket.mutate({ name });
   };
 
@@ -152,6 +155,15 @@ export default function DesktopPocketPage() {
           在地圖上看這個口袋
         </button>
       </div>
+      <InputModal
+        isOpen={isCreateOpen}
+        onClose={() => setIsCreateOpen(false)}
+        onSubmit={handleSubmitCreate}
+        title="新口袋"
+        description="幫這個口袋取個好記的名字，例如「想去的咖啡店」。"
+        placeholder="口袋名稱"
+        submitText="建立"
+      />
     </DesktopPageLayout>
   );
 }

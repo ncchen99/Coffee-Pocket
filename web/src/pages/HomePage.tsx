@@ -12,13 +12,16 @@ import { useSearchSelection } from "@/hooks/useSearchSelection";
  */
 export default function HomePage() {
   const navigate = useNavigate();
-  const { selected, toggle, setAll, query, setQuery } = useSearchSelection();
+  const { selected, toggle, setAll, query, setQuery, scenario, pickScenario } =
+    useSearchSelection();
 
-  const goSearch = (overrideTags?: string[]) => {
+  const goSearch = (overrideTags?: string[], scenarioKey?: string | null) => {
     const params = new URLSearchParams();
     const tags = overrideTags ?? Array.from(selected);
     tags.forEach((k) => params.append("tag", k));
     if (query) params.set("q", query);
+    const s = scenarioKey === undefined ? scenario : scenarioKey;
+    if (s) params.set("scenario", s);
     navigate(`/map?${params.toString()}`);
   };
 
@@ -31,7 +34,11 @@ export default function HomePage() {
           onQueryChange={setQuery}
           selected={selected}
           onToggle={toggle}
-          onSubmit={() => goSearch()}
+          onSubmit={(parsed) => {
+            // LLM 解析後的 tags 直接覆蓋 selection 並導頁
+            setAll(parsed);
+            goSearch(parsed, null);
+          }}
         />
 
         <div className="divider my-6" />
@@ -40,9 +47,10 @@ export default function HomePage() {
         <div className="mt-3">
           <ScenarioGrid
             layout="stack"
+            activeKey={scenario}
             onPick={(s) => {
-              setAll(s.tags);
-              goSearch(s.tags);
+              pickScenario(s);
+              goSearch(s.tags, s.key);
             }}
           />
         </div>
