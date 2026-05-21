@@ -20,6 +20,8 @@ export interface TagWithConfidence {
 
 export interface CafeCard {
   id: string;
+  /** URL-friendly slug (pypinyin-derived). 若後端尚未回填則為 null,前端應 fallback 到 id。 */
+  slug?: string | null;
   name: string;
   cover_url: string | null;
   top_tags: string[];

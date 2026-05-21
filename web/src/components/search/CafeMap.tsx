@@ -26,6 +26,13 @@ interface CafeMapProps {
    */
   paddingBottom?: number;
   className?: string;
+  /**
+   * 當這個 key 變化(且 cafes 非空)時,觸發一次 fitBounds —— 把目前所有 cafes
+   * 收進可視範圍。用於「在地圖上看這個口袋」這類情境:進站時要立刻把鏡頭帶到
+   * 那批點上,而不是停在預設的 Tainan center。
+   * 設成 null / undefined 代表不要 auto-fit。
+   */
+  fitToCafesKey?: string | null;
 }
 
 // Huge Icons · Coffee02 paths,轉成 SVG markup 直接塞進 marker DOM。
@@ -154,6 +161,7 @@ export function CafeMap({
   onMarkerClick,
   paddingBottom = 0,
   className,
+  fitToCafesKey = null,
 }: CafeMapProps) {
   const { requestLocation, isLoading: isLocationLoading } = useUserLocation();
   const container = useRef<HTMLDivElement>(null);
@@ -257,6 +265,26 @@ export function CafeMap({
       markersRef.current.set(c.id, { marker, circle, label });
     });
   }, [cafes]);
+
+  // fit-to-cafes —— 當 fitToCafesKey 變化(例如從 /pocket 跳轉進來、或切換口袋)
+  // 且 cafes 非空時,把鏡頭收進整批點的 bounds。單點時改用 flyTo 並給一個適中的 zoom,
+  // 避免 fitBounds 在 maxZoom 上塞滿整個視窗。
+  useEffect(() => {
+    if (!fitToCafesKey) return;
+    const map = mapRef.current;
+    if (!map || cafes.length === 0) return;
+    // 抑制 user location 首次取得時的 auto fly-to,避免和 fitBounds 互相覆寫。
+    hasFlownToUserRef.current = true;
+    const padding = { top: 40, right: 40, bottom: Math.max(paddingBottom, 40), left: 40 };
+    if (cafes.length === 1) {
+      const only = cafes[0];
+      map.flyTo({ center: [only.lng, only.lat], zoom: 15, duration: 800, padding });
+      return;
+    }
+    const bounds = new mapboxgl.LngLatBounds();
+    cafes.forEach((c) => bounds.extend([c.lng, c.lat]));
+    map.fitBounds(bounds, { padding, duration: 800, maxZoom: 15 });
+  }, [fitToCafesKey, cafes, paddingBottom]);
 
   // user location marker
   useEffect(() => {

@@ -159,7 +159,13 @@ export default function DesktopPocketPage() {
       <div className="mt-5">
         <button
           type="button"
-          onClick={() => navigate("/")}
+          onClick={() => {
+            if (!activePocketId) {
+              navigate("/");
+              return;
+            }
+            navigate(`/?pocket=${encodeURIComponent(activePocketId)}`);
+          }}
           className="btn btn-ghost btn-sm gap-2"
         >
           <HugeiconsIcon icon={Location01Icon} size={16} strokeWidth={1.5} />

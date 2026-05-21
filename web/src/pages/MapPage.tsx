@@ -9,6 +9,7 @@ import { CafeMap } from "@/components/search/CafeMap";
 import { SCENARIO_BY_KEY } from "@/components/search/ScenarioGrid";
 import { useSearchSelection } from "@/hooks/useSearchSelection";
 import { useCafeSearch } from "@/hooks/useCafes";
+import { usePocketItems, usePockets } from "@/hooks/usePockets";
 import { useUserLocation } from "@/context/UserLocationContext";
 import { getTWTimeParts } from "@/lib/format";
 const CHIP_OPTIONS: ChipOption[] = [
@@ -47,6 +48,7 @@ export default function MapPage() {
   const initialD = params.get("d");
   const initialRadiusM = initialD != null ? Number(initialD) * 1000 : null;
   const initialKeyword = params.get("q");
+  const pocketId = params.get("pocket");
   const { selected, orSelected, toggle, scenario, pickScenario, openAt, setOpenAt, radiusM, keyword } =
     useSearchSelection(initial, initialRadiusM, initialKeyword);
   const [activeId, setActiveId] = useState<string | null>(null);
@@ -89,8 +91,17 @@ export default function MapPage() {
     open_at: openAt,
     q: keyword,
   });
-  const cafes = searchQuery.data?.cafes ?? [];
-  const totalCount = searchQuery.data?.total ?? 0;
+  // Pocket 模式 —— 從 /pocket 點「在地圖上看這個口袋」進來。直接以 pocket items
+  // 取代 search 結果,並把鏡頭收進這批點(由 CafeMap 的 fitToCafesKey 觸發)。
+  const pocketItemsQuery = usePocketItems(pocketId);
+  const { data: pockets } = usePockets();
+  const isPocketMode = !!pocketId;
+  const pocketCafes = (pocketItemsQuery.data ?? [])
+    .map((item) => item.cafe)
+    .filter((c): c is NonNullable<typeof c> => !!c);
+  const cafes = isPocketMode ? pocketCafes : (searchQuery.data?.cafes ?? []);
+  const totalCount = isPocketMode ? pocketCafes.length : (searchQuery.data?.total ?? 0);
+  const activePocket = pockets?.find((p) => p.id === pocketId) ?? null;
   const activeScenario = scenario ? SCENARIO_BY_KEY[scenario] : null;
 
   // 點圖標 → 自動把對應 list item 捲到可視區域,讓使用者馬上看到項目細節。
@@ -132,17 +143,25 @@ export default function MapPage() {
     }
   }
 
-  const headerTitle = activeScenario
-    ? activeScenario.title
-    : selected.size > 0
-      ? `${selected.size} 個條件`
-      : "臺南";
-
-  const listHeading = searchQuery.isLoading
-    ? "搜尋中…"
+  const headerTitle = isPocketMode
+    ? activePocket
+      ? `${activePocket.emoji ? `${activePocket.emoji} ` : ""}${activePocket.name}`
+      : "口袋名單"
     : activeScenario
-      ? `${totalCount} 間${activeScenario.title}`
-      : `${totalCount} 間 · 臺南`;
+      ? activeScenario.title
+      : selected.size > 0
+        ? `${selected.size} 個條件`
+        : "臺南";
+
+  const isListLoading = isPocketMode ? pocketItemsQuery.isLoading : searchQuery.isLoading;
+  const isListError = isPocketMode ? pocketItemsQuery.isError : searchQuery.isError;
+  const listHeading = isListLoading
+    ? "載入中…"
+    : isPocketMode
+      ? `${totalCount} 間 · 口袋名單`
+      : activeScenario
+        ? `${totalCount} 間${activeScenario.title}`
+        : `${totalCount} 間 · 臺南`;
 
   return (
     <div className="flex h-screen flex-col bg-base-100">
@@ -199,6 +218,7 @@ export default function MapPage() {
             activeId={activeId}
             userLocation={location}
             paddingBottom={sheetPaddingPx}
+            fitToCafesKey={isPocketMode ? `pocket:${pocketId}` : null}
             onMarkerClick={(id) => {
               setActiveId(id);
               setSheet("half");
@@ -241,11 +261,11 @@ export default function MapPage() {
             {location && <span className="text-xs text-base-content/55">距離 ↓</span>}
           </header>
           <div className="divider my-0" />
-          {searchQuery.isError ? (
+          {isListError ? (
             <p className="px-5 py-6 text-center text-sm text-base-content/55">
               載入失敗，請稍後再試
             </p>
-          ) : searchQuery.isLoading ? (
+          ) : isListLoading ? (
             <ul className="flex-1 divide-y divide-base-content/10 overflow-y-auto">
               {Array.from({ length: 4 }).map((_, i) => (
                 <li key={i} className="px-5 py-3">
@@ -255,7 +275,7 @@ export default function MapPage() {
             </ul>
           ) : cafes.length === 0 ? (
             <p className="px-5 py-6 text-center text-sm text-base-content/55">
-              找不到符合條件的咖啡店
+              {isPocketMode ? "這個口袋還沒有咖啡店" : "找不到符合條件的咖啡店"}
             </p>
           ) : (
             <ul

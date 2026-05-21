@@ -172,7 +172,13 @@ export default function PocketListPage() {
       <div className="border-t border-base-content/10 px-5 py-3">
         <button
           type="button"
-          onClick={() => navigate("/map")}
+          onClick={() => {
+            if (!activePocketId) {
+              navigate("/map");
+              return;
+            }
+            navigate(`/map?pocket=${encodeURIComponent(activePocketId)}`);
+          }}
           className="btn btn-ghost btn-sm btn-block justify-start gap-2"
         >
           <HugeiconsIcon icon={Location01Icon} size={16} strokeWidth={1.5} />

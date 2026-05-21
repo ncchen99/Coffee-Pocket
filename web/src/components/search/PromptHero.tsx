@@ -183,7 +183,7 @@ export function PromptHero({
             type="text"
             value={query}
             onChange={(e) => onQueryChange(e.target.value)}
-            placeholder="例如:想找一個安靜可以帶電腦的地方"
+            placeholder="輸入咖啡廳名字或是情境"
             className="grow focus:outline-none bg-transparent text-sm h-full"
             disabled={loading}
           />

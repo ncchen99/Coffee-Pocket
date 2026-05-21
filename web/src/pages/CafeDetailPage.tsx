@@ -18,11 +18,13 @@ import { shareUrl } from "@/lib/share";
  * 桌面版改由 App.tsx 的 DesktopApp 統一管理(共用 CafeMap 不重 mount)。
  */
 export default function CafeDetailPage() {
-  const { id = "" } = useParams();
+  // URL: /cafe/:slug — 但向下相容舊 UUID 連結（後端 cafe_detail_by_slug 兩種都吃）。
+  const { slug = "" } = useParams();
   const navigate = useNavigate();
-  const { data: cafe, isLoading, isError } = useCafeDetail(id);
+  const { data: cafe, isLoading, isError } = useCafeDetail(slug);
 
-  const actions = useCafeActions(id || null);
+  // 內部操作（投票 / 口袋 / 回報）都以 UUID 為主鍵,等 detail 拿到再啟用。
+  const actions = useCafeActions(cafe?.id ?? null);
 
   const handleShare = () => {
     shareUrl(window.location.href, cafe?.name);

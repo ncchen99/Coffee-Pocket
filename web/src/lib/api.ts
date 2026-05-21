@@ -99,6 +99,7 @@ export interface SearchResult {
 
 interface CafeSearchRow {
   id: string;
+  slug: string | null;
   name: string;
   cover_image_url: string | null;
   top_tags: string[] | null;
@@ -141,6 +142,7 @@ export async function searchCafes(params: SearchParams): Promise<SearchResult> {
     // 由 CafeListItem 在 render 時即時計算。
     return {
       id: row.id,
+      slug: row.slug,
       name: row.name,
       cover_url: row.cover_image_url,
       top_tags: (row.top_tags ?? []).map(dbTagLabel),
@@ -237,8 +239,13 @@ function normalizePhotos(photos: any): string[] {
   return [];
 }
 
-export async function fetchCafeDetail(id: string): Promise<CafeDetail | null> {
-  const { data, error } = await supabase.rpc("cafe_detail", { p_cafe_id: id });
+/**
+ * 取得單一咖啡廳詳細資料。
+ * @param identifier - 可以是 slug（推薦,SEO-friendly URL 走這條）或 UUID
+ *                    （舊書籤相容）。後端 cafe_detail_by_slug 會自動判斷。
+ */
+export async function fetchCafeDetail(identifier: string): Promise<CafeDetail | null> {
+  const { data, error } = await supabase.rpc("cafe_detail_by_slug", { p_slug: identifier });
   if (error) throw error;
   if (!data) return null;
   const d: any = data;
@@ -261,6 +268,7 @@ export async function fetchCafeDetail(id: string): Promise<CafeDetail | null> {
 
   return {
     id: d.id,
+    slug: d.slug ?? null,
     name: d.name,
     address: d.address ?? "",
     phone: d.phone ?? undefined,
@@ -329,19 +337,35 @@ export async function fetchPockets(): Promise<Pocket[]> {
 }
 
 export async function fetchPocketItems(pocketId: string): Promise<PocketItem[]> {
-  // Step 1: pocket items + cafe base info (top_tags 不是 cafes 表的欄位，不能用 join 取得)
-  const { data, error } = await supabase
-    .from("pocket_items")
-    .select(
-      "id, pocket_id, cafe_id, personal_note, added_at, cafe:cafes(id, name, address, cover_image_url, google_rating, google_review_count, price_level, business_hours, lng, lat)",
-    )
-    .eq("pocket_id", pocketId)
-    .order("added_at", { ascending: false });
+  // Step 1: pocket items + cafe base info via RPC
+  //   為什麼用 RPC?cafes 的座標是 PostGIS geography,要 ST_X/ST_Y 才能取出
+  //   lng/lat,沒辦法靠 PostgREST 的 select=cafe:cafes(...,lng,lat) 直接拿
+  //   (那會 42703,因為 cafes 表沒有 lng/lat 欄位)。
+  //   top_tags 也不在 cafes 表,留到 Step 2 批次抓。
+  const { data, error } = await supabase.rpc("pocket_cafes", {
+    p_pocket_id: pocketId,
+  });
   if (error) throw error;
-  const rows = data ?? [];
+  const rows = (data ?? []) as Array<{
+    id: string;
+    pocket_id: string;
+    cafe_id: string;
+    personal_note: string | null;
+    added_at: string;
+    cafe_slug: string | null;
+    cafe_name: string;
+    cafe_address: string | null;
+    cover_image_url: string | null;
+    google_rating: number | null;
+    google_review_count: number | null;
+    price_level: string | null;
+    business_hours: any;
+    lng: number | null;
+    lat: number | null;
+  }>;
 
   // Step 2: batch-fetch top tags from cafe_tags for all cafe_ids
-  const cafeIds = rows.map((r: any) => r.cafe_id).filter(Boolean) as string[];
+  const cafeIds = rows.map((r) => r.cafe_id).filter(Boolean) as string[];
   const topTagsMap: Record<string, string[]> = {};
   if (cafeIds.length > 0) {
     const { data: tagRows, error: tagError } = await supabase
@@ -362,26 +386,23 @@ export async function fetchPocketItems(pocketId: string): Promise<PocketItem[]> 
     }
   }
 
-  return rows.map((row: any) => {
-    const c = row.cafe;
-    let cafe: CafeCard | undefined;
-    if (c) {
-      cafe = {
-        id: c.id,
-        name: c.name,
-        cover_url: c.cover_image_url ?? null,
-        top_tags: (topTagsMap[c.id] ?? []).map(dbTagLabel),
-        distance_km: 0,
-        open_now: false,
-        lng: c.lng ?? 0,
-        lat: c.lat ?? 0,
-        google_rating: c.google_rating ?? null,
-        google_review_count: c.google_review_count ?? null,
-        price_level: c.price_level ?? null,
-        address: c.address ?? null,
-        business_hours: c.business_hours ?? null,
-      };
-    }
+  return rows.map((row) => {
+    const cafe: CafeCard = {
+      id: row.cafe_id,
+      slug: row.cafe_slug ?? null,
+      name: row.cafe_name,
+      cover_url: row.cover_image_url ?? null,
+      top_tags: (topTagsMap[row.cafe_id] ?? []).map(dbTagLabel),
+      distance_km: 0,
+      open_now: false,
+      lng: row.lng ?? 0,
+      lat: row.lat ?? 0,
+      google_rating: row.google_rating ?? null,
+      google_review_count: row.google_review_count ?? null,
+      price_level: row.price_level ?? null,
+      address: row.cafe_address ?? null,
+      business_hours: row.business_hours ?? null,
+    };
     return {
       id: row.id,
       pocket_id: row.pocket_id,
@@ -563,7 +584,7 @@ export async function submitEdit(input: {
   const userId = await requireUserId();
   const { error } = await supabase.from("edits").insert({
     cafe_id: input.cafe_id,
-    editor_id: userId,
+    user_id: userId,
     target: input.target,
     before_value: input.before_value ?? null,
     after_value: input.after_value,
@@ -584,7 +605,7 @@ export async function fetchUserStats(userId: string): Promise<UserStats> {
       .from("pocket_items")
       .select("id, pocket:pockets!inner(user_id)", { count: "exact", head: true })
       .eq("pocket.user_id", userId),
-    supabase.from("edits").select("id", { count: "exact", head: true }).eq("editor_id", userId),
+    supabase.from("edits").select("id", { count: "exact", head: true }).eq("user_id", userId),
     supabase.from("tag_votes").select("cafe_id", { count: "exact", head: true }).eq("user_id", userId),
   ]);
   return {
@@ -603,7 +624,7 @@ export async function fetchContributions(
     supabase
       .from("edits")
       .select("id, cafe_id, target, after_value, created_at, status, cafe:cafes(name)")
-      .eq("editor_id", userId)
+      .eq("user_id", userId)
       .order("created_at", { ascending: false })
       .limit(limit),
     supabase

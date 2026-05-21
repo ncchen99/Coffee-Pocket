@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Routes, Route, Navigate, useMatch, useNavigate, useLocation } from "react-router-dom";
+import { Routes, Route, Navigate, useMatch, useNavigate, useLocation, useSearchParams } from "react-router-dom";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Cancel01Icon, AlertCircleIcon } from "@hugeicons/core-free-icons";
 import { useIsDesktop } from "@/components/layout/Responsive";
@@ -11,6 +11,7 @@ import { CafeActionModals } from "@/components/cafe/CafeActionModals";
 import { DesktopFilterPanel } from "@/components/search/DesktopFilterPanel";
 import { useSearchSelection } from "@/hooks/useSearchSelection";
 import { useCafeSearch, useCafeDetail } from "@/hooks/useCafes";
+import { usePocketItems } from "@/hooks/usePockets";
 import { useCafeActions } from "@/hooks/useCafeActions";
 import { useUserLocation } from "@/context/UserLocationContext";
 import HomePage from "./pages/HomePage";
@@ -51,7 +52,7 @@ export default function App() {
       <Route path="/" element={isOnboarded() ? <HomePage /> : <Navigate to="/onboarding" replace />} />
       <Route path="/map" element={isOnboarded() ? <MapPage /> : <Navigate to="/onboarding" replace />} />
       <Route path="/filter" element={isOnboarded() ? <FilterPage /> : <Navigate to="/onboarding" replace />} />
-      <Route path="/cafe/:id" element={isOnboarded() ? <CafeDetailPage /> : <Navigate to="/onboarding" replace />} />
+      <Route path="/cafe/:slug" element={isOnboarded() ? <CafeDetailPage /> : <Navigate to="/onboarding" replace />} />
       <Route path="/login" element={isOnboarded() ? <LoginPage /> : <Navigate to="/onboarding" replace />} />
       <Route path="/pocket" element={isOnboarded() ? <PocketListPage /> : <Navigate to="/onboarding" replace />} />
       <Route path="/profile" element={isOnboarded() ? <ProfilePage /> : <Navigate to="/onboarding" replace />} />
@@ -72,17 +73,23 @@ export default function App() {
  *   保留可分享 / 後退鍵原本的行為。
  */
 function DesktopApp() {
-  const cafeMatch = useMatch("/cafe/:id");
+  const cafeMatch = useMatch("/cafe/:slug");
   const filterMatch = useMatch("/filter");
   const navigate = useNavigate();
-  const activeId = cafeMatch?.params.id ?? null;
+  const [searchParams] = useSearchParams();
+  const pocketId = searchParams.get("pocket");
+  const isPocketMode = !!pocketId;
+  // URL 帶的是 slug (相容舊書籤也接受 UUID)。對下游元件（CafeMap / Sidebar）
+  // 而言它們只關心「目前選中的那筆 cafe」的識別字串,所以這裡先保留 slug,
+  // 在拿到 cafes 後再 resolve 出對應 UUID 給 marker / list item 做 active 比對。
+  const activeIdent = cafeMatch?.params.slug ?? null;
   const isFilterOpen = !!filterMatch;
 
   const { selected, orSelected, toggle, setAll, setOrSelected, query, setQuery, scenario, pickScenario, openAt, setOpenAt, radiusM, setRadiusM, keyword, setKeyword } =
     useSearchSelection();
 
-  // displayed 落後 activeId —— 關閉時讓內容多停留 280ms 給 exit 動畫播完。
-  const [displayed, setDisplayed] = useState<string | null>(activeId);
+  // displayed 落後 activeIdent —— 關閉時讓內容多停留 280ms 給 exit 動畫播完。
+  const [displayed, setDisplayed] = useState<string | null>(activeIdent);
   const [isScrolled, setIsScrolled] = useState(false);
   const [sortKey, setSortKey] = useState<SortKey>("distance");
   // 中間欄轉場期間覆蓋一層模糊遮罩,避免 Mapbox 寬度漸變時的視覺跳動。
@@ -90,20 +97,20 @@ function DesktopApp() {
   const [isPanelAnimating, setIsPanelAnimating] = useState(false);
 
   useEffect(() => {
-    if (activeId) {
-      setDisplayed(activeId);
+    if (activeIdent) {
+      setDisplayed(activeIdent);
       return;
     }
     const t = window.setTimeout(() => setDisplayed(null), 280);
     return () => window.clearTimeout(t);
-  }, [activeId]);
+  }, [activeIdent]);
 
   useEffect(() => {
     setIsScrolled(false);
-  }, [activeId]);
+  }, [activeIdent]);
 
   const { location } = useUserLocation();
-  const isPanelOpen = !!activeId || isFilterOpen;
+  const isPanelOpen = !!activeIdent || isFilterOpen;
 
   useEffect(() => {
     setIsPanelAnimating(true);
@@ -122,12 +129,23 @@ function DesktopApp() {
     limit: 1000,
     q: keyword,
   });
-  const cafes = searchQuery.data?.cafes ?? [];
-  const totalCount = searchQuery.data?.total ?? 0;
+  // Pocket 模式 —— ?pocket=<id>。直接用 pocket items 取代 search 結果,
+  // 並讓 CafeMap 透過 fitToCafesKey 把鏡頭帶到這批點上。
+  const pocketItemsQuery = usePocketItems(pocketId);
+  const pocketCafes = (pocketItemsQuery.data ?? [])
+    .map((item) => item.cafe)
+    .filter((c): c is NonNullable<typeof c> => !!c);
+  const cafes = isPocketMode ? pocketCafes : (searchQuery.data?.cafes ?? []);
+  const totalCount = isPocketMode ? pocketCafes.length : (searchQuery.data?.total ?? 0);
+
+  // 把 URL 上的 ident (slug / UUID) 對到 cafes 列表中的 UUID,
+  // 讓 CafeMap / SearchSidebar 的 active 比對仍走 cafe.id。
+  const activeId =
+    cafes.find((c) => c.slug === activeIdent || c.id === activeIdent)?.id ?? activeIdent;
 
   const detailQuery = useCafeDetail(displayed);
   const cafe = detailQuery.data ?? null;
-  const actions = useCafeActions(displayed);
+  const actions = useCafeActions(cafe?.id ?? null);
 
   return (
     <div className="flex h-screen flex-col bg-base-100">
@@ -146,8 +164,8 @@ function DesktopApp() {
             pickScenario={pickScenario}
             cafes={cafes}
             totalCount={totalCount}
-            isLoading={searchQuery.isLoading}
-            isError={searchQuery.isError}
+            isLoading={isPocketMode ? pocketItemsQuery.isLoading : searchQuery.isLoading}
+            isError={isPocketMode ? pocketItemsQuery.isError : searchQuery.isError}
             sortKey={sortKey}
             onSortChange={setSortKey}
             openAt={openAt}
@@ -227,7 +245,11 @@ function DesktopApp() {
             cafes={cafes}
             activeId={activeId}
             userLocation={location}
-            onMarkerClick={(mid) => navigate(`/cafe/${mid}`)}
+            fitToCafesKey={isPocketMode ? `pocket:${pocketId}` : null}
+            onMarkerClick={(mid) => {
+              const c = cafes.find((x) => x.id === mid);
+              navigate(`/cafe/${c?.slug ?? mid}`);
+            }}
           />
           {/* 中間欄展開 / 收合期間,地圖容器寬度同步漸變,Mapbox 會逐幀 resize +
               reproject —— 視覺上像是「畫面跳動」。蓋一層模糊覆蓋層在轉場期間

@@ -1,6 +1,4 @@
 import { Link } from "react-router-dom";
-import { HugeiconsIcon } from "@hugeicons/react";
-import { Location01Icon } from "@hugeicons/core-free-icons";
 import { Placeholder, StarRating, TagBadge } from "@/components/primitives";
 import type { CafeCard } from "@/types/cafe";
 import { isCafeOpenAt } from "@/lib/format";
@@ -29,7 +27,7 @@ export function PocketCafeCard({ cafe, personalNote }: PocketCafeCardProps) {
 
   return (
     <Link
-      to={`/cafe/${cafe.id}`}
+      to={`/cafe/${cafe.slug ?? cafe.id}`}
       className="flex gap-3 px-4 py-3 transition-colors hover:bg-base-200/60 active:bg-base-200"
     >
       {/* 封面圖 */}

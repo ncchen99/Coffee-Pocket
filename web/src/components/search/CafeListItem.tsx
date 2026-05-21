@@ -46,7 +46,7 @@ export function CafeListItem({
   return (
     <Link
       to={{
-        pathname: isDesktop && active ? "/" : `/cafe/${cafe.id}`,
+        pathname: isDesktop && active ? "/" : `/cafe/${cafe.slug ?? cafe.id}`,
         search: locationObj.search,
       }}
       onMouseEnter={() => onHover?.(cafe.id)}
