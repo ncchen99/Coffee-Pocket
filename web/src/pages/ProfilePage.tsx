@@ -23,17 +23,62 @@ function relativeTime(iso: string): string {
   return new Date(iso).toLocaleDateString();
 }
 
+function ContributionsSkeleton() {
+  return (
+    <ul className="space-y-4 mt-3">
+      {Array.from({ length: 3 }).map((_, i) => (
+        <li key={i} className="flex flex-col gap-2">
+          <div className="h-4 w-32 bg-base-200 animate-pulse rounded" />
+          <div className="h-3 w-20 bg-base-200 animate-pulse rounded" />
+        </li>
+      ))}
+    </ul>
+  );
+}
+
 /**
  * 個人頁 — 顯示使用者口袋數量、貢獻紀錄、設定入口。
  */
 export default function ProfilePage() {
-  const { user, signOut } = useAuth();
+  const { user, loading: authLoading, signOut } = useAuth();
   const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
   const { data: stats } = useUserStats(user?.id ?? null);
   const { data: contributions = [], isLoading: contributionsLoading } = useContributions(
     user?.id ?? null,
     10,
   );
+
+  if (authLoading) {
+    return (
+      <div className="flex min-h-screen flex-col bg-base-100">
+        <section className="border-b border-base-content/10 px-5 py-5">
+          <div className="flex items-center gap-3">
+            <div className="h-10 w-10 bg-base-200 animate-pulse rounded-full" />
+            <div className="flex flex-col gap-2">
+              <div className="h-4 w-24 bg-base-200 animate-pulse rounded" />
+              <div className="h-3 w-32 bg-base-200 animate-pulse rounded" />
+            </div>
+          </div>
+        </section>
+        <section className="border-b border-base-content/10 px-5 py-4">
+          <div className="h-4 w-16 bg-base-200 animate-pulse rounded mb-3" />
+          <div className="grid grid-cols-3 divide-x divide-base-content/10">
+            {Array.from({ length: 3 }).map((_, i) => (
+              <div key={i} className="flex flex-col items-center gap-2">
+                <div className="h-6 w-8 bg-base-200 animate-pulse rounded" />
+                <div className="h-3 w-8 bg-base-200 animate-pulse rounded" />
+              </div>
+            ))}
+          </div>
+        </section>
+        <section className="flex-1 border-b border-base-content/10 px-5 py-4">
+          <div className="h-4 w-16 bg-base-200 animate-pulse rounded mb-3" />
+          <ContributionsSkeleton />
+        </section>
+        <MobileTabBar />
+      </div>
+    );
+  }
 
   if (!user) {
     return (
@@ -99,11 +144,7 @@ export default function ProfilePage() {
       <section className="flex-1 border-b border-base-content/10 px-5 py-4">
         <Cap>我的貢獻</Cap>
         {contributionsLoading ? (
-          <ul className="mt-3 space-y-2">
-            {Array.from({ length: 3 }).map((_, i) => (
-              <li key={i} className="h-10 bg-base-200 animate-pulse rounded" />
-            ))}
-          </ul>
+          <ContributionsSkeleton />
         ) : contributions.length === 0 ? (
           <p className="mt-3 text-sm text-base-content/55">還沒有貢獻紀錄</p>
         ) : (

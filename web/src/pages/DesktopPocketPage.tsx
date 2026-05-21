@@ -8,11 +8,28 @@ import { PocketCafeCard } from "@/components/search/PocketCafeCard";
 import { useAuth } from "@/hooks/useAuth";
 import { usePockets, usePocketItems, useCreatePocket } from "@/hooks/usePockets";
 
+function DesktopPocketListSkeleton() {
+  return (
+    <ul className="divide-y divide-base-content/10 rounded-xl border border-base-content/10 overflow-hidden">
+      {Array.from({ length: 4 }).map((_, i) => (
+        <li key={i} className="flex gap-3 px-4 py-3">
+          <div className="h-20 w-20 shrink-0 bg-base-200 animate-pulse rounded-sm" />
+          <div className="flex-1 space-y-2 pt-1">
+            <div className="h-4 bg-base-200 animate-pulse rounded w-3/4" />
+            <div className="h-3 bg-base-200 animate-pulse rounded w-1/2" />
+            <div className="h-3 bg-base-200 animate-pulse rounded w-2/3" />
+          </div>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
 /**
  * 桌面版口袋名單頁 — 使用 DesktopPageLayout 置中呈現。
  */
 export default function DesktopPocketPage() {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const { data: pockets, isLoading: pocketsLoading } = usePockets();
   const [activePocketId, setActivePocketId] = useState<string | null>(null);
@@ -30,6 +47,27 @@ export default function DesktopPocketPage() {
   const handleSubmitCreate = (name: string) => {
     createPocket.mutate({ name });
   };
+
+  if (authLoading) {
+    return (
+      <DesktopPageLayout>
+        <div className="flex items-center justify-between pb-5">
+          <div className="space-y-2">
+            <div className="h-6 w-24 bg-base-200 animate-pulse rounded" />
+            <div className="h-4 w-32 bg-base-200 animate-pulse rounded" />
+          </div>
+          <div className="h-8 w-8 bg-base-200 animate-pulse rounded" />
+        </div>
+        <div className="flex gap-2 border-b border-base-content/10 pb-3">
+          <div className="h-8 w-20 bg-base-200 animate-pulse rounded" />
+          <div className="h-8 w-24 bg-base-200 animate-pulse rounded" />
+        </div>
+        <div className="mt-2">
+          <DesktopPocketListSkeleton />
+        </div>
+      </DesktopPageLayout>
+    );
+  }
 
   if (!user) {
     return (
@@ -98,18 +136,7 @@ export default function DesktopPocketPage() {
             </button>
           </div>
         ) : itemsLoading ? (
-          <ul className="divide-y divide-base-content/10 rounded-xl border border-base-content/10 overflow-hidden">
-            {Array.from({ length: 4 }).map((_, i) => (
-              <li key={i} className="flex gap-3 px-4 py-3">
-                <div className="h-20 w-20 shrink-0 bg-base-200 animate-pulse rounded-sm" />
-                <div className="flex-1 space-y-2 pt-1">
-                  <div className="h-4 bg-base-200 animate-pulse rounded w-3/4" />
-                  <div className="h-3 bg-base-200 animate-pulse rounded w-1/2" />
-                  <div className="h-3 bg-base-200 animate-pulse rounded w-2/3" />
-                </div>
-              </li>
-            ))}
-          </ul>
+          <DesktopPocketListSkeleton />
         ) : items.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 text-center">
             <p className="text-base-content/55">口袋裡還沒有咖啡店，去地圖找找看吧！</p>

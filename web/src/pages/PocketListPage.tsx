@@ -12,7 +12,7 @@ import { usePockets, usePocketItems, useCreatePocket } from "@/hooks/usePockets"
  * 口袋名單頁 — 管理收藏的店家。
  */
 export default function PocketListPage() {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const { data: pockets, isLoading: pocketsLoading } = usePockets();
   const [activePocketId, setActivePocketId] = useState<string | null>(null);
@@ -30,6 +30,42 @@ export default function PocketListPage() {
   const handleSubmitCreate = (name: string) => {
     createPocket.mutate({ name });
   };
+
+  if (authLoading) {
+    return (
+      <div className="flex min-h-screen flex-col bg-base-100">
+        <header className="flex items-center justify-between border-b border-base-content/10 px-5 py-3">
+          <div className="space-y-2">
+            <div className="h-5 w-20 bg-base-200 animate-pulse rounded" />
+            <div className="h-3 w-24 bg-base-200 animate-pulse rounded" />
+          </div>
+          <div className="h-8 w-8 bg-base-200 animate-pulse rounded" />
+        </header>
+        <div className="flex gap-2 overflow-x-auto border-b border-base-content/10 px-5 py-2">
+          <div className="h-8 w-20 bg-base-200 animate-pulse rounded" />
+          <div className="h-8 w-24 bg-base-200 animate-pulse rounded" />
+        </div>
+        <div className="flex-1 overflow-y-auto">
+          <ul className="divide-y divide-base-content/10">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <li key={i} className="flex gap-3 px-4 py-3">
+                <div className="h-20 w-20 shrink-0 bg-base-200 animate-pulse rounded-sm" />
+                <div className="flex-1 space-y-2 pt-1">
+                  <div className="h-4 bg-base-200 animate-pulse rounded w-3/4" />
+                  <div className="h-3 bg-base-200 animate-pulse rounded w-1/2" />
+                  <div className="h-3 bg-base-200 animate-pulse rounded w-2/3" />
+                </div>
+              </li>
+            ))}
+          </ul>
+        </div>
+        <div className="border-t border-base-content/10 px-5 py-3">
+          <div className="h-8 w-40 bg-base-200 animate-pulse rounded" />
+        </div>
+        <MobileTabBar />
+      </div>
+    );
+  }
 
   if (!user) {
     return (

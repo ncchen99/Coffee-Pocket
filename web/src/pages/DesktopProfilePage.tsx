@@ -23,17 +23,59 @@ function relativeTime(iso: string): string {
   return new Date(iso).toLocaleDateString();
 }
 
+function DesktopContributionsSkeleton() {
+  return (
+    <ul className="space-y-4">
+      {Array.from({ length: 3 }).map((_, i) => (
+        <li key={i} className="flex flex-col gap-2">
+          <div className="h-5 w-48 bg-base-200 animate-pulse rounded" />
+          <div className="h-3 w-24 bg-base-200 animate-pulse rounded" />
+        </li>
+      ))}
+    </ul>
+  );
+}
+
 /**
  * 桌面版個人頁 — 使用 DesktopPageLayout 置中呈現。
  */
 export default function DesktopProfilePage() {
-  const { user, signOut } = useAuth();
+  const { user, loading: authLoading, signOut } = useAuth();
   const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
   const { data: stats } = useUserStats(user?.id ?? null);
   const { data: contributions = [], isLoading: contributionsLoading } = useContributions(
     user?.id ?? null,
     10,
   );
+
+  if (authLoading) {
+    return (
+      <DesktopPageLayout>
+        <section className="flex items-center gap-4 pb-6">
+          <div className="h-16 w-16 bg-base-200 animate-pulse rounded-full" />
+          <div className="space-y-2">
+            <div className="h-6 w-32 bg-base-200 animate-pulse rounded" />
+            <div className="h-4 w-40 bg-base-200 animate-pulse rounded" />
+          </div>
+        </section>
+        <section className="rounded-xl border border-base-content/10 p-5">
+          <div className="h-4 w-16 bg-base-200 animate-pulse rounded mb-4" />
+          <div className="grid grid-cols-3 divide-x divide-base-content/10 text-center">
+            {Array.from({ length: 3 }).map((_, i) => (
+              <div key={i} className="flex flex-col items-center gap-2">
+                <div className="h-8 w-10 bg-base-200 animate-pulse rounded" />
+                <div className="h-3 w-8 bg-base-200 animate-pulse rounded" />
+              </div>
+            ))}
+          </div>
+        </section>
+        <section className="mt-6 rounded-xl border border-base-content/10 p-5">
+          <div className="h-4 w-16 bg-base-200 animate-pulse rounded mb-4" />
+          <DesktopContributionsSkeleton />
+        </section>
+      </DesktopPageLayout>
+    );
+  }
 
   if (!user) {
     return (
@@ -92,11 +134,9 @@ export default function DesktopProfilePage() {
       <section className="mt-6 rounded-xl border border-base-content/10 p-5">
         <Cap>我的貢獻</Cap>
         {contributionsLoading ? (
-          <ul className="mt-3 space-y-2">
-            {Array.from({ length: 3 }).map((_, i) => (
-              <li key={i} className="h-10 bg-base-200 animate-pulse rounded" />
-            ))}
-          </ul>
+          <div className="mt-3">
+            <DesktopContributionsSkeleton />
+          </div>
         ) : contributions.length === 0 ? (
           <p className="mt-3 text-sm text-base-content/55">還沒有貢獻紀錄</p>
         ) : (
