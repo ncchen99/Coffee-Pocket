@@ -78,6 +78,12 @@ def upload_cafe_cover(place_id: str, image_url: str) -> str | None:
     """
     if not image_url:
         return None
+
+    # Auto-upgrade googleusercontent URLs to high resolution
+    if "googleusercontent.com" in image_url and "=" in image_url:
+        base = image_url.split("=")[0]
+        image_url = f"{base}=s1600"
+
     try:
         raw = _fetch_image(image_url)
         webp = _to_webp(raw)

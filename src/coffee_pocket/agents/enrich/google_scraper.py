@@ -254,7 +254,10 @@ def extract_place_meta(page: Page) -> dict[str, Any]:
             const menuUrl = attr(document.querySelector('a[data-item-id="menu"]'), 'href');
 
             // Hero image — button.aoRNLd img (the place-panel cover photo).
-            const heroImg = document.querySelector('button.aoRNLd img') || document.querySelector('button[aria-label$="的相片"] img, button[aria-label$=" photos"] img');
+            // Avoid matching reviewer avatars (which have aria-label ending with "的相片" or "photos").
+            const heroImg = document.querySelector('button.aoRNLd img') || 
+                            document.querySelector('div.ZKCDEc img') ||
+                            document.querySelector('button[aria-label*="相片"] img:not([src*="=w36"]):not([src*="=s32"]):not([src*="=w120"])');
             const heroSrc = heroImg?.src || null;
 
             // Hours — one button.mWUh3d per weekday with aria-label.
@@ -498,10 +501,15 @@ def scrape_one(
 
     # Capture place-panel metadata BEFORE switching to the Reviews tab — the
     # side panel gets replaced when the Reviews tab opens.
+    # We wait up to 5 seconds for the cover photo to be visible, falling back
+    # to h1 visibility check if it isn't found.
     try:
-        page.locator('h1').first.wait_for(state="visible", timeout=15000)
+        page.locator('button.aoRNLd img').first.wait_for(state="visible", timeout=5000)
     except PWTimeout:
-        pass
+        try:
+            page.locator('h1').first.wait_for(state="visible", timeout=10000)
+        except PWTimeout:
+            pass
     meta = extract_place_meta(page)
     logger.info(
         "  meta: status=%s rating=%s reviews=%s price=%s phone=%s",
@@ -509,59 +517,66 @@ def scrape_one(
         meta["price_level"], meta["phone"],
     )
 
-    _wait_reviews_panel(page)
-    _sleep(page, AFTER_TAB_CLICK_MS)
-    _sort_by_newest(page)
-    _sleep(page, AFTER_SORT_MS)
-
     collected: dict[str, dict[str, Any]] = {}  # keyed by review_id
     stop_reason = "exhausted"
-    no_progress = 0
 
-    while True:
-        _expand_more_buttons(page)
+    if meta.get("review_count") and max_reviews > 0:
+        try:
+            _wait_reviews_panel(page)
+            _sleep(page, AFTER_TAB_CLICK_MS)
+            _sort_by_newest(page)
+            _sleep(page, AFTER_SORT_MS)
 
-        added_this_round = 0
-        for data in _extract_all_cards(page):
-            rid = data.get("review_id") or _stable_id(place_id, data)
-            if rid in collected:
-                continue
-            parsed = parse_relative_time(data.get("relative_time"))
-            if parsed:
-                age_days, posted_at = parsed
-                data["age_days"] = age_days
-                data["posted_at_approx"] = posted_at.isoformat()
-            else:
-                data["age_days"] = None
-                data["posted_at_approx"] = None
-            data["external_id"] = rid
-            collected[rid] = data
-            added_this_round += 1
-
-            if len(collected) >= max_reviews:
-                stop_reason = "max_reviews"
-                break
-            if data["age_days"] is not None and data["age_days"] > max_age_days:
-                stop_reason = "max_age"
-                break
-
-        if stop_reason in ("max_reviews", "max_age"):
-            break
-
-        if added_this_round == 0:
-            no_progress += 1
-        else:
             no_progress = 0
-        if no_progress >= NO_PROGRESS_LIMIT:
-            stop_reason = "exhausted"
-            break
+            while True:
+                _expand_more_buttons(page)
 
-        # Scroll the side-panel container — jitter so we don't look like a bot
-        # cruising at constant velocity.
-        _scroll_reviews(page, random.uniform(0.45, 0.85))
-        _sleep(page, SCROLL_PAUSE_MS)
-        if random.random() < 0.15:
-            _sleep(page, (4000, 8000))
+                added_this_round = 0
+                for data in _extract_all_cards(page):
+                    rid = data.get("review_id") or _stable_id(place_id, data)
+                    if rid in collected:
+                        continue
+                    parsed = parse_relative_time(data.get("relative_time"))
+                    if parsed:
+                        age_days, posted_at = parsed
+                        data["age_days"] = age_days
+                        data["posted_at_approx"] = posted_at.isoformat()
+                    else:
+                        data["age_days"] = None
+                        data["posted_at_approx"] = None
+                    data["external_id"] = rid
+                    collected[rid] = data
+                    added_this_round += 1
+
+                    if len(collected) >= max_reviews:
+                        stop_reason = "max_reviews"
+                        break
+                    if data["age_days"] is not None and data["age_days"] > max_age_days:
+                        stop_reason = "max_age"
+                        break
+
+                if stop_reason in ("max_reviews", "max_age"):
+                    break
+
+                if added_this_round == 0:
+                    no_progress += 1
+                else:
+                    no_progress = 0
+                if no_progress >= NO_PROGRESS_LIMIT:
+                    stop_reason = "exhausted"
+                    break
+
+                # Scroll the side-panel container — jitter so we don't look like a bot
+                # cruising at constant velocity.
+                _scroll_reviews(page, random.uniform(0.45, 0.85))
+                _sleep(page, SCROLL_PAUSE_MS)
+                if random.random() < 0.15:
+                    _sleep(page, (4000, 8000))
+        except Exception as exc:
+            logger.warning("  Failed to extract reviews for %s: %s. Continuing with metadata only.", cafe["name"], exc)
+            stop_reason = "reviews_failed"
+    else:
+        stop_reason = "no_reviews"
 
     reviews = sorted(
         collected.values(),
