@@ -113,7 +113,7 @@ export function SearchSidebar({
             resetHintTrigger={hintResetKey}
             onSubmit={(parsed, softTags, parsedOpenAt, distanceKm, kw) => {
               if (kw) {
-                // 關鍵字模式 — 清掉其他條件，只保留 keyword。
+                // 關鍵字模式 — 清掉其他條件，只保留 keyword（query 文字也留著）。
                 setAll([]);
                 onOpenAtChange(null);
                 onRadiusMChange(null);
@@ -128,6 +128,9 @@ export function SearchSidebar({
               onOpenAtChange(parsedOpenAt);
               onRadiusMChange(distanceKm != null ? distanceKm * 1000 : null);
               onKeywordChange?.(null);
+              // AI 解析後語意已被翻譯成 tag/openAt/distance，輸入框文字若不清掉，
+              // 會繼續被 PromptHero 當 liveKeyword 餵進本地 filter（基本都會 0 命中）。
+              setQuery("");
             }}
             onClear={() => {
               setAll([]);

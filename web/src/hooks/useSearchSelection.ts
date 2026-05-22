@@ -16,10 +16,12 @@ export function useSearchSelection(initial?: string[], initialRadiusM?: number |
   const [keyword, setKeyword] = useState<string | null>(initialKeyword ?? null);
 
   const toggle = useCallback((key: string) => {
-    // 任何手動 chip 互動都視為脫離場景模式，並清掉關鍵字（避免雙重過濾）。
+    // 任何手動 chip 互動都視為脫離場景模式，並清掉關鍵字 + 輸入框
+    //（避免雙重過濾：陳舊的輸入文字當 liveKeyword 把列表洗成 0 筆）。
     setScenario(null);
     setOrSelected([]);
     setKeyword(null);
+    setQuery("");
     setSelected((prev) => {
       const next = new Set(prev);
       next.has(key) ? next.delete(key) : next.add(key);
@@ -27,6 +29,9 @@ export function useSearchSelection(initial?: string[], initialRadiusM?: number |
     });
   }, []);
 
+  // 注意：setAll 故意 *不* 清 query —— keyword-match 那條路徑會呼叫 setAll([])
+  // 來清掉所有 tag，但 query 文字要留著做 keyword 篩選。需要清 query 的呼叫端
+  // (AI 解析成功) 自己呼叫 setQuery("")。
   const setAll = useCallback((keys: string[]) => {
     setScenario(null);
     setOrSelected([]);
@@ -41,6 +46,7 @@ export function useSearchSelection(initial?: string[], initialRadiusM?: number |
       setOrSelected(s.tagsOr ?? []);
       setOpenAt(s.resolveOpenAt ? s.resolveOpenAt() : null);
       setKeyword(null);
+      setQuery("");
     },
     [],
   );

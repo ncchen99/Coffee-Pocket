@@ -179,9 +179,11 @@ function DesktopApp() {
   //   情境:從口袋名單點某家店進 /cafe/:slug,但這家店可能不在 searchQuery
   //   的當前結果裡(被 tag/距離/keyword 過濾掉),也不在 pocketCafes 裡(沒帶
   //   pocket 參數時)。如果不補,使用者會看到右側詳細欄,但地圖上沒有對應的
-  //   咖啡色圖標 —— 無法定位、無法 highlight。把 detail 抓回來的那筆塞進
-  //   cafes 尾端,讓 CafeMap 建出 marker,後續 active highlight 才有作用。
-  const cafes =
+  //   咖啡色圖標 —— 無法定位、無法 highlight。
+  //
+  //   重要:這個「補上 detail」只給 *地圖* 用,不能塞進 sidebar 列表 ——
+  //   否則使用者搜尋時，被打開的詳細頁那家會混在搜尋結果裡誤導人。
+  const mapCafes =
     cafe && !baseCafes.some((c) => c.id === cafe.id)
       ? [
           ...baseCafes,
@@ -190,6 +192,7 @@ function DesktopApp() {
             : cafe,
         ]
       : baseCafes;
+  const cafes = baseCafes; // sidebar 用的乾淨列表
   const totalCount = isPocketMode ? pocketCafes.length : (searchQuery.data?.total ?? 0);
 
   // 在 pocket 模式下,所有導航都要把 ?pocket=<id> 帶著走 —— 點 marker 進詳細
@@ -201,8 +204,9 @@ function DesktopApp() {
 
   // 把 URL 上的 ident (slug / UUID) 對到 cafes 列表中的 UUID,
   // 讓 CafeMap / SearchSidebar 的 active 比對仍走 cafe.id。
+  // 用 mapCafes 而不是 cafes — 才能涵蓋「不在搜尋結果但開了詳細頁」的情況。
   const activeId =
-    cafes.find((c) => c.slug === activeIdent || c.id === activeIdent)?.id ?? activeIdent;
+    mapCafes.find((c) => c.slug === activeIdent || c.id === activeIdent)?.id ?? activeIdent;
   const actions = useCafeActions(cafe?.id ?? null);
 
   return (
@@ -236,13 +240,13 @@ function DesktopApp() {
         </div>
         <section className="relative flex-1 overflow-hidden">
           <CafeMap
-            cafes={cafes}
+            cafes={mapCafes}
             activeId={activeId}
             userLocation={location}
             paddingLeft={mapPaddingLeft}
             fitToCafesKey={isPocketMode ? `pocket:${pocketId}` : null}
             onMarkerClick={(mid) => {
-              const c = cafes.find((x) => x.id === mid);
+              const c = mapCafes.find((x) => x.id === mid);
               navigate(cafePath(c?.slug ?? mid));
             }}
           />
