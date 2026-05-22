@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Cap, CustomSelect } from "@/components/primitives";
 import { FILTER_TAG_GROUPS, SORT_OPTIONS } from "@/data/filterTags";
-import { useCafeSearchCount } from "@/hooks/useCafes";
+import { useAllCafes } from "@/hooks/useCafes";
+import { countCafesLocal } from "@/lib/cafeFilter";
 import { useUserLocation } from "@/context/UserLocationContext";
 import { getTWTimeParts } from "@/lib/format";
 interface DesktopFilterPanelProps {
@@ -112,14 +113,21 @@ export function DesktopFilterPanel({
     onOpenAtChange(`${dateStr}T${hour}:00+08:00`);
   };
 
-  const countQuery = useCafeSearchCount({
-    tags: Array.from(selected),
-    lng: location?.lng ?? null,
-    lat: location?.lat ?? null,
-    radius_m: distance * 1000,
-    open_at: openAt,
-  });
-  const count = countQuery.data ?? 0;
+  const allCafes = useAllCafes();
+  const tagsArr = Array.from(selected);
+  const tagsKey = tagsArr.join(",");
+  const count = useMemo(
+    () =>
+      countCafesLocal(allCafes.data, {
+        tags: tagsArr,
+        userLng: location?.lng ?? null,
+        userLat: location?.lat ?? null,
+        radiusM: distance * 1000,
+        openAt,
+      }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [allCafes.data, tagsKey, location?.lng, location?.lat, distance, openAt],
+  );
 
   return (
     <div className="flex h-full flex-col bg-base-100">
@@ -262,7 +270,7 @@ export function DesktopFilterPanel({
           onClick={() => onApply?.()}
           className="btn btn-neutral btn-sm btn-block"
         >
-          顯示 {countQuery.isLoading ? "…" : count} 間 →
+          顯示 {allCafes.isLoading ? "…" : count} 間 →
         </button>
       </div>
     </div>

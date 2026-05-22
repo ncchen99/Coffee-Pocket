@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Routes, Route, Navigate, useMatch, useNavigate, useLocation, useSearchParams } from "react-router-dom";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Cancel01Icon, AlertCircleIcon } from "@hugeicons/core-free-icons";
@@ -10,7 +10,8 @@ import { CafeDetailContent } from "@/components/cafe/CafeDetailContent";
 import { CafeActionModals } from "@/components/cafe/CafeActionModals";
 import { DesktopFilterPanel } from "@/components/search/DesktopFilterPanel";
 import { useSearchSelection } from "@/hooks/useSearchSelection";
-import { useCafeSearch, useCafeDetail } from "@/hooks/useCafes";
+import { useAllCafes, useCafeDetail } from "@/hooks/useCafes";
+import { searchCafesLocal } from "@/lib/cafeFilter";
 import { usePocketItems } from "@/hooks/usePockets";
 import { useCafeActions } from "@/hooks/useCafeActions";
 import { useUserLocation } from "@/context/UserLocationContext";
@@ -128,17 +129,33 @@ function DesktopApp() {
   }, []);
   const mapPaddingLeft = isPanelOpen ? panelWidth : 0;
 
-  const searchQuery = useCafeSearch({
-    tags: Array.from(selected),
-    tags_or: orSelected,
-    lng: location?.lng ?? null,
-    lat: location?.lat ?? null,
-    radius_m: radiusM ?? undefined,
-    sort: sortKey,
-    open_at: openAt,
-    limit: 1000,
-    q: keyword,
-  });
+  // 全量資料 → 本地 filter。改用 useMemo 是因為 selected 是 Set，
+  // 每次 render 參考都會變，但 Array.from 後內容才是 hook 真正的 dep。
+  const allCafes = useAllCafes();
+  const tagsArr = Array.from(selected);
+  const tagsKey = tagsArr.join(",");
+  const orKey = orSelected.join(",");
+  // 即時 keyword：優先用 query（使用者正在輸入），其次才用 AI 解析時 set 的 keyword。
+  const liveKeyword = query.trim() || keyword || null;
+  const searchResult = useMemo(() => {
+    const cafes = searchCafesLocal(allCafes.data, {
+      tags: tagsArr,
+      tagsOr: orSelected,
+      userLng: location?.lng ?? null,
+      userLat: location?.lat ?? null,
+      radiusM,
+      openAt,
+      q: liveKeyword,
+      sort: sortKey,
+    });
+    return { cafes, total: cafes.length };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [allCafes.data, tagsKey, orKey, location?.lng, location?.lat, radiusM, openAt, liveKeyword, sortKey]);
+  const searchQuery = {
+    data: searchResult,
+    isLoading: allCafes.isLoading,
+    isError: allCafes.isError,
+  };
   // Pocket 模式 —— ?pocket=<id>。直接用 pocket items 取代 search 結果,
   // 並讓 CafeMap 透過 fitToCafesKey 把鏡頭帶到這批點上。
   const pocketItemsQuery = usePocketItems(pocketId);

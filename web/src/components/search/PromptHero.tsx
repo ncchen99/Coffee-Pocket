@@ -2,8 +2,11 @@ import { useEffect, useRef, useState } from "react";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Search01Icon, Loading03Icon } from "@hugeicons/core-free-icons";
 import { TagChip } from "@/components/primitives";
-import { smartSearch } from "@/lib/api";
+import { parsePrompt } from "@/lib/api";
 import { TAG_LABEL_TO_KEY } from "@/data/filterTags";
+import { useAllCafes } from "@/hooks/useCafes";
+import { searchCafesLocal } from "@/lib/cafeFilter";
+import { useUserLocation } from "@/context/UserLocationContext";
 
 /** 完全等於某個標籤 label（去除多餘空白）→ 直接套用該標籤。 */
 function matchTagLabelKey(q: string): string | null {
@@ -85,6 +88,20 @@ export function PromptHero({
   const [hint, setHint] = useState<string | null>(null);
   const [lastSubmittedQuery, setLastSubmittedQuery] = useState("");
 
+  // 即時本地搜尋：算當下 query 在 200 筆全量裡有幾筆符合，
+  // 用於 (1) 在輸入時顯示「找到 N 間」提示；(2) Enter 時判斷要不要打 AI。
+  const allCafes = useAllCafes();
+  const { location } = useUserLocation();
+  const liveMatchCount = (() => {
+    const q = query.trim();
+    if (!q) return 0;
+    return searchCafesLocal(allCafes.data, {
+      userLng: location?.lng ?? null,
+      userLat: location?.lat ?? null,
+      q,
+    }).length;
+  })();
+
   // 外部（chip / 場景點擊）觸發 → 清除 hint。
   // 用 ref 跳過 mount 時的初始執行（trigger=0 不應清除）。
   const prevResetRef = useRef<number | undefined>(undefined);
@@ -113,25 +130,25 @@ export function PromptHero({
       return;
     }
 
+    // 2. 本地已經有命中 → 不打 AI。輸入時 liveKeyword 已即時 filter，
+    //    這裡只把 keyword 固化成 state (給 URL 分享 / 後端 RPC 模式用)。
+    if (liveMatchCount > 0) {
+      setHint(`找到 ${liveMatchCount} 間店名 / 地址含「${q}」`);
+      setLastSubmittedQuery(q);
+      onSubmit([], [], null, null, q);
+      return;
+    }
+
+    // 3. 本地完全找不到 → 才打 AI，把自然語言轉成 tag 條件。
     setLoading(true);
     setHint(null);
     try {
-      // 2 + 3. 一個 edge function 同時做關鍵字 count 與 LLM 解析的分流，
-      //         免去客戶端「先 count 再 parse」兩個 round-trip。
-      const { matched_count, parsed } = await smartSearch(q);
-      if (matched_count > 0) {
-        setHint(`找到 ${matched_count} 間店名 / 地址含「${q}」`);
-        setLastSubmittedQuery(q);
-        onSubmit([], [], null, null, q);
-        return;
-      }
-
+      const parsed = await parsePrompt(q);
       if (
-        !parsed ||
-        (parsed.tags.length === 0 &&
-          parsed.soft_tags.length === 0 &&
-          !parsed.open_at &&
-          parsed.distance_km === null)
+        parsed.tags.length === 0 &&
+        parsed.soft_tags.length === 0 &&
+        !parsed.open_at &&
+        parsed.distance_km === null
       ) {
         setHint(`找不到「${q}」相關咖啡廳，也沒抓到對應條件，請試試「有插座」「適合讀書」「不限時」等關鍵字`);
       } else {
@@ -139,10 +156,10 @@ export function PromptHero({
       }
       setLastSubmittedQuery(q);
       onSubmit(
-        parsed?.tags ?? [],
-        parsed?.soft_tags ?? [],
-        parsed?.open_at ?? null,
-        parsed?.distance_km ?? null,
+        parsed.tags,
+        parsed.soft_tags,
+        parsed.open_at,
+        parsed.distance_km,
         null,
       );
     } catch (e) {

@@ -119,6 +119,37 @@ export async function parsePrompt(query: string): Promise<ParsedPrompt> {
 }
 
 // ===========================================================================
+// Local search corpus
+// ===========================================================================
+
+import type { RawCafe } from "./cafeFilter";
+
+/**
+ * 拉一次全量咖啡廳給前端做本地搜尋 / 篩選 / 排序。
+ * 對應 supabase/migrations/0029_cafes_all_for_local_search.sql。
+ * 200 筆 + 必要欄位約 50–80KB，gzip 後 <20KB，比每次條件變動都 RPC 划算太多。
+ */
+export async function fetchAllCafesForSearch(): Promise<RawCafe[]> {
+  const { data, error } = await supabase.rpc("cafes_all_for_search");
+  if (error) throw error;
+  const rows = (data ?? []) as any[];
+  return rows.map((r) => ({
+    id: r.id,
+    slug: r.slug ?? null,
+    name: r.name,
+    name_pinyin: r.name_pinyin ?? null,
+    address: r.address ?? null,
+    cover_image_url: r.cover_image_url ?? null,
+    lng: Number(r.lng),
+    lat: Number(r.lat),
+    google_rating: r.google_rating ?? null,
+    business_hours: r.business_hours ?? null,
+    top_tags: Array.isArray(r.top_tags) ? r.top_tags : [],
+    tag_keys: Array.isArray(r.tag_keys) ? r.tag_keys : [],
+  }));
+}
+
+// ===========================================================================
 // Search
 // ===========================================================================
 

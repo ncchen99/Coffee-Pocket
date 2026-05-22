@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { ArrowLeft02Icon, Share01Icon, Settings01Icon } from "@hugeicons/core-free-icons";
@@ -8,7 +8,8 @@ import { CafeListItem } from "@/components/search/CafeListItem";
 import { CafeMap } from "@/components/search/CafeMap";
 import { SCENARIO_BY_KEY } from "@/components/search/ScenarioGrid";
 import { useSearchSelection } from "@/hooks/useSearchSelection";
-import { useCafeSearch } from "@/hooks/useCafes";
+import { useAllCafes } from "@/hooks/useCafes";
+import { searchCafesLocal } from "@/lib/cafeFilter";
 import { usePocketItems, usePockets } from "@/hooks/usePockets";
 import { useUserLocation } from "@/context/UserLocationContext";
 import { haversineKm } from "@/lib/format";
@@ -80,17 +81,29 @@ export default function MapPage() {
   const { location } = useUserLocation();
   const sheetPaddingPx = Math.round(vh * SHEET_PADDING_VH[sheet]);
 
-  const searchQuery = useCafeSearch({
-    tags: Array.from(selected),
-    tags_or: orSelected,
-    lng: location?.lng ?? null,
-    lat: location?.lat ?? null,
-    radius_m: radiusM ?? undefined,
-    sort: location ? "distance" : undefined,
-    limit: 1000,
-    open_at: openAt,
-    q: keyword,
-  });
+  const allCafes = useAllCafes();
+  const tagsArr = Array.from(selected);
+  const tagsKey = tagsArr.join(",");
+  const orKey = orSelected.join(",");
+  const searchResult = useMemo(() => {
+    const cafes = searchCafesLocal(allCafes.data, {
+      tags: tagsArr,
+      tagsOr: orSelected,
+      userLng: location?.lng ?? null,
+      userLat: location?.lat ?? null,
+      radiusM,
+      openAt,
+      q: keyword,
+      sort: "distance",
+    });
+    return { cafes, total: cafes.length };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [allCafes.data, tagsKey, orKey, location?.lng, location?.lat, radiusM, openAt, keyword]);
+  const searchQuery = {
+    data: searchResult,
+    isLoading: allCafes.isLoading,
+    isError: allCafes.isError,
+  };
   // Pocket 模式 —— 從 /pocket 點「在地圖上看這個口袋」進來。直接以 pocket items
   // 取代 search 結果,並把鏡頭收進這批點(由 CafeMap 的 fitToCafesKey 觸發)。
   const pocketItemsQuery = usePocketItems(pocketId);
