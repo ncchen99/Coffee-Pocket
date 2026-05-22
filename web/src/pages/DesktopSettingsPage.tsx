@@ -4,6 +4,7 @@ import { Cap, CustomSelect, ConfirmModal } from "@/components/primitives";
 import { DesktopPageLayout } from "@/components/layout/DesktopPageLayout";
 import { useAuth } from "@/hooks/useAuth";
 import { useUserPreferences, useUpdateUserPreferences } from "@/hooks/useProfile";
+import { exportPocketsJSON } from "@/lib/api";
 
 function applyTheme(themeVal: string) {
   if (themeVal === "light") {
@@ -33,6 +34,7 @@ export default function DesktopSettingsPage() {
   const [distance, setDistance] = useState(() => localStorage.getItem("cp.settings.distance") ?? "3");
   const [view, setView] = useState(() => localStorage.getItem("cp.settings.view") ?? "map");
   const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
 
   const { data: prefs } = useUserPreferences(user?.id ?? null);
   const updatePrefs = useUpdateUserPreferences();
@@ -80,6 +82,18 @@ export default function DesktopSettingsPage() {
 
   const handleConfirmLogout = () => {
     signOut();
+  };
+
+  const handleExportPockets = async () => {
+    if (isExporting) return;
+    setIsExporting(true);
+    try {
+      await exportPocketsJSON();
+    } catch (e) {
+      alert("匯出失敗：" + (e instanceof Error ? e.message : String(e)));
+    } finally {
+      setIsExporting(false);
+    }
   };
 
   return (
@@ -173,6 +187,24 @@ export default function DesktopSettingsPage() {
             )}
           </div>
         </section>
+
+        {user && (
+          <section className="rounded-xl border border-base-content/10 p-5 bg-base-100/50">
+            <Cap>資料</Cap>
+            <div className="mt-4">
+              <SettingRow label="匯出我的口袋">
+                <button
+                  type="button"
+                  onClick={handleExportPockets}
+                  disabled={isExporting}
+                  className="btn btn-neutral btn-sm rounded-none font-medium px-4 h-8 min-h-8 text-xs disabled:opacity-50"
+                >
+                  {isExporting ? "匯出中…" : "下載 JSON"}
+                </button>
+              </SettingRow>
+            </div>
+          </section>
+        )}
 
         {/* 關於 */}
         <section className="p-5">

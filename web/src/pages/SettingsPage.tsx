@@ -5,6 +5,7 @@ import { ArrowLeft02Icon } from "@hugeicons/core-free-icons";
 import { Cap, CustomSelect, ConfirmModal } from "@/components/primitives";
 import { useAuth } from "@/hooks/useAuth";
 import { useUserPreferences, useUpdateUserPreferences } from "@/hooks/useProfile";
+import { exportPocketsJSON } from "@/lib/api";
 
 function applyTheme(themeVal: string) {
   if (themeVal === "light") {
@@ -34,6 +35,7 @@ export default function SettingsPage() {
   const [distance, setDistance] = useState(() => localStorage.getItem("cp.settings.distance") ?? "3");
   const [view, setView] = useState(() => localStorage.getItem("cp.settings.view") ?? "map");
   const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
 
   const { data: prefs } = useUserPreferences(user?.id ?? null);
   const updatePrefs = useUpdateUserPreferences();
@@ -82,6 +84,18 @@ export default function SettingsPage() {
 
   const handleConfirmLogout = () => {
     signOut();
+  };
+
+  const handleExportPockets = async () => {
+    if (isExporting) return;
+    setIsExporting(true);
+    try {
+      await exportPocketsJSON();
+    } catch (e) {
+      alert("匯出失敗：" + (e instanceof Error ? e.message : String(e)));
+    } finally {
+      setIsExporting(false);
+    }
   };
 
   return (
@@ -188,6 +202,28 @@ export default function SettingsPage() {
             )}
           </div>
         </section>
+
+        {user && (
+          <>
+            <div className="divider mx-5 my-4" />
+            {/* 資料 */}
+            <section className="px-5">
+              <Cap>資料</Cap>
+              <div className="mt-3">
+                <SettingRow label="匯出我的口袋">
+                  <button
+                    type="button"
+                    onClick={handleExportPockets}
+                    disabled={isExporting}
+                    className="btn btn-neutral btn-sm rounded-none font-medium px-4 h-8 min-h-8 text-xs disabled:opacity-50"
+                  >
+                    {isExporting ? "匯出中…" : "下載 JSON"}
+                  </button>
+                </SettingRow>
+              </div>
+            </section>
+          </>
+        )}
 
         <div className="divider mx-5 my-4" />
 

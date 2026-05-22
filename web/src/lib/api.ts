@@ -502,6 +502,77 @@ export async function isCafeInAnyPocket(
 }
 
 // ===========================================================================
+// Pocket export
+// ===========================================================================
+
+/**
+ * 匯出目前登入者所有 pockets + items 為 JSON，並觸發瀏覽器下載。
+ *
+ * 為什麼放前端：兩條 RLS-protected 查詢就能拿到所有資料(RLS 已限制只能看到
+ * 自己的 pockets / pocket_items)，不需要 Edge Function 中轉，省一次冷啟動。
+ */
+export async function exportPocketsJSON(): Promise<void> {
+  const userId = await requireUserId();
+
+  const { data: pockets, error: pErr } = await supabase
+    .from("pockets")
+    .select("id, name, emoji, created_at")
+    .order("created_at", { ascending: true });
+  if (pErr) throw pErr;
+
+  const pocketIds = (pockets ?? []).map((p: any) => p.id);
+  const itemsByPocket: Record<string, any[]> = {};
+  if (pocketIds.length > 0) {
+    const { data: items, error: iErr } = await supabase
+      .from("pocket_items")
+      .select(
+        "pocket_id, cafe_id, personal_note, added_at, cafes(name, address, google_maps_url)",
+      )
+      .in("pocket_id", pocketIds);
+    if (iErr) throw iErr;
+    for (const it of items ?? []) {
+      const row = it as any;
+      const cafe = Array.isArray(row.cafes) ? row.cafes[0] : row.cafes;
+      const arr = itemsByPocket[row.pocket_id] ?? [];
+      arr.push({
+        cafe_id: row.cafe_id,
+        cafe_name: cafe?.name ?? null,
+        address: cafe?.address ?? null,
+        google_maps_url: cafe?.google_maps_url ?? null,
+        personal_note: row.personal_note,
+        added_at: row.added_at,
+      });
+      itemsByPocket[row.pocket_id] = arr;
+    }
+  }
+
+  const payload = {
+    exported_at: new Date().toISOString(),
+    user_id: userId,
+    pockets: (pockets ?? []).map((p: any) => ({
+      id: p.id,
+      name: p.name,
+      emoji: p.emoji,
+      created_at: p.created_at,
+      items: itemsByPocket[p.id] ?? [],
+    })),
+  };
+
+  const date = new Date().toISOString().slice(0, 10);
+  const blob = new Blob([JSON.stringify(payload, null, 2)], {
+    type: "application/json",
+  });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `coffee-pocket-export-${date}.json`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
+// ===========================================================================
 // Tag votes
 // ===========================================================================
 
