@@ -11,7 +11,7 @@ import { useSearchSelection } from "@/hooks/useSearchSelection";
 import { useCafeSearch } from "@/hooks/useCafes";
 import { usePocketItems, usePockets } from "@/hooks/usePockets";
 import { useUserLocation } from "@/context/UserLocationContext";
-import { getTWTimeParts, haversineKm } from "@/lib/format";
+import { haversineKm } from "@/lib/format";
 const CHIP_OPTIONS: ChipOption[] = [
   { key: "now", label: "現在營業" },
   { key: "no_limit", label: "不限時" },
@@ -132,26 +132,6 @@ export default function MapPage() {
     return null;
   }
 
-  function formatOpenAtLabel(openAt: string | null): string {
-    if (!openAt) return "";
-    if (!openAt.startsWith("2026-05-")) return "現在營業中";
-    try {
-      const parts = getTWTimeParts(new Date(openAt));
-      const labels: Record<string, string> = {
-        monday: "週一",
-        tuesday: "週二",
-        wednesday: "週三",
-        thursday: "週四",
-        friday: "週五",
-        saturday: "週六",
-        sunday: "週日",
-      };
-      return `${labels[parts.weekday] || "特定時間"} ${parts.timeStr}`;
-    } catch {
-      return "特定時間";
-    }
-  }
-
   const headerTitle = isPocketMode
     ? activePocket
       ? `${activePocket.emoji ? `${activePocket.emoji} ` : ""}${activePocket.name}`
@@ -249,22 +229,6 @@ export default function MapPage() {
           >
             <span className="block h-1 w-9 bg-base-content/30" />
           </button>
-          {openAt && (
-            <div className="mx-5 mb-2 flex items-center justify-between rounded-lg bg-info/10 border border-info/20 px-3 py-1.5 text-xs text-info cp-anim-fade-in animate-none">
-              <span className="flex items-center gap-1.5 font-medium">
-                <span>🕒</span>
-                <span>時間篩選：{formatOpenAtLabel(openAt)}</span>
-              </span>
-              <button
-                type="button"
-                onClick={() => setOpenAt(null)}
-                className="btn btn-ghost btn-xs btn-circle h-5 w-5 min-h-0 text-base-content/60 hover:text-base-content"
-                aria-label="清除時間篩選"
-              >
-                ✕
-              </button>
-            </div>
-          )}
           <header className="flex items-baseline justify-between px-5 pb-2">
             <h2 className="text-[15px] font-semibold">{listHeading}</h2>
             {location && <span className="text-xs text-base-content/55">距離 ↓</span>}

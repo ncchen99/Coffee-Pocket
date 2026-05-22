@@ -65,6 +65,9 @@ function configForTheme(theme: ThemeName) {
     // 沒有公開 API 可以只關掉 shield;路名飽和度也無法獨立調整,
     // 所以採取「整體關閉」以避免編號像 marker 一樣誤導視覺焦點。
     showRoadLabels: false,
+    // 關掉立體建築 / 地標 —— 鏡頭鎖正俯視角後 3D 物件本來也看不到正面,
+    // 但 Standard 仍會渲染陰影,移除後背景更乾淨。
+    show3dObjects: false,
   } as const;
 }
 
@@ -211,11 +214,19 @@ export function CafeMap({
       zoom: DEFAULT_ZOOM,
       minZoom: 14,
       maxZoom: 17,
+      // 鎖定俯視角 —— 不讓使用者拉成傾斜或旋轉,避免立體建築陰影回來。
+      pitch: 0,
+      maxPitch: 0,
+      dragRotate: false,
+      pitchWithRotate: false,
+      touchPitch: false,
       attributionControl: false,
       // v3 Standard style 接受 config 物件
       config: { basemap: configForTheme(initialTheme) } as never,
     });
     map.addControl(new mapboxgl.AttributionControl({ compact: true }), "bottom-right");
+    // 雙指旋轉 / 拉俯仰也一併關掉(dragRotate 旗標只擋滑鼠拖曳)。
+    map.touchZoomRotate.disableRotation();
 
     // 確保 style 載入後設定一次(初始 config 在某些版本/快取狀態下會被忽略)
     map.on("style.load", () => applyStandardConfig(map, readTheme()));
