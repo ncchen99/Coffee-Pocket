@@ -96,7 +96,6 @@ export function PromptHero({
 
   const handleInputFocus = () => {
     if (!showInlineResults) return;
-    setIsFocused(true);
     // 清掉先前選中的標籤 / 時間，避免和打字搜尋互相干擾。
     if (selected.size > 0 || openAt) {
       onClearTagsOnFocus?.();
@@ -106,16 +105,11 @@ export function PromptHero({
       inputRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
     });
   };
-
-  const handleInputBlur = () => {
-    setIsFocused(false);
-  };
   const lateNightTarget = todayAt22();
   const isLateNightActive = openAt === lateNightTarget;
   const [loading, setLoading] = useState(false);
   const [hint, setHint] = useState<string | null>(null);
   const [lastSubmittedQuery, setLastSubmittedQuery] = useState("");
-  const [isFocused, setIsFocused] = useState(false);
 
   // 即時本地搜尋：算當下 query 在 200 筆全量裡有幾筆符合，
   // 用於 (1) 在輸入時顯示「找到 N 間」提示；(2) Enter 時判斷要不要打 AI。
@@ -267,13 +261,7 @@ export function PromptHero({
         </div>
       )}
 
-      <div
-        className={`mt-4 ${
-          isFocused
-            ? "sticky top-0 z-30 -mx-5 bg-base-100/95 px-5 pt-3 pb-3 backdrop-blur border-b border-base-content/10"
-            : ""
-        }`}
-      >
+      <div className="mt-4 sticky top-0 z-30 -mx-5 bg-base-100 px-5">
       <form
         onSubmit={(e) => {
           e.preventDefault();
@@ -292,7 +280,6 @@ export function PromptHero({
             value={query}
             onChange={(e) => onQueryChange(e.target.value)}
             onFocus={handleInputFocus}
-            onBlur={handleInputBlur}
             placeholder="輸入咖啡廳名字或是情境"
             className="grow focus:outline-none bg-transparent text-sm h-full"
             disabled={loading}
@@ -329,10 +316,10 @@ export function PromptHero({
                 : "text-error";
             const statusText = status.open_now
               ? status.closes_at
-                ? `營業中 · 至 ${status.closes_at}`
+                ? `營業至 ${status.closes_at}`
                 : "營業中"
               : status.opens_at
-                ? `尚未營業 · ${status.opens_at} 開門`
+                ? `${status.opens_at} 開店`
                 : "已休息";
             return (
               <li key={c.id}>

@@ -155,6 +155,16 @@
   display: none;
 }
 
+/* 完全隱藏指定容器的 scrollbar — 用於水平 chip 列等不想出現滾動條的橫向捲動區 */
+.no-scrollbar {
+  scrollbar-width: none !important;
+}
+.no-scrollbar::-webkit-scrollbar {
+  width: 0 !important;
+  height: 0 !important;
+  display: none !important;
+}
+
 /* ─────────────────────────────────────
  * 使用者定位 marker — 咖啡色 (coffee theme) 與脈衝動畫
  * ────────────────────────────────── */
