@@ -1,6 +1,6 @@
 import { supabase } from "./supabase";
 import { pinyin } from "pinyin-pro";
-import { filterKeysToDb, dbTagLabel, dbKeysToFilter } from "@/data/tagMapping";
+import { filterKeysToDbAnd, filterKeysToDbOr, dbTagLabel, dbKeysToFilter } from "@/data/tagMapping";
 
 /**
  * 將使用者輸入轉成「無聲調拼音」字串，用來和後端 `cafes.name_pinyin` 做 ILIKE
@@ -190,11 +190,11 @@ interface CafeSearchRow {
 }
 
 function rpcArgsForSearch(params: SearchParams) {
-  const orTags = filterKeysToDb(params.tags_or ?? []);
+  const orTags = filterKeysToDbOr(params.tags_or ?? []);
   const q = (params.q ?? "").trim();
   const qNonNull = q.length > 0 ? q : null;
   return {
-    p_tags: filterKeysToDb(params.tags ?? []),
+    p_tags: filterKeysToDbAnd(params.tags ?? []),
     p_lng: params.lng ?? null,
     p_lat: params.lat ?? null,
     p_radius_m: params.radius_m !== undefined ? params.radius_m : null,
@@ -237,11 +237,11 @@ export async function searchCafes(params: SearchParams): Promise<SearchResult> {
 export async function searchCafesCount(
   params: Omit<SearchParams, "sort" | "limit" | "offset">,
 ): Promise<number> {
-  const orTags = filterKeysToDb(params.tags_or ?? []);
+  const orTags = filterKeysToDbOr(params.tags_or ?? []);
   const q = (params.q ?? "").trim();
   const qNonNull = q.length > 0 ? q : null;
   const { data, error } = await supabase.rpc("cafes_search_count", {
-    p_tags: filterKeysToDb(params.tags ?? []),
+    p_tags: filterKeysToDbAnd(params.tags ?? []),
     p_lng: params.lng ?? null,
     p_lat: params.lat ?? null,
     p_radius_m: params.radius_m !== undefined ? params.radius_m : null,

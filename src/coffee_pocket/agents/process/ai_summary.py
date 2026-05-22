@@ -24,57 +24,117 @@ from ...llm import LLMError, chat_json
 
 logger = logging.getLogger(__name__)
 
-SUMMARY_PROMPT = """你是 Coffee Pocket 的咖啡廳摘要生成器。
-根據以下 Google 評論內容，為這間咖啡廳寫一段繁體中文摘要。
+# v2.0: map-reduce 摘要。
+# 1) Map：每批 BULLET_BATCH_SIZE 筆評論 → LLM 抽 3~5 個重點短句。
+# 2) Reduce：所有重點短句 → LLM 整合 50~100 字摘要。
+
+BULLET_PROMPT = """你是 Coffee Pocket 的評論重點萃取器。讀完輸入的評論後，抽出 3~5 個這些評論共同呈現的重點短句。
 
 規則：
-- 字數控制在 50 到 100 字之間
-- 用自然、簡潔的語氣描述店家特色
-- 重點涵蓋：環境氛圍、餐飲特色、適合的使用場景
-- 不要列舉條目，用流暢的段落描述
-- 不要提及評論者個人資訊
-- 不要使用「根據評論」「網友表示」等 meta 語句
-- 只輸出 JSON，不要前後解說、不要 markdown 圍欄
+- 每個短句 ≤ 30 字，繁體中文。
+- 重點限定在以下幾個面向：環境氛圍 / 餐飲特色 / 使用場景 / 服務 / 位置交通。
+- 只輸出多位評論者都提到、或重複出現的規律；單一評論者的個人雜記不需保留。
+- 不要提評論者姓名、不要寫「有人說 / 評論提到」這類 meta 語句。
+- 只輸出 JSON，不要 markdown 圍欄。
 
 輸出格式：
-{"summary": "<摘要文字>"}"""
+{"bullets": ["<短句1>", "<短句2>", ...]}"""
 
-# Max reviews to feed into a single summary request
-MAX_REVIEWS_PER_CAFE = 20
+SUMMARY_PROMPT = """你是 Coffee Pocket 的咖啡廳摘要生成器。
+輸入是這間店多個評論抽出的重點短句集合，請整合成一段繁體中文摘要。
+
+規則：
+- 字數 50 到 100 字之間。
+- 自然、簡潔的語氣，用流暢段落、不要列點。
+- 重點依序：環境氛圍 → 餐飲特色 → 適合使用場景。
+- 不要提「評論者」、「有人」、「根據評論」這種 meta 語句。
+- 只輸出 JSON，不要 markdown 圍欄。
+
+輸出格式：
+{"summary": "<50~100字摘要>"}"""
+
+# Map 階段每批評論數
+BULLET_BATCH_SIZE = 25
+# Map 階段每筆評論最多保留多少字
+MAX_REVIEW_CHARS = 280
+# Reduce 階段最多接受多少個 bullets（避免 prompt 太長）
+MAX_BULLETS_FOR_REDUCE = 50
+# 每間店最多處理多少筆評論
+MAX_REVIEWS_PER_CAFE = 200
 
 # Batch size for fetching cafes from DB
 BATCH_SIZE = 50
 
 
+def _extract_bullets(cafe_name: str, batch: list[str]) -> list[str]:
+    """Map step: 一批評論 → 幾個重點短句。失敗回 []."""
+    if not batch:
+        return []
+    payload = json.dumps(
+        {
+            "cafe_name": cafe_name,
+            "reviews": [t[:MAX_REVIEW_CHARS] for t in batch],
+        },
+        ensure_ascii=False,
+    )
+    try:
+        result = chat_json(BULLET_PROMPT, payload)
+    except LLMError as exc:
+        logger.warning("  bullet extraction failed for %s: %s", cafe_name, exc)
+        return []
+
+    bullets = result.get("bullets")
+    if not isinstance(bullets, list):
+        return []
+    return [str(b).strip() for b in bullets if isinstance(b, str) and b.strip()]
+
+
+def _reduce_bullets(cafe_name: str, bullets: list[str]) -> str | None:
+    """Reduce step: 重點短句集合 → 50~100 字摘要。"""
+    if not bullets:
+        return None
+    payload = json.dumps(
+        {"cafe_name": cafe_name, "bullets": bullets[:MAX_BULLETS_FOR_REDUCE]},
+        ensure_ascii=False,
+    )
+    try:
+        result = chat_json(SUMMARY_PROMPT, payload)
+    except LLMError as exc:
+        logger.warning("  reduce failed for %s: %s", cafe_name, exc)
+        return None
+    summary = result.get("summary")
+    if not isinstance(summary, str) or len(summary.strip()) < 20:
+        logger.warning("  invalid summary for %s: %s", cafe_name, result)
+        return None
+    return summary.strip()
+
+
 def generate_summary(cafe_name: str, review_texts: list[str]) -> str | None:
-    """Call LLM to generate a summary from review texts. Returns the summary string or None."""
+    """Map-reduce 摘要。輸入 ≤ MAX_REVIEWS_PER_CAFE 筆。"""
     if not review_texts:
         return None
 
-    # Truncate each review to avoid token overflow
-    truncated = [t[:300] for t in review_texts[:MAX_REVIEWS_PER_CAFE]]
-    user_msg = json.dumps(
-        {"cafe_name": cafe_name, "reviews": truncated},
-        ensure_ascii=False,
-    )
+    texts = review_texts[:MAX_REVIEWS_PER_CAFE]
 
-    try:
-        result = chat_json(SUMMARY_PROMPT, user_msg)
-    except LLMError as exc:
-        logger.warning("LLM failed for %s: %s", cafe_name, exc)
-        return None
+    # 評論數量少：跳過 map 階段，直接當作 bullets 送 reduce。
+    if len(texts) <= BULLET_BATCH_SIZE:
+        bullets = [t[:MAX_REVIEW_CHARS] for t in texts]
+        return _reduce_bullets(cafe_name, bullets)
 
-    summary = result.get("summary")
-    if not summary or not isinstance(summary, str):
-        logger.warning("LLM returned invalid summary for %s: %s", cafe_name, result)
-        return None
+    # Map: 分批萃取重點
+    all_bullets: list[str] = []
+    for i in range(0, len(texts), BULLET_BATCH_SIZE):
+        chunk = texts[i : i + BULLET_BATCH_SIZE]
+        if i > 0:
+            time.sleep(0.5)
+        all_bullets.extend(_extract_bullets(cafe_name, chunk))
 
-    # Sanity check length (allow some tolerance)
-    if len(summary) < 20:
-        logger.warning("Summary too short for %s (%d chars): %s", cafe_name, len(summary), summary)
-        return None
+    if not all_bullets:
+        # Map 全部失敗，fallback：拿前 N 筆原始評論當 bullets
+        all_bullets = [t[:MAX_REVIEW_CHARS] for t in texts[:BULLET_BATCH_SIZE]]
 
-    return summary.strip()
+    # Reduce
+    return _reduce_bullets(cafe_name, all_bullets)
 
 
 def fetch_cafes_to_process(

@@ -30,15 +30,15 @@
 
 任務：將 Cafe Nomad 的離散欄位直接映射到 Raw Signals，**不需 LLM**。
 
-| Cafe Nomad 欄位 | 對應 Raw Signal              |
-| --------------- | ---------------------------- |
-| `socket`        | `socket_available`           |
-| `quiet`         | `noise_level`（1–5，**5 = 最安靜**） |
-| `seat`          | `seating_availability`       |
-| `wifi`          | `wifi_quality`               |
-| `limited_time`  | `time_limit.status`          |
-| `open_time`     | `business_hours_raw`（待清洗）|
-| `tasty/cheap`   | 不直接映射，供排序輔助       |
+| Cafe Nomad 欄位 | 對應 Raw Signal              | Semantic Agent 如何轉換                 |
+| --------------- | ---------------------------- | --------------------------------------- |
+| `socket`        | `socket_available`           | yes→`socket_most`、maybe→`socket_few`、no→`socket_most`負向 |
+| `quiet`         | `noise_level`（1–5，**5 = 最安靜**） | ≥4 加 study、≤3 加 discussion          |
+| `seat`          | `seating_availability`       | 不直接映射                                |
+| `wifi`          | `wifi_quality`（1–5）             | ≥3 → `wifi_available` 正向、≤1 → 負向     |
+| `limited_time`  | `time_limit.status`          | 直接寫入 structured                       |
+| `open_time`     | `business_hours_raw`（待清洗）| 不直接映射                                |
+| `tasty/cheap`   | 不直接映射，供排序輔助       | 不直接映射                                |
 
 ### 2.2 Google Places Agent（評論語意萃取）
 
@@ -54,8 +54,9 @@
    ```json
    {
      "signals": [
-       {"type": "socket_available", "polarity": "positive", "evidence": "每桌都有插座", "review_id": "..."},
-       {"type": "time_limit", "value": {"status": "limited", "duration_minutes": 90}, "evidence": "客滿限時90分鐘", "review_id": "..."}
+       {"type": "socket_most", "polarity": "positive", "evidence": "每桌都有插座", "review_id": "..."},
+       {"type": "time_limit", "value": {"status": "limited"}, "evidence": "客滿限時 90 分鐘", "review_id": "..."},
+       {"type": "high_cp_value", "polarity": "positive", "evidence": "雙人套餐 350 雙杯咖啡 + 甜點很划算", "review_id": "..."}
      ]
    }
    ```
@@ -87,17 +88,22 @@ LLM 提示應引用 SPEC.md 的 `positive_keywords` / `negative_keywords` 作為
 
 輸入：來自所有來源的 Raw Signals。
 
-輸出：SPEC.md 中定義的 Product Tags（`socket_available`、`pet_friendly`、`reservable`、`outdoor_seating`、`study_friendly`、`discussion_friendly`、`group_chat_friendly`、`time_limit`⋯⋯）。
+輸出：SPEC.md 、`specs/semantic_layer.yaml` 中定義的 v2.0 Product Tags（詳見 README）。主要類別：
+
+- **覆蓋率類**（互斥）：`socket_most`/`socket_few`、`large_table_most`/`large_table_few`
+- **一般 boolean**：`wifi_available`、`high_cp_value`、`scooter_parking_easy`、`car_parking_easy`、`has_resident_cat`、`has_resident_dog`、`reservable`、`outdoor_seating`
+- **Score**：`study_friendly`、`discussion_friendly`、`group_chat_friendly`
+- **Structured**：`time_limit`（只保留 status）
+- **廢棄**（DB 舊資料保留，pipeline 不再寫入）：`socket_available`、`pet_friendly`
 
 規則：
 
-1. **Boolean 標籤**（如 `socket_available`）：單一可靠來源即可寫入，並套用 `minimum_confidence`
-2. **Score 標籤**（如 `study_friendly`）：
-   - 套用 `semantic_conditions.strong_positive / weak_positive / negative`
-   - 加總、上下限 clip 到 0–100
-3. **Structured 標籤**（如 `time_limit`）：
-   - LLM 從多筆 evidence 中歸納 canonical 結構
-   - 衝突時優先順序：community > recent google > instagram > cafe_nomad
+1. **Boolean 標籤**：需 `正向證據數 ≥ N` 且 `正向 / Google+IG 評論總數 ≥ R` 才寫入（預設 N=2、R=15%；`has_resident_*` R=10%；`reservable`/`outdoor_seating` 1 筆即可）。負向多於正向且過門檻 → 寫 False。
+   - 互斥規則：`*_most` 成立為 True 時，`*_few` 不寫入。
+   - `high_cp_value` 採「正向佔比 ≥ 0.6」規則（需 ≥ 2 筆證據）。
+   - community 證據永遠覆寫。
+2. **Score 標籤**（如 `study_friendly`）：套用 `semantic_conditions.strong_positive / weak_positive / negative` 加總，clip 到 0–100。
+3. **Structured 標籤**（`time_limit`）：只保留 `status`，衝突時優先順序 community > recent google > instagram > cafe_nomad。
 
 ## 4. 處理流程設計考量
 

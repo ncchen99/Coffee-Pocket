@@ -261,7 +261,7 @@ export function PromptHero({
         </div>
       )}
 
-      <div className="mt-4 sticky top-0 z-30 -mx-5 bg-base-100 px-5">
+      <div className="sticky top-0 z-30 -mx-5 bg-base-100 px-5 pt-4">
       <form
         onSubmit={(e) => {
           e.preventDefault();

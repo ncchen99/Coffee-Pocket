@@ -2,12 +2,13 @@
 
 Why this exists: Google Places API v1 returns at most ~5 reviews per place, which
 is insufficient signal density for our Semantic Layer. This scraper opens the
-Google Maps web UI, sorts by newest, scrolls the reviews panel, expands truncated
-text, and saves all collected reviews to a local JSON file per cafe.
+Google Maps web UI, sorts reviews (default: 最相關 / most relevant), scrolls the
+reviews panel, expands truncated text, and saves all collected reviews to a
+local JSON file per cafe.
 
 Stop conditions (whichever hits first):
-  - Collected >= MAX_REVIEWS (default 100)
-  - Encountered a review older than MAX_AGE_DAYS (default 365)
+  - Collected >= MAX_REVIEWS (default 200)
+  - Encountered a review older than MAX_AGE_DAYS (default 3650; effectively off when sorting by relevance)
   - No new reviews after several scroll attempts (panel exhausted)
 
 Output:
@@ -71,8 +72,10 @@ AUTH_DIR = Path("data/.auth")
 # Using a real Chrome channel (not bundled Chromium) so Google doesn't flag
 # the browser as "insecure" during login.
 USER_DATA_DIR = AUTH_DIR / "chrome-profile"
-MAX_REVIEWS_DEFAULT = 100
+MAX_REVIEWS_DEFAULT = 200
 MAX_AGE_DAYS_DEFAULT = 3650
+SORT_OPTIONS = ("relevance", "newest")
+SORT_DEFAULT = "relevance"
 NO_PROGRESS_LIMIT = 6  # consecutive scrolls with no new cards → stop
 
 # Human-pace timing knobs (milliseconds). Real users don't scroll on a metronome,
@@ -81,7 +84,7 @@ NO_PROGRESS_LIMIT = 6  # consecutive scrolls with no new cards → stop
 SCROLL_PAUSE_MS = (2200, 4200)           # between feed scrolls
 AFTER_NAV_MS = (3000, 5500)              # after opening a place URL
 AFTER_TAB_CLICK_MS = (1500, 3000)        # after clicking 評論 tab
-AFTER_SORT_MS = (2000, 4000)             # after picking 最新
+AFTER_SORT_MS = (2000, 4000)             # after picking 最相關 / 最新
 BETWEEN_CAFES_MS = (20_000, 30_000)      # idle gap between cafes — shorter as requested
 MICRO_PAUSE_MS = (200, 700)              # tiny think-time between sub-actions
 
@@ -384,8 +387,20 @@ def _scroll_reviews(page: Page, ratio: float) -> None:
     )
 
 
-def _sort_by_newest(page: Page) -> None:
-    """Open the sort menu and pick '最新' (data-index="1")."""
+# data-index 對應：0=最相關、1=最新、2=評分最高、3=評分最低
+SORT_INDEX = {"relevance": "0", "newest": "1"}
+SORT_LABEL_RE = {
+    "relevance": re.compile(r"最相關|Most relevant|Most helpful", re.IGNORECASE),
+    "newest": re.compile(r"最新|Newest", re.IGNORECASE),
+}
+
+
+def _sort_reviews(page: Page, mode: str = SORT_DEFAULT) -> None:
+    """Open the sort menu and pick the requested mode (default: 最相關)."""
+    if mode not in SORT_INDEX:
+        logger.warning("Unknown sort mode %r, falling back to %s", mode, SORT_DEFAULT)
+        mode = SORT_DEFAULT
+
     # Verified: sort button has aria-label="排序評論", text "排序".
     try:
         page.locator('button[aria-label*="排序"], button[aria-label*="Sort"]').first.click(timeout=3000)
@@ -393,17 +408,21 @@ def _sort_by_newest(page: Page) -> None:
         logger.warning("Sort button not found — reviews will be in default order")
         return
 
-    # Menu items are role="menuitemradio" with data-index: 0=最相關, 1=最新,
-    # 2=評分最高, 3=評分最低. data-index is more stable than the label text.
+    idx = SORT_INDEX[mode]
     try:
-        page.locator('[role="menuitemradio"][data-index="1"]').click(timeout=3000)
+        page.locator(f'[role="menuitemradio"][data-index="{idx}"]').click(timeout=3000)
         return
     except PWTimeout:
         pass
     try:
-        page.get_by_role("menuitemradio", name=re.compile(r"最新|Newest")).click(timeout=3000)
+        page.get_by_role("menuitemradio", name=SORT_LABEL_RE[mode]).click(timeout=3000)
     except PWTimeout:
-        logger.warning("Could not find '最新' / 'Newest' option")
+        logger.warning("Could not pick sort mode %s", mode)
+
+
+# Backwards-compat shim (不刪除，以免其他地方 import)
+def _sort_by_newest(page: Page) -> None:
+    _sort_reviews(page, mode="newest")
 
 
 def _expand_more_buttons(page: Page) -> int:
@@ -490,6 +509,7 @@ def scrape_one(
     *,
     max_reviews: int,
     max_age_days: int,
+    sort_mode: str = SORT_DEFAULT,
 ) -> dict[str, Any]:
     place_id = cafe["google_place_id"]
     url = cafe.get("google_maps_url") or f"https://www.google.com/maps/place/?q=place_id:{place_id}"
@@ -524,7 +544,7 @@ def scrape_one(
         try:
             _wait_reviews_panel(page)
             _sleep(page, AFTER_TAB_CLICK_MS)
-            _sort_by_newest(page)
+            _sort_reviews(page, mode=sort_mode)
             _sleep(page, AFTER_SORT_MS)
 
             no_progress = 0
@@ -812,6 +832,7 @@ def run(
     max_reviews: int,
     max_age_days: int,
     update_cafe: bool = False,
+    sort_mode: str = SORT_DEFAULT,
 ) -> None:
     OUT_DIR.mkdir(parents=True, exist_ok=True)
     context = _launch_persistent(pw, headful=headful)
@@ -837,7 +858,11 @@ def run(
 
             try:
                 result = scrape_one(
-                    page, cafe, max_reviews=max_reviews, max_age_days=max_age_days
+                    page,
+                    cafe,
+                    max_reviews=max_reviews,
+                    max_age_days=max_age_days,
+                    sort_mode=sort_mode,
                 )
             except Exception as exc:  # noqa: BLE001
                 logger.exception("Failed on cafe=%s: %s", cafe["name"], exc)
@@ -873,6 +898,12 @@ def main() -> None:
     parser.add_argument("--headful", action="store_true", help="Show the browser window")
     parser.add_argument("--max-reviews", type=int, default=MAX_REVIEWS_DEFAULT)
     parser.add_argument("--max-age-days", type=int, default=MAX_AGE_DAYS_DEFAULT)
+    parser.add_argument(
+        "--sort",
+        choices=SORT_OPTIONS,
+        default=SORT_DEFAULT,
+        help="評論排序方式（預設 relevance 最相關）",
+    )
     parser.add_argument(
         "--login",
         action="store_true",
@@ -932,6 +963,7 @@ def main() -> None:
             max_reviews=args.max_reviews,
             max_age_days=args.max_age_days,
             update_cafe=args.update_cafe,
+            sort_mode=args.sort,
         )
 
 

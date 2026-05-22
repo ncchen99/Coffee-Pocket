@@ -1,84 +1,252 @@
-version: "1.0"
+version: "2.0"
 
-# Coffee Pocket — Semantic Layer v1.0
+# Coffee Pocket — Semantic Layer v2.0
 # 定義 LLM 如何理解一間咖啡廳的標準化標籤。
 # 詳見 SPEC.md / AGENTS.md。
+#
+# v2.0 重點變動（取代 v1.0）：
+#   - socket_available → 拆 socket_most / socket_few
+#   - pet_friendly     → 拆 has_resident_cat / has_resident_dog
+#   - 新增 large_table_most / large_table_few
+#   - 新增 wifi_available, high_cp_value
+#   - 新增 scooter_parking_easy / car_parking_easy
+#   - time_limit 移除 duration_minutes，只保留 status
+#   - group_chat_friendly 收緊判斷規則（必須明確 4 人以上 / 大桌容量）
 
 platform_tags:
 
-  socket_available:
+  # ---------- 插座（覆蓋率） ----------
+  socket_most:
     display_name:
-      zh: "有插座"
-      en: "Socket Available"
+      zh: "多數座位有插座"
+      en: "Sockets at most seats"
     type: boolean
     confidence_rules:
       minimum_confidence: 0.7
-      minimum_sources: 1
+      minimum_evidence: 2
+      minimum_evidence_ratio: 0.15
+    description: >
+      多數座位附近有插座可使用（每桌都有 / 大部分桌子有 / 整面牆都是插座）。
+      與 socket_few 互斥；當 socket_most 成立時 socket_few 不再產生。
     source_mapping:
       cafe_nomad:
         direct_fields:
           socket:
             yes: true
-            maybe: partial
-            no: false
       google_reviews:
         positive_keywords:
-          - "有插座"
-          - "插座很多"
           - "每桌都有插座"
-          - "可以充電"
-          - "適合帶電腦"
+          - "每張桌子都有插座"
+          - "插座很多"
+          - "整面牆都是插座"
+          - "幾乎每桌都有"
         negative_keywords:
           - "沒有插座"
           - "插座很少"
-      instagram_posts:
-        positive_keywords:
-          - "插座"
-          - "帶電腦"
-          - "工作"
-          - "充電"
-    llm_interpretation_rules:
-      positive_conditions:
-        - "mentions_socket"
-        - "mentions_charging"
-        - "mentions_laptop_usage"
-      negative_conditions:
-        - "mentions_no_socket"
 
-  pet_friendly:
+  socket_few:
     display_name:
-      zh: "寵物友善"
-      en: "Pet Friendly"
+      zh: "少數座位有插座"
+      en: "Sockets at few seats"
     type: boolean
     confidence_rules:
       minimum_confidence: 0.7
-      minimum_sources: 1
+      minimum_evidence: 2
+      minimum_evidence_ratio: 0.15
+    description: >
+      只有少部分座位有插座（牆邊 / 角落 / 吧台才有）。
+    source_mapping:
+      cafe_nomad:
+        direct_fields:
+          socket:
+            maybe: true
+      google_reviews:
+        positive_keywords:
+          - "靠牆才有插座"
+          - "角落才有插座"
+          - "插座位置有限"
+          - "只有少數座位有插座"
+
+  # ---------- 桌子大小 ----------
+  large_table_most:
+    display_name:
+      zh: "多數是大桌"
+      en: "Mostly large tables"
+    type: boolean
+    confidence_rules:
+      minimum_confidence: 0.7
+      minimum_evidence: 2
+      minimum_evidence_ratio: 0.15
+    description: >
+      多數座位都是適合 4 人以上使用的大桌。需要評論明確提到「大桌」、
+      「桌子很大」、「桌面寬」、「四人桌很多」等具體描述。
     source_mapping:
       google_reviews:
         positive_keywords:
-          - "寵物友善"
-          - "可以帶狗"
-          - "可以帶寵物"
-          - "歡迎毛小孩"
-          - "店狗"
-          - "店貓"
-        negative_keywords:
-          - "謝絕寵物"
-          - "不能帶寵物"
-          - "寵物不能入內"
-      instagram_posts:
-        positive_keywords:
-          - "寵物友善"
-          - "毛小孩"
-          - "店狗"
-          - "店貓"
-    llm_interpretation_rules:
-      positive_conditions:
-        - "mentions_pets_allowed"
-        - "mentions_resident_dog_or_cat"
-      negative_conditions:
-        - "mentions_pets_not_allowed"
+          - "桌子大"
+          - "桌面寬"
+          - "大桌很多"
+          - "都是大桌"
+          - "四人桌"
+          - "六人桌"
 
+  large_table_few:
+    display_name:
+      zh: "偶有大桌"
+      en: "A few large tables"
+    type: boolean
+    confidence_rules:
+      minimum_confidence: 0.7
+      minimum_evidence: 2
+      minimum_evidence_ratio: 0.15
+    description: >
+      只有少數大桌（多數是雙人桌 / 小圓桌）。
+    source_mapping:
+      google_reviews:
+        positive_keywords:
+          - "只有一兩張大桌"
+          - "大桌不多"
+          - "多數是兩人桌"
+
+  # ---------- Wi-Fi ----------
+  wifi_available:
+    display_name:
+      zh: "有 Wi-Fi"
+      en: "Wi-Fi Available"
+    type: boolean
+    confidence_rules:
+      minimum_confidence: 0.7
+      minimum_evidence: 2
+      minimum_evidence_ratio: 0.15
+    description: >
+      店家有提供可使用的 Wi-Fi。評論需明確提到 Wi-Fi 才成立。
+    source_mapping:
+      cafe_nomad:
+        direct_fields:
+          wifi:
+            yes: true
+      google_reviews:
+        positive_keywords:
+          - "有 Wi-Fi"
+          - "有wifi"
+          - "提供無線網路"
+          - "Wi-Fi 很快"
+        negative_keywords:
+          - "沒有 Wi-Fi"
+          - "沒有無線網路"
+
+  # ---------- CP 值 ----------
+  high_cp_value:
+    display_name:
+      zh: "高 CP 值"
+      en: "High Value"
+    type: boolean
+    confidence_rules:
+      minimum_confidence: 0.7
+      minimum_evidence: 2
+      # 採用「正向佔比 >= 0.6」聚合（aggregate_cp_value），不單純多數決
+      positive_ratio: 0.6
+    description: >
+      多數使用者覺得物超所值。聚合邏輯：positive / (positive + negative)
+      >= positive_ratio 才視為 True；一半一半則 False。
+    source_mapping:
+      google_reviews:
+        positive_keywords:
+          - "便宜"
+          - "高 CP 值"
+          - "CP 值高"
+          - "份量大"
+          - "划算"
+          - "物超所值"
+        negative_keywords:
+          - "貴"
+          - "不划算"
+          - "CP 值不高"
+          - "價格偏高"
+          - "份量太少"
+
+  # ---------- 停車 ----------
+  scooter_parking_easy:
+    display_name:
+      zh: "機車好停"
+      en: "Scooter parking easy"
+    type: boolean
+    confidence_rules:
+      minimum_confidence: 0.7
+      minimum_evidence: 2
+      minimum_evidence_ratio: 0.15
+    source_mapping:
+      google_reviews:
+        positive_keywords:
+          - "機車好停"
+          - "機車位多"
+          - "機車格很多"
+        negative_keywords:
+          - "機車不好停"
+          - "沒地方停機車"
+
+  car_parking_easy:
+    display_name:
+      zh: "汽車好停"
+      en: "Car parking easy"
+    type: boolean
+    confidence_rules:
+      minimum_confidence: 0.7
+      minimum_evidence: 2
+      minimum_evidence_ratio: 0.15
+    source_mapping:
+      google_reviews:
+        positive_keywords:
+          - "停車方便"
+          - "有停車場"
+          - "汽車好停"
+          - "附設停車"
+        negative_keywords:
+          - "不好停車"
+          - "停車困難"
+          - "沒地方停車"
+
+  # ---------- 寵物 / 店寵 ----------
+  has_resident_cat:
+    display_name:
+      zh: "有店貓"
+      en: "Resident cat"
+    type: boolean
+    confidence_rules:
+      minimum_confidence: 0.7
+      minimum_evidence: 2
+      minimum_evidence_ratio: 0.10
+    description: >
+      店內有駐店貓（店貓 / 老闆養的貓）。注意：
+      「可以帶寵物」、「歡迎毛小孩」**不算**店貓——只記錄駐店動物。
+    source_mapping:
+      google_reviews:
+        positive_keywords:
+          - "店貓"
+          - "駐店貓"
+          - "老闆養的貓"
+          - "有貓"
+
+  has_resident_dog:
+    display_name:
+      zh: "有店狗"
+      en: "Resident dog"
+    type: boolean
+    confidence_rules:
+      minimum_confidence: 0.7
+      minimum_evidence: 2
+      minimum_evidence_ratio: 0.10
+    description: >
+      店內有駐店狗（店狗 / 老闆養的狗）。
+    source_mapping:
+      google_reviews:
+        positive_keywords:
+          - "店狗"
+          - "駐店狗"
+          - "老闆養的狗"
+          - "有狗"
+
+  # ---------- 既有 score / 其他 boolean ----------
   study_friendly:
     display_name:
       zh: "適合讀書辦公"
@@ -174,11 +342,13 @@ platform_tags:
       min: 0
       max: 100
     description: >
-      適合 3 人以上社交聚會 / 純聊天（放鬆社交，氛圍熱鬧、可放心暢聊）。
-      cafe_nomad 沒有直接欄位可以推導，主要由 Google reviews / Instagram 提供。
+      適合 **4 人以上** 社交聚會 / 純聊天。判定規則嚴格：必須明確提到
+      「四人」、「五人」、「一群人」、「家庭聚會」、「包場」、「大桌可坐多人」
+      等具體用詞或數字。**「適合朋友聊天」、「適合與朋友來」這類泛指不成立。**
+      原因：許多咖啡廳雖然能聊天，但沒有 4 人桌或不收 4 人以上群體。
     semantic_conditions:
       strong_positive:
-        - "group_gathering_friendly"
+        - "group_gathering_4plus"
         - "large_table"
         - "lively_atmosphere"
         - "private_room_available"
@@ -190,13 +360,12 @@ platform_tags:
       google_reviews:
         positive_keywords:
           - "適合多人"
-          - "朋友聚會"
-          - "聚餐"
-          - "包場"
-          - "大桌"
-          - "一群人聊天"
-          - "熱鬧暢聊"
+          - "四人"
+          - "五人"
+          - "一群人"
           - "家庭聚會"
+          - "包場"
+          - "大桌可坐多人"
         negative_keywords:
           - "位置太小"
           - "不適合多人"
@@ -206,8 +375,7 @@ platform_tags:
         positive_keywords:
           - "聚會"
           - "包場"
-          - "多人"
-          - "聚餐"
+          - "家庭聚餐"
 
   reservable:
     display_name:
@@ -216,7 +384,7 @@ platform_tags:
     type: boolean
     confidence_rules:
       minimum_confidence: 0.7
-      minimum_sources: 1
+      minimum_evidence: 1
     description: >
       店家是否可事先訂位 / 預約座位。cafe_nomad 沒有對應欄位，
       由 Google reviews / Instagram 抽取。
@@ -238,13 +406,6 @@ platform_tags:
         positive_keywords:
           - "訂位"
           - "預約"
-    llm_interpretation_rules:
-      positive_conditions:
-        - "mentions_reservation_accepted"
-        - "mentions_booking_recommended"
-      negative_conditions:
-        - "mentions_no_reservation"
-        - "mentions_walk_in_only"
 
   outdoor_seating:
     display_name:
@@ -253,7 +414,7 @@ platform_tags:
     type: boolean
     confidence_rules:
       minimum_confidence: 0.7
-      minimum_sources: 1
+      minimum_evidence: 1
     description: >
       店家是否有戶外座位 / 室外區 / 露天座位。cafe_nomad 沒有對應欄位，
       由 Google reviews / Instagram 抽取。
@@ -261,28 +422,12 @@ platform_tags:
       google_reviews:
         positive_keywords:
           - "戶外座"
-          - "戶外座位"
           - "露天"
           - "室外區"
           - "戶外區"
-          - "室外座位"
         negative_keywords:
           - "沒有戶外座"
           - "僅限室內"
-          - "無室外座位"
-      instagram_posts:
-        positive_keywords:
-          - "戶外座"
-          - "露天"
-          - "室外區"
-          - "戶外區"
-    llm_interpretation_rules:
-      positive_conditions:
-        - "mentions_outdoor_seating"
-        - "mentions_patio"
-        - "mentions_terrace"
-      negative_conditions:
-        - "mentions_no_outdoor_seating"
 
   time_limit:
     display_name:
@@ -292,15 +437,11 @@ platform_tags:
     schema:
       status:
         enum:
-          - unlimited
-          - conditional
-          - limited
-      duration_minutes:
-        type: integer
-        nullable: true
-      conditions:
-        type: string
-        nullable: true
+          - unlimited      # 不限時
+          - limited        # 一律限時
+          - conditional    # 只在客滿時限時
+    description: >
+      v2.0 起不再記錄 duration_minutes，只保留 status 三選一。
     source_mapping:
       cafe_nomad:
         direct_fields:
@@ -313,23 +454,16 @@ platform_tags:
               status: unlimited
       google_reviews:
         extraction_patterns:
-          - "限時90分鐘"
-          - "客滿限時兩小時"
+          - "限時"
+          - "客滿限時"
           - "假日限時"
           - "不限時"
-      instagram_posts:
-        extraction_patterns:
-          - "不限時"
-          - "久坐"
-          - "客滿限時"
-    llm_extraction_rules:
-      duration_detection:
-        enabled: true
-      normalize_rules:
-        - input: "兩小時"
-          output_minutes: 120
-        - input: "90分鐘"
-          output_minutes: 90
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Deprecated（v1.0 → v2.0）。資料庫舊資料保留，但 pipeline 不再寫入這些 tag_key。
+deprecated_tags:
+  - socket_available     # → socket_most / socket_few
+  - pet_friendly         # → has_resident_cat / has_resident_dog
 
 # ─────────────────────────────────────────────────────────────────────────────
 # 輔助欄位（不是 platform_tags，但會出現在 raw signals 裡，供彙整使用）
@@ -343,8 +477,6 @@ auxiliary_signals:
     used_by:
       - study_friendly       # >=4 → 加分
       - discussion_friendly  # <=3 → 加分
-  wifi_quality:
-    description: "Wi-Fi 品質, 1~5 整數, 5 = 最好。"
   seating_availability:
     description: "座位充足度, 1~5 整數, 5 = 最充足。"
 
@@ -364,3 +496,11 @@ source_priority:
   - google_reviews_recent
   - instagram
   - cafe_nomad
+
+# Pipeline 全域聚合預設（若 tag 未個別指定 confidence_rules）
+aggregation_defaults:
+  boolean:
+    minimum_evidence: 2
+    minimum_evidence_ratio: 0.15   # positives / max(total_reviews_for_cafe, pos+neg)
+    minimum_confidence: 0.7
+  community_override: true         # community 來源不受門檻限制

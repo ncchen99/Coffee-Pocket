@@ -2,14 +2,28 @@
 // 跑通三頁 mock 之後,這份 type 就是和 Edge Function 對齊的 contract。
 
 export type PlatformTagKey =
-  | "socket_available"
-  | "pet_friendly"
+  // v2.0 boolean
+  | "socket_most"
+  | "socket_few"
+  | "large_table_most"
+  | "large_table_few"
+  | "wifi_available"
+  | "high_cp_value"
+  | "scooter_parking_easy"
+  | "car_parking_easy"
+  | "has_resident_cat"
+  | "has_resident_dog"
   | "reservable"
   | "outdoor_seating"
+  // v2.0 score
   | "study_friendly"
   | "discussion_friendly"
   | "group_chat_friendly"
-  | "time_limit";
+  // v2.0 structured
+  | "time_limit"
+  // Deprecated（DB 仍可能有歷史紀錄）
+  | "socket_available"
+  | "pet_friendly";
 
 export interface TagWithConfidence {
   key: PlatformTagKey;

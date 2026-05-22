@@ -105,6 +105,11 @@ uv run python -m coffee_pocket.agents.enrich.google_scraper --no-missing --updat
 
 爬蟲會把評論與店家資訊存到 `data/reviews/<google_place_id>.json`。加上 `--update-cafe` 時，也會把可用的 Google 店家資訊寫回 `cafes`。
 
+v2.0 變動：
+
+- 預設改抓 **「最相關」** (`--sort relevance`)，每店最多 **200 筆**評論（`MAX_REVIEWS_DEFAULT=200`）。
+- 想改回「最新」可加 `--sort newest`。
+
 ### 4. 評論語意萃取（LLM）
 
 爬蟲拿到的 Google 評論、手動匯入的 Instagram 貼文都是原始文字，需要透過 LLM 抽出結構化標籤（是否有插座、是否適合讀書 / 討論 / 多人聊天、是否可訂位、限時規則⋯⋯）。這一步會把訊號寫進 `reviews_raw.extracted_signals`。
@@ -157,11 +162,23 @@ uv run python -m coffee_pocket.agents.process.semantic --cafe-id <cafe-uuid>
 uv run python -m coffee_pocket.agents.process.semantic --limit 5
 ```
 
+v2.0 標籤體系（2026-05 改版）：
+
+- 覆蓋率類（互斥：`*_most` 為 True 時 `*_few` 不寫入）
+  - `socket_most` / `socket_few`
+  - `large_table_most` / `large_table_few`
+- 新增 boolean：`wifi_available`、`high_cp_value`、`scooter_parking_easy`、`car_parking_easy`、`has_resident_cat`、`has_resident_dog`
+- 既有 boolean：`reservable`、`outdoor_seating`
+- Score（0–100）：`study_friendly`、`discussion_friendly`、`group_chat_friendly`
+- Structured：`time_limit`（**只保留 status**：`unlimited` / `limited` / `conditional`，不再記錄 `duration_minutes`）
+- 廢棄（pipeline 不再寫入，DB 舊資料保留）：`socket_available`、`pet_friendly`
+
 彙整邏輯：
 
-- Boolean 標籤（`socket_available`、`pet_friendly`、`reservable`）：多數決，社群編輯可覆寫。
-- Score 標籤（`study_friendly`、`discussion_friendly`、`group_chat_friendly`）：正負訊號加總，clip 到 0–100。
-- Structured 標籤（`time_limit`）：依來源優先順序取 canonical value。
+- Boolean 標籤：需「**正向證據數 ≥ N** 且 **正向 / 該店 Google+IG 評論總數 ≥ R**」才成立。預設 N=2、R=15%；`has_resident_*` R=10%；`reservable`/`outdoor_seating` 仍是 1 筆即可。社群編輯永遠覆寫。
+- `high_cp_value`：採「正向佔比 ≥ 0.6」規則（一半一半 → False），需 ≥ 2 筆證據。
+- Score 標籤：正負訊號加總，clip 到 0–100。
+- Structured `time_limit`：依來源優先順序取 canonical value。
 - 已被 community 鎖定的標籤（`locked_by_community=true`）不會被自動覆蓋。
 
 注意：cafe_nomad 來源沒有「訂位」、「多人聊天」相關欄位，所以這兩個標籤只會在有 Google / IG 訊號的咖啡廳上產生。`noise_level` 三個來源都遵循同一方向（**5 = 最安靜，1 = 最吵**）。

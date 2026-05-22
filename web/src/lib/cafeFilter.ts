@@ -13,7 +13,7 @@
 
 import { pinyin } from "pinyin-pro";
 import { haversineKm, isCafeOpenAt } from "./format";
-import { filterKeysToDb, dbTagLabel } from "@/data/tagMapping";
+import { filterKeysToDbGroups, filterKeysToDbOr, dbTagLabel } from "@/data/tagMapping";
 import type { CafeCard } from "@/types/cafe";
 
 export interface RawCafe {
@@ -90,10 +90,15 @@ interface ScoredCafe extends IndexedCafe {
   _passed_q: boolean;
 }
 
-function passesTags(cafe: IndexedCafe, andKeys: string[], orKeys: string[]): boolean {
-  if (andKeys.length > 0) {
-    for (const k of andKeys) {
-      if (!cafe.tag_keys.includes(k)) return false;
+function passesTags(
+  cafe: IndexedCafe,
+  andGroups: string[][],
+  orKeys: string[],
+): boolean {
+  if (andGroups.length > 0) {
+    // 每個 group 是 OR（任一命中即可），groups 之間是 AND。
+    for (const group of andGroups) {
+      if (!group.some((k) => cafe.tag_keys.includes(k))) return false;
     }
   }
   if (orKeys.length > 0) {
@@ -137,8 +142,8 @@ export function searchCafesLocal(
   index: IndexedCafe[],
   params: LocalSearchParams,
 ): CafeCard[] {
-  const andKeys = filterKeysToDb(params.tags ?? []);
-  const orKeys = filterKeysToDb(params.tagsOr ?? []);
+  const andGroups = filterKeysToDbGroups(params.tags ?? []);
+  const orKeys = filterKeysToDbOr(params.tagsOr ?? []);
   const hasLoc = params.userLng != null && params.userLat != null;
   const qRaw = (params.q ?? "").trim();
   const qNorm = normalizeSearchText(qRaw);
@@ -147,7 +152,7 @@ export function searchCafesLocal(
 
   const scored: ScoredCafe[] = [];
   for (const c of index) {
-    if (!passesTags(c, andKeys, orKeys)) continue;
+    if (!passesTags(c, andGroups, orKeys)) continue;
     if (!passesOpenAt(c, params.openAt)) continue;
 
     const distance_km = hasLoc
