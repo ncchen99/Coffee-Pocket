@@ -17,6 +17,7 @@ venv/
 
 # Local scraped data (reviews JSON per cafe)
 data/reviews/
+data/reviews.bak*
 
 # Saved browser auth state (Google login cookies for scraper)
 data/.auth/
