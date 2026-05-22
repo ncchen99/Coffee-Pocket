@@ -93,7 +93,7 @@ function DesktopApp() {
   // displayed 落後 activeIdent —— 關閉時讓內容多停留 280ms 給 exit 動畫播完。
   const [displayed, setDisplayed] = useState<string | null>(activeIdent);
   const [isScrolled, setIsScrolled] = useState(false);
-  const [sortKey, setSortKey] = useState<SortKey>("distance");
+  const [sortKey, setSortKey] = useState<SortKey>("smart");
 
   useEffect(() => {
     if (activeIdent) {

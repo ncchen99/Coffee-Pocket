@@ -62,7 +62,7 @@ export function DesktopFilterPanel({
   // Default to 5km when null/undefined.
   const distance = radiusM != null ? Math.round(radiusM / 1000) : 5;
   const setDistance = (km: number) => onRadiusMChange(km * 1000);
-  const [sort, setSort] = useState("距離");
+  const [sort, setSort] = useState("綜合");
 
   // 初始化時間模式與選定時間
   const initialMode = !openAt
@@ -90,7 +90,7 @@ export function DesktopFilterPanel({
 
   const resetAll = () => {
     onReset();
-    setSort("距離");
+    setSort("綜合");
     setTimeMode("any");
   };
 

@@ -45,7 +45,7 @@ export const DB_TAG_LABEL: Record<string, string> = {
   reservable: "可訂位",
   outdoor_seating: "戶外座",
   study_friendly: "適合讀書",
-  discussion_friendly: "適合討論",
+  discussion_friendly: "適合聊天",
   group_chat_friendly: "適合多人",
   time_limit: "不限時",
   wifi_available: "有Wi-Fi",

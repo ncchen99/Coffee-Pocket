@@ -155,7 +155,7 @@ export async function fetchAllCafesForSearch(): Promise<RawCafe[]> {
 
 export interface SearchParams {
   tags?: string[]; // frontend short keys (e.g. "socket") — AND
-  /** OR-match (任一符合即可)。用於場景組合，例如「聊天聚會」= 適合討論 OR 適合多人。 */
+  /** OR-match (任一符合即可)。用於場景組合，例如「聊天聚會」= 適合聊天 OR 適合多人。 */
   tags_or?: string[];
   lng?: number | null;
   lat?: number | null;

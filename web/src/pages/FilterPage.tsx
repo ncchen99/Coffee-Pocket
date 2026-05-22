@@ -46,7 +46,7 @@ export default function FilterPage() {
 
   const [selected, setSelected] = useState<Set<string>>(new Set(initialTags));
   const [distance, setDistance] = useState(initialDist);
-  const [sort, setSort] = useState("距離");
+  const [sort, setSort] = useState("綜合");
   const [openAt, setOpenAt] = useState<string | null>(initialOpenAt);
 
   // 初始化時間模式與選定時間
@@ -103,7 +103,7 @@ export default function FilterPage() {
   const reset = () => {
     setSelected(new Set());
     setDistance(3);
-    setSort("距離");
+    setSort("綜合");
     setTimeMode("any");
     setOpenAt(null);
   };

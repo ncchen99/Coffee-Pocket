@@ -5,7 +5,7 @@ export const TAG_LABELS: Record<string, string> = {
   quiet: "安靜",
   late_night: "22:00 後",
   near_3km: "3km 內",
-  group_4: "4 人",
+  chat: "適合聊天",
   now: "現在營業",
   reservable: "可訂位",
   pet: "寵物友善",

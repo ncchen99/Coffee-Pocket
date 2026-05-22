@@ -60,7 +60,12 @@ export function indexCafes(rows: RawCafe[]): IndexedCafe[] {
   }));
 }
 
-export type LocalSortKey = "distance" | "rating";
+export type LocalSortKey = "smart" | "distance" | "rating";
+
+/** 綜合分數：高評分加分，遠距離扣分。越大越前面。 */
+function smartScore(rating: number | null | undefined, distanceKm: number): number {
+  return (rating ?? 3.5) - 3.5 - 0.25 * distanceKm;
+}
 
 export interface LocalSearchParams {
   /** Frontend short keys (e.g. "socket")。AND 邏輯 — 全部都得命中。 */
@@ -138,7 +143,7 @@ export function searchCafesLocal(
   const qRaw = (params.q ?? "").trim();
   const qNorm = normalizeSearchText(qRaw);
   const qpNorm = qRaw ? normalizeSearchText(toQueryPinyin(qRaw)) : "";
-  const sort = params.sort ?? "distance";
+  const sort = params.sort ?? "smart";
 
   const scored: ScoredCafe[] = [];
   for (const c of index) {
@@ -170,6 +175,10 @@ export function searchCafesLocal(
       const ar = a.google_rating ?? -1;
       const br = b.google_rating ?? -1;
       if (ar !== br) return br - ar;
+    } else if (sort === "smart") {
+      const sa = smartScore(a.google_rating, a._distance_km);
+      const sb = smartScore(b.google_rating, b._distance_km);
+      if (sa !== sb) return sb - sa;
     } else if (hasLoc) {
       if (a._distance_km !== b._distance_km) return a._distance_km - b._distance_km;
     }

@@ -1,18 +1,31 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { ArrowLeft02Icon, Share01Icon, Settings01Icon } from "@hugeicons/core-free-icons";
+import { ArrowLeft02Icon, Share01Icon, Settings01Icon, ArrowDown01Icon } from "@hugeicons/core-free-icons";
 import { useIsDesktop } from "@/components/layout/Responsive";
 import { FilterChipBar, type ChipOption } from "@/components/search/FilterChipBar";
 import { CafeListItem } from "@/components/search/CafeListItem";
 import { CafeMap } from "@/components/search/CafeMap";
 import { SCENARIO_BY_KEY } from "@/components/search/ScenarioGrid";
+import { MobileChoiceSheet } from "@/components/primitives";
 import { useSearchSelection } from "@/hooks/useSearchSelection";
 import { useAllCafes } from "@/hooks/useCafes";
-import { searchCafesLocal } from "@/lib/cafeFilter";
+import { searchCafesLocal, type LocalSortKey } from "@/lib/cafeFilter";
 import { usePocketItems, usePockets } from "@/hooks/usePockets";
 import { useUserLocation } from "@/context/UserLocationContext";
 import { haversineKm } from "@/lib/format";
+const SORT_LABEL: Record<LocalSortKey, string> = {
+  smart: "綜合",
+  distance: "距離",
+  rating: "評分",
+};
+
+const SORT_OPTIONS_MOBILE: { value: LocalSortKey; label: string; description: string }[] = [
+  { value: "smart", label: "綜合", description: "結合距離與評分的推薦排序" },
+  { value: "distance", label: "距離", description: "離你最近的優先" },
+  { value: "rating", label: "評分", description: "Google 評分高的優先" },
+];
+
 const CHIP_OPTIONS: ChipOption[] = [
   { key: "now", label: "現在營業" },
   { key: "no_limit", label: "不限時" },
@@ -54,6 +67,8 @@ export default function MapPage() {
     useSearchSelection(initial, initialRadiusM, initialKeyword);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [sheet, setSheet] = useState<SheetMode>("half");
+  const [sortKey, setSortKey] = useState<LocalSortKey>("smart");
+  const [isSortOpen, setIsSortOpen] = useState(false);
   const [vh, setVh] = useState(() =>
     typeof window === "undefined" ? 0 : window.innerHeight,
   );
@@ -94,11 +109,11 @@ export default function MapPage() {
       radiusM,
       openAt,
       q: keyword,
-      sort: "distance",
+      sort: sortKey,
     });
     return { cafes, total: cafes.length };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [allCafes.data, tagsKey, orKey, location?.lng, location?.lat, radiusM, openAt, keyword]);
+  }, [allCafes.data, tagsKey, orKey, location?.lng, location?.lat, radiusM, openAt, keyword, sortKey]);
   const searchQuery = {
     data: searchResult,
     isLoading: allCafes.isLoading,
@@ -244,7 +259,15 @@ export default function MapPage() {
           </button>
           <header className="flex items-baseline justify-between px-5 pb-2">
             <h2 className="text-[15px] font-semibold">{listHeading}</h2>
-            {location && <span className="text-xs text-base-content/55">距離 ↓</span>}
+            <button
+              type="button"
+              onClick={() => setIsSortOpen(true)}
+              className="flex items-center gap-1 text-xs text-base-content/65 hover:text-base-content transition-colors px-1 py-0.5"
+              aria-haspopup="dialog"
+            >
+              {SORT_LABEL[sortKey]}
+              <HugeiconsIcon icon={ArrowDown01Icon} size={12} strokeWidth={1.5} />
+            </button>
           </header>
           <div className="divider my-0" />
           {isListError ? (
@@ -270,13 +293,22 @@ export default function MapPage() {
             >
               {cafes.map((c) => (
                 <li key={c.id} data-cafe-id={c.id}>
-                  <CafeListItem cafe={c} active={c.id === activeId} />
+                  <CafeListItem cafe={c} active={c.id === activeId} sortKey={sortKey} />
                 </li>
               ))}
             </ul>
           )}
         </section>
       </div>
+
+      <MobileChoiceSheet
+        isOpen={isSortOpen}
+        onClose={() => setIsSortOpen(false)}
+        title="選擇排序方式"
+        value={sortKey}
+        options={SORT_OPTIONS_MOBILE}
+        onChange={setSortKey}
+      />
     </div>
   );
 }

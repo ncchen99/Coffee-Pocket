@@ -13,8 +13,8 @@ interface CafeListItemProps {
   index?: number;
   active?: boolean;
   size?: "sm" | "md" | "lg";
-  /** 主排序欄位 — 影響右上角顯示距離或評分。預設 distance。 */
-  sortKey?: "distance" | "rating";
+  /** 主排序欄位 — 影響右上角顯示距離或評分。預設 smart（顯示距離）。 */
+  sortKey?: "smart" | "distance" | "rating";
   onHover?: (id: string | null) => void;
 }
 
@@ -23,7 +23,7 @@ export function CafeListItem({
   cafe,
   active,
   size = "md",
-  sortKey = "distance",
+  sortKey = "smart",
   onHover,
 }: CafeListItemProps) {
   const isDesktop = useIsDesktop();

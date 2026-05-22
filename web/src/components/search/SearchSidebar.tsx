@@ -8,7 +8,7 @@ import { CafeListItem } from "./CafeListItem";
 import { Cap } from "@/components/primitives";
 import type { CafeCard } from "@/types/cafe";
 
-export type SortKey = "distance" | "rating";
+export type SortKey = "smart" | "distance" | "rating";
 
 interface SearchSidebarProps {
   activeId: string | null;
@@ -37,6 +37,7 @@ interface SearchSidebarProps {
 }
 
 const SORT_OPTIONS: { value: SortKey; label: string }[] = [
+  { value: "smart", label: "綜合" },
   { value: "distance", label: "按距離" },
   { value: "rating", label: "按評分" },
 ];
@@ -72,7 +73,7 @@ export function SearchSidebar({
 
   const [isSortOpen, setIsSortOpen] = useState(false);
   const sortRef = useRef<HTMLDivElement>(null);
-  const currentSortLabel = SORT_OPTIONS.find((o) => o.value === sortKey)?.label ?? "按距離";
+  const currentSortLabel = SORT_OPTIONS.find((o) => o.value === sortKey)?.label ?? "綜合";
 
   // 直接在 chip / 場景點擊 handler 裡遞増，而非監聴 selected/scenario 變化，
   // 避免搜尋提交也會觸發（setAll 建立新 Set 導致參考變變）。

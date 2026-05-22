@@ -41,11 +41,11 @@ export const SCENARIOS: Scenario[] = [
     resolveOpenAt: todayAt20,
     icon: MoonIcon,
   },
-  // 聊天聚會 — 適合討論 OR 適合多人，並且不限時
+  // 聊天聚會 — 適合聊天 OR 適合多人，並且不限時
   {
     key: "group",
     title: "聊天聚會",
-    sub: "適合討論／多人・不限時",
+    sub: "適合聊天／多人・不限時",
     tags: ["no_limit"],
     tagsOr: ["chat", "group"],
     icon: UserMultipleIcon,

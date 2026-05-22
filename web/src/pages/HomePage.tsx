@@ -45,6 +45,11 @@ export default function HomePage() {
           onToggle={toggle}
           openAt={openAt}
           onOpenAtChange={setOpenAt}
+          showInlineResults
+          onClearTagsOnFocus={() => {
+            setAll([]);
+            setOpenAt(null);
+          }}
           onSubmit={(parsed, _softTags, parsedOpenAt, distanceKm, keyword) => {
             if (keyword) {
               setAll([]);
@@ -79,14 +84,6 @@ export default function HomePage() {
           className="btn btn-ghost btn-sm mt-4 gap-1 text-base-content/55"
         >
           ⚙ 進階篩選
-        </button>
-
-        <button
-          type="button"
-          onClick={() => goSearch()}
-          className="btn btn-neutral btn-block mt-4"
-        >
-          看符合的店 →
         </button>
       </main>
       <MobileTabBar />

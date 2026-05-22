@@ -56,4 +56,4 @@ export const TAG_LABEL_TO_KEY: Record<string, string> = Object.fromEntries(
   FILTER_TAG_GROUPS.flatMap((g) => g.tags.map((t) => [t.label, t.key])),
 );
 
-export const SORT_OPTIONS = ["距離", "評分", "熱門"];
+export const SORT_OPTIONS = ["綜合", "距離", "評分"];
