@@ -18,6 +18,12 @@ interface CafeMapProps {
   activeId?: string | null;
   userLocation?: { lng: number; lat: number } | null;
   onMarkerClick?: (id: string) => void;
+  /** 點空白地圖(非 marker)時觸發。供手機 bottom sheet 在詳細模式下縮成 mini。 */
+  onMapClick?: () => void;
+  /** 隱藏 +/- 縮放按鈕(手機改成全靠手指縮放,避免覆蓋 sheet 區域)。 */
+  hideZoomButtons?: boolean;
+  /** 隱藏定位按鈕(用於手機 sheet > 50% 時,避免按鈕被 sheet 蓋住)。 */
+  hideLocateButton?: boolean;
   /**
    * 視覺上會被其他面板遮蓋的邊距(px)。flyTo 會把這些邊距視為「不可見區域」,
    * 把選中咖啡廳定位在剩餘可見區域的中心。
@@ -163,10 +169,13 @@ export function CafeMap({
   activeId,
   userLocation,
   onMarkerClick,
+  onMapClick,
   paddingBottom = 0,
   paddingLeft = 0,
   className,
   fitToCafesKey = null,
+  hideZoomButtons = false,
+  hideLocateButton = false,
 }: CafeMapProps) {
   const { requestLocation, isLoading: isLocationLoading } = useUserLocation();
   const container = useRef<HTMLDivElement>(null);
@@ -202,6 +211,10 @@ export function CafeMap({
   useEffect(() => {
     onMarkerClickRef.current = onMarkerClick;
   }, [onMarkerClick]);
+  const onMapClickRef = useRef(onMapClick);
+  useEffect(() => {
+    onMapClickRef.current = onMapClick;
+  }, [onMapClick]);
 
   // init
   useEffect(() => {
@@ -230,6 +243,8 @@ export function CafeMap({
 
     // 確保 style 載入後設定一次(初始 config 在某些版本/快取狀態下會被忽略)
     map.on("style.load", () => applyStandardConfig(map, readTheme()));
+    // 點地圖空白處(marker 的 click 不會冒泡到 map,Mapbox 也有原生過濾)→ 通知父層
+    map.on("click", () => onMapClickRef.current?.());
 
     // 中間欄開合會讓 container 寬度連續變化 —— ResizeObserver 每幀通知一次,
     // map.resize() 重算 canvas + reproject,動畫過程不會出現黑邊或閃動。
@@ -397,43 +412,47 @@ export function CafeMap({
     <div className={`relative h-full w-full ${className ?? ""}`}>
       <div ref={container} className="h-full w-full" />
       <div className="absolute right-2.5 top-2.5 z-10 flex flex-col gap-2">
-        {/* 縮放按鈕組 */}
-        <div className="flex flex-col rounded-lg shadow-md border border-base-content/10 overflow-hidden bg-base-100">
-          <button
-            type="button"
-            onClick={() => mapRef.current?.zoomIn()}
-            className="btn btn-square btn-sm border-0 bg-base-100 text-base-content hover:bg-base-200 transition-colors duration-200 rounded-none h-8 w-8"
-            aria-label="放大"
-            title="放大"
-          >
-            <HugeiconsIcon icon={Add01Icon} size={16} strokeWidth={1.5} />
-          </button>
-          <div className="h-[1px] bg-base-content/10 w-full" />
-          <button
-            type="button"
-            onClick={() => mapRef.current?.zoomOut()}
-            className="btn btn-square btn-sm border-0 bg-base-100 text-base-content hover:bg-base-200 transition-colors duration-200 rounded-none h-8 w-8"
-            aria-label="縮小"
-            title="縮小"
-          >
-            <HugeiconsIcon icon={Remove01Icon} size={16} strokeWidth={1.5} />
-          </button>
-        </div>
+        {/* 縮放按鈕組 — 手機隱藏,讓使用者用雙指捏合縮放,避免占用 sheet 上方空間 */}
+        {!hideZoomButtons && (
+          <div className="flex flex-col rounded-lg shadow-md border border-base-content/10 overflow-hidden bg-base-100">
+            <button
+              type="button"
+              onClick={() => mapRef.current?.zoomIn()}
+              className="btn btn-square btn-sm border-0 bg-base-100 text-base-content hover:bg-base-200 transition-colors duration-200 rounded-none h-8 w-8"
+              aria-label="放大"
+              title="放大"
+            >
+              <HugeiconsIcon icon={Add01Icon} size={16} strokeWidth={1.5} />
+            </button>
+            <div className="h-[1px] bg-base-content/10 w-full" />
+            <button
+              type="button"
+              onClick={() => mapRef.current?.zoomOut()}
+              className="btn btn-square btn-sm border-0 bg-base-100 text-base-content hover:bg-base-200 transition-colors duration-200 rounded-none h-8 w-8"
+              aria-label="縮小"
+              title="縮小"
+            >
+              <HugeiconsIcon icon={Remove01Icon} size={16} strokeWidth={1.5} />
+            </button>
+          </div>
+        )}
 
-        {/* 定位按鈕 */}
-        <button
-          type="button"
-          onClick={handleLocateClick}
-          className="btn btn-square btn-sm border border-base-content/10 bg-base-100 shadow-md text-base-content hover:bg-base-200 transition-colors duration-200 h-8 w-8"
-          aria-label="回到現在位置"
-          title="回到現在位置"
-        >
-          {isLocationLoading ? (
-            <span className="loading loading-spinner loading-xs text-base-content/70" />
-          ) : (
-            <HugeiconsIcon icon={Navigation03Icon} size={16} strokeWidth={1.5} />
-          )}
-        </button>
+        {/* 定位按鈕 — 手機 sheet > 50% 時隱藏(會被 sheet 蓋住) */}
+        {!hideLocateButton && (
+          <button
+            type="button"
+            onClick={handleLocateClick}
+            className="btn btn-square btn-sm border border-base-content/10 bg-base-100 shadow-md text-base-content hover:bg-base-200 transition-colors duration-200 h-8 w-8"
+            aria-label="回到現在位置"
+            title="回到現在位置"
+          >
+            {isLocationLoading ? (
+              <span className="loading loading-spinner loading-xs text-base-content/70" />
+            ) : (
+              <HugeiconsIcon icon={Navigation03Icon} size={16} strokeWidth={1.5} />
+            )}
+          </button>
+        )}
       </div>
     </div>
   );

@@ -18,7 +18,8 @@
     "pinyin-pro": "^3.28.1",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
-    "react-router-dom": "^6.27.0"
+    "react-router-dom": "^6.27.0",
+    "vaul": "^1.1.2"
   },
   "devDependencies": {
     "@types/mapbox-gl": "^3.4.0",

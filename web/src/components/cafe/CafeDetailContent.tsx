@@ -25,10 +25,17 @@ interface CafeDetailContentProps {
   cafe: CafeDetail;
   isDesktop: boolean;
   actions: CafeActions;
+  /**
+   * 封面圖位置:
+   *   "top"        — 預設,放在最上方(桌面與舊版手機行為)。
+   *   "mid"        — 放在「AI 摘要」與「行動按鈕」之間。供手機 bottom sheet
+   *                  使用,讓使用者把 sheet 上拉時才看到封面,作為向上探索的獎勵。
+   */
+  coverPlacement?: "top" | "mid";
 }
 
 /** 詳細頁主體 — 桌面中間欄與手機 main 共用。 */
-export function CafeDetailContent({ cafe, isDesktop, actions }: CafeDetailContentProps) {
+export function CafeDetailContent({ cafe, isDesktop, actions, coverPlacement = "top" }: CafeDetailContentProps) {
   const { user } = useAuth();
   const [isAddTagOpen, setIsAddTagOpen] = useState(false);
   const { data: userVotes } = useUserVotesForCafe(user ? cafe.id : null);
@@ -107,15 +114,89 @@ export function CafeDetailContent({ cafe, isDesktop, actions }: CafeDetailConten
       : { href: cafe.google_url }
     : null;
 
+  const cover = cafe.cover_url ? (
+    <div className="aspect-[16/9] w-full overflow-hidden bg-base-200">
+      <img src={cafe.cover_url} alt="" className="h-full w-full object-cover" />
+    </div>
+  ) : (
+    <Placeholder ratio="16/9" label="hero" />
+  );
+
+  // 行動按鈕區段獨立出來,因為手機 bottom sheet 排版時會夾在「AI 摘要」與「封面」之後。
+  const actionButtons = (
+    <section className="px-5 pt-4">
+      <div className="flex gap-2">
+        {user && (
+          <button
+            type="button"
+            onClick={handlePocketClick}
+            disabled={pocketDisabled}
+            className={`btn btn-sm flex-1 gap-1.5 rounded-none ${inPocket ? "btn-neutral" : "btn-outline"}`}
+          >
+            <HugeiconsIcon
+              icon={inPocket ? BookmarkCheck02Icon : Bookmark02Icon}
+              size={14}
+              strokeWidth={1.5}
+            />
+            <span className="truncate">{pocketLabel}</span>
+          </button>
+        )}
+        <button
+          type="button"
+          onClick={() => shareUrl(window.location.href, cafe.name)}
+          className="btn btn-sm btn-outline flex-1 gap-1.5 rounded-none"
+          aria-label="分享咖啡廳"
+        >
+          <HugeiconsIcon icon={LinkForwardIcon} size={14} strokeWidth={1.5} />
+          <span className="truncate">分享</span>
+        </button>
+        {mapLinkProps ? (
+          <a
+            {...mapLinkProps}
+            className="btn btn-sm btn-outline flex-1 gap-1.5 rounded-none"
+            aria-label="在 Google Maps 開啟"
+          >
+            <HugeiconsIcon icon={Navigation03Icon} size={14} strokeWidth={1.5} />
+            <span className="truncate">地圖開啟</span>
+          </a>
+        ) : (
+          <button
+            type="button"
+            disabled
+            className="btn btn-sm btn-outline flex-1 gap-1.5 rounded-none"
+          >
+            <HugeiconsIcon icon={Navigation03Icon} size={14} strokeWidth={1.5} />
+            <span className="truncate">地圖開啟</span>
+          </button>
+        )}
+      </div>
+    </section>
+  );
+
+  const aiSummary = (
+    <>
+      <div className="divider mx-5" />
+      <section className="px-5">
+        <Cap>AI 摘要</Cap>
+        <div
+          role="status"
+          className="alert alert-info bg-base-200 mt-2 text-base-content border border-base-content/10"
+        >
+          {cafe.ai_summary ? (
+            <span className="text-sm leading-relaxed">{cafe.ai_summary}</span>
+          ) : (
+            <span className="text-sm leading-relaxed text-base-content/55">
+              這間店的 AI 摘要還在準備中，敬請期待。
+            </span>
+          )}
+        </div>
+      </section>
+    </>
+  );
+
   return (
     <>
-      {cafe.cover_url ? (
-        <div className="aspect-[16/9] w-full overflow-hidden bg-base-200">
-          <img src={cafe.cover_url} alt="" className="h-full w-full object-cover" />
-        </div>
-      ) : (
-        <Placeholder ratio="16/9" label="hero" />
-      )}
+      {coverPlacement === "top" && cover}
 
       {/* === 1. 咖啡廳資訊 === */}
       <section className="px-5 pt-5">
@@ -187,73 +268,22 @@ export function CafeDetailContent({ cafe, isDesktop, actions }: CafeDetailConten
         </div>
       </section>
 
-      {/* === 2. 行動按鈕：加入口袋 / 分享 / Google 導航 === */}
-      {/* 未登入時,「加入口袋」與「回報問題」等需登入功能一律不顯示,避免誤導。 */}
-      <section className="px-5 pt-4">
-        <div className="flex gap-2">
-          {user && (
-            <button
-              type="button"
-              onClick={handlePocketClick}
-              disabled={pocketDisabled}
-              className={`btn btn-sm flex-1 gap-1.5 rounded-none ${inPocket ? "btn-neutral" : "btn-outline"}`}
-            >
-              <HugeiconsIcon
-                icon={inPocket ? BookmarkCheck02Icon : Bookmark02Icon}
-                size={14}
-                strokeWidth={1.5}
-              />
-              <span className="truncate">{pocketLabel}</span>
-            </button>
-          )}
-          <button
-            type="button"
-            onClick={() => shareUrl(window.location.href, cafe.name)}
-            className="btn btn-sm btn-outline flex-1 gap-1.5 rounded-none"
-            aria-label="分享咖啡廳"
-          >
-            <HugeiconsIcon icon={LinkForwardIcon} size={14} strokeWidth={1.5} />
-            <span className="truncate">分享</span>
-          </button>
-          {mapLinkProps ? (
-            <a
-              {...mapLinkProps}
-              className="btn btn-sm btn-outline flex-1 gap-1.5 rounded-none"
-              aria-label="在 Google Maps 開啟"
-            >
-              <HugeiconsIcon icon={Navigation03Icon} size={14} strokeWidth={1.5} />
-              <span className="truncate">地圖開啟</span>
-            </a>
-          ) : (
-            <button
-              type="button"
-              disabled
-              className="btn btn-sm btn-outline flex-1 gap-1.5 rounded-none"
-            >
-              <HugeiconsIcon icon={Navigation03Icon} size={14} strokeWidth={1.5} />
-              <span className="truncate">地圖開啟</span>
-            </button>
-          )}
-        </div>
-      </section>
-
-      {/* === 3. AI 摘要 === */}
-      <div className="divider mx-5" />
-      <section className="px-5">
-        <Cap>AI 摘要</Cap>
-        <div
-          role="status"
-          className="alert alert-info bg-base-200 mt-2 text-base-content border border-base-content/10"
-        >
-          {cafe.ai_summary ? (
-            <span className="text-sm leading-relaxed">{cafe.ai_summary}</span>
-          ) : (
-            <span className="text-sm leading-relaxed text-base-content/55">
-              這間店的 AI 摘要還在準備中，敬請期待。
-            </span>
-          )}
-        </div>
-      </section>
+      {coverPlacement === "top" ? (
+        <>
+          {/* === 2. 行動按鈕 → 3. AI 摘要 (預設順序,桌面用) === */}
+          {actionButtons}
+          {aiSummary}
+        </>
+      ) : (
+        <>
+          {/* 手機 bottom sheet 排版:資訊 → 行動按鈕 → 封面 → AI 摘要 → 其他。
+              使用者一進詳細頁(預設 50%)就先看到資訊、立刻能操作的功能按鈕;
+              再往上拉才看到封面圖,接著才是 AI 摘要與標籤等深入內容。 */}
+          {actionButtons}
+          <div className="mt-4">{cover}</div>
+          {aiSummary}
+        </>
+      )}
 
       <div className="divider mx-5" />
       <section className="px-5">

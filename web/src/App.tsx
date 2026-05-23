@@ -18,7 +18,6 @@ import { useUserLocation } from "@/context/UserLocationContext";
 import { haversineKm } from "@/lib/format";
 import HomePage from "./pages/HomePage";
 import MapPage from "./pages/MapPage";
-import CafeDetailPage from "./pages/CafeDetailPage";
 import LoginPage from "./pages/LoginPage";
 import PocketListPage from "./pages/PocketListPage";
 import ProfilePage from "./pages/ProfilePage";
@@ -54,7 +53,8 @@ export default function App() {
       <Route path="/" element={isOnboarded() ? <HomePage /> : <Navigate to="/onboarding" replace />} />
       <Route path="/map" element={isOnboarded() ? <MapPage /> : <Navigate to="/onboarding" replace />} />
       <Route path="/filter" element={isOnboarded() ? <FilterPage /> : <Navigate to="/onboarding" replace />} />
-      <Route path="/cafe/:slug" element={isOnboarded() ? <CafeDetailPage /> : <Navigate to="/onboarding" replace />} />
+      {/* 手機端 cafe 詳細頁與地圖整合 —— 沿用 MapPage,內部偵測 :slug 切換 sheet 內容 */}
+      <Route path="/cafe/:slug" element={isOnboarded() ? <MapPage /> : <Navigate to="/onboarding" replace />} />
       <Route path="/login" element={isOnboarded() ? <LoginPage /> : <Navigate to="/onboarding" replace />} />
       <Route path="/pocket" element={isOnboarded() ? <PocketListPage /> : <Navigate to="/onboarding" replace />} />
       <Route path="/profile" element={isOnboarded() ? <ProfilePage /> : <Navigate to="/onboarding" replace />} />
