@@ -89,6 +89,7 @@ def upsert_reviews_from_local(cafe_id: str, reviews: list[dict[str, Any]]) -> li
                 "external_id": r["external_id"],
                 "text": r["text"],
                 "processed_at": meta.get("processed_at"),
+                "_row": r,
             }
         )
     return result
@@ -101,20 +102,29 @@ def write_dead_letter(payload: Any, error: str) -> None:
     ).execute()
 
 
-def mark_processed(review_ids: list[str], signals_by_review: dict[str, list[dict]]) -> None:
-    if not review_ids:
+def mark_processed(
+    processed: list[dict[str, Any]],
+    signals_by_review: dict[str, list[dict]],
+) -> None:
+    """Batch-upsert processed_at + extracted_signals.
+
+    Each item must carry the original full row under `_row` so the INSERT
+    branch of upsert can satisfy NOT NULL constraints; conflict resolves
+    on (source_id, external_id) and updates in place.
+    """
+    if not processed:
         return
     db = get_client()
     now = datetime.now(timezone.utc).isoformat()
     rows = [
         {
-            "id": rid,
+            **item["_row"],
             "processed_at": now,
-            "extracted_signals": signals_by_review.get(rid, []),
+            "extracted_signals": signals_by_review.get(item["id"], []),
         }
-        for rid in review_ids
+        for item in processed
     ]
-    db.table("reviews_raw").upsert(rows).execute()
+    db.table("reviews_raw").upsert(rows, on_conflict="source_id,external_id").execute()
 
 
 def extract_chunk(chunk: list[dict[str, str]]) -> ExtractionResult:
@@ -145,7 +155,8 @@ def process_file(path: Path, *, run_llm: bool, only_unprocessed: bool) -> dict[s
     chunks = [items[i : i + CHUNK_SIZE] for i in range(0, len(items), CHUNK_SIZE)]
 
     signals_by_review: dict[str, list[dict]] = {r["id"]: [] for r in todo}
-    processed_ids: list[str] = []
+    processed_items: list[dict[str, Any]] = []
+    by_id = {r["id"]: r for r in todo}
     total_signals = 0
 
     for idx, chunk in enumerate(chunks):
@@ -161,10 +172,10 @@ def process_file(path: Path, *, run_llm: bool, only_unprocessed: bool) -> dict[s
             total_signals += 1
             if sig.review_id and sig.review_id in signals_by_review:
                 signals_by_review[sig.review_id].append(sig.model_dump())
-        processed_ids.extend(item["id"] for item in chunk)
+        processed_items.extend(by_id[item["id"]] for item in chunk)
 
-    mark_processed(processed_ids, signals_by_review)
-    logger.info("  → %d signals extracted across %d reviews", total_signals, len(processed_ids))
+    mark_processed(processed_items, signals_by_review)
+    logger.info("  → %d signals extracted across %d reviews", total_signals, len(processed_items))
     return {"reviews": len(upserted), "signals": total_signals}
 
 
