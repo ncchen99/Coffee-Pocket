@@ -26,3 +26,8 @@ data/.auth/
 # Supabase
 
 supabase/.temp
+
+# Firebase
+.firebase/
+firebase-debug.log
+firebase-debug.*.log
