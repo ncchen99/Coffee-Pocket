@@ -3,7 +3,6 @@ import { Link } from "react-router-dom";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Settings01Icon, Mail01Icon, Logout01Icon } from "@hugeicons/core-free-icons";
 import { Cap, ConfirmModal } from "@/components/primitives";
-import { MobileTabBar } from "@/components/layout/MobileTabBar";
 import { useAuth } from "@/hooks/useAuth";
 import { useUserStats, useContributions } from "@/hooks/useProfile";
 
@@ -23,23 +22,8 @@ function relativeTime(iso: string): string {
   return new Date(iso).toLocaleDateString();
 }
 
-function ContributionsSkeleton() {
-  return (
-    <ul className="space-y-4 mt-3">
-      {Array.from({ length: 3 }).map((_, i) => (
-        <li key={i} className="flex flex-col gap-2">
-          <div className="h-4 w-32 bg-base-200 animate-pulse rounded" />
-          <div className="h-3 w-20 bg-base-200 animate-pulse rounded" />
-        </li>
-      ))}
-    </ul>
-  );
-}
-
-/**
- * 個人頁 — 顯示使用者口袋數量、貢獻紀錄、設定入口。
- */
-export default function ProfilePage() {
+/** 個人 tab 的 sheet 內容 — 從原 ProfilePage 抽出。 */
+export function ProfileSheetContent() {
   const { user, loading: authLoading, signOut } = useAuth();
   const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
   const { data: stats } = useUserStats(user?.id ?? null);
@@ -50,49 +34,26 @@ export default function ProfilePage() {
 
   if (authLoading) {
     return (
-      <div className="flex min-h-screen flex-col bg-base-100">
-        <section className="border-b border-base-content/10 px-5 py-5">
-          <div className="flex items-center gap-3">
-            <div className="h-10 w-10 bg-base-200 animate-pulse rounded-full" />
-            <div className="flex flex-col gap-2">
-              <div className="h-4 w-24 bg-base-200 animate-pulse rounded" />
-              <div className="h-3 w-32 bg-base-200 animate-pulse rounded" />
-            </div>
+      <div className="px-5 py-6 space-y-4">
+        <div className="flex items-center gap-3">
+          <div className="h-10 w-10 animate-pulse rounded-full bg-base-200" />
+          <div className="flex-1 space-y-2">
+            <div className="h-4 w-24 animate-pulse rounded bg-base-200" />
+            <div className="h-3 w-32 animate-pulse rounded bg-base-200" />
           </div>
-        </section>
-        <section className="border-b border-base-content/10 px-5 py-4">
-          <div className="h-4 w-16 bg-base-200 animate-pulse rounded mb-3" />
-          <div className="grid grid-cols-3 divide-x divide-base-content/10">
-            {Array.from({ length: 3 }).map((_, i) => (
-              <div key={i} className="flex flex-col items-center gap-2">
-                <div className="h-6 w-8 bg-base-200 animate-pulse rounded" />
-                <div className="h-3 w-8 bg-base-200 animate-pulse rounded" />
-              </div>
-            ))}
-          </div>
-        </section>
-        <section className="flex-1 border-b border-base-content/10 px-5 py-4">
-          <div className="h-4 w-16 bg-base-200 animate-pulse rounded mb-3" />
-          <ContributionsSkeleton />
-        </section>
-        <MobileTabBar />
+        </div>
       </div>
     );
   }
 
   if (!user) {
     return (
-      <div className="flex min-h-screen flex-col bg-base-100">
-        <div className="flex flex-1 flex-col items-center justify-center px-6 text-center">
-          <p className="text-lg font-semibold">登入來管理你的口袋</p>
-          <p className="mt-1 text-sm text-base-content/55">
-            收藏、貢獻紀錄都在這裡
-          </p>
-          <Link to="/login" className="btn btn-neutral mt-6">
-            登入
-          </Link>
-        </div>
-        <MobileTabBar />
+      <div className="flex flex-col items-center justify-center px-6 py-12 text-center">
+        <p className="text-lg font-semibold">登入來管理你的口袋</p>
+        <p className="mt-1 text-sm text-base-content/55">收藏、貢獻紀錄都在這裡</p>
+        <Link to="/login" className="btn btn-neutral mt-6">
+          登入
+        </Link>
       </div>
     );
   }
@@ -101,9 +62,8 @@ export default function ProfilePage() {
   const avatarUrl = user.user_metadata?.avatar_url as string | undefined;
 
   return (
-    <div className="flex min-h-screen flex-col bg-base-100">
-      {/* Header */}
-      <section className="border-b border-base-content/10 px-5 py-5">
+    <div className="flex h-full flex-col overflow-y-auto">
+      <section className="border-b border-base-content/10 px-5 py-4">
         <div className="flex items-center gap-3">
           {avatarUrl ? (
             <img src={avatarUrl} alt="" className="h-10 w-10 rounded-full" />
@@ -119,7 +79,6 @@ export default function ProfilePage() {
         </div>
       </section>
 
-      {/* Stats */}
       <section className="border-b border-base-content/10 px-5 py-4">
         <Cap>我的數字</Cap>
         <div className="mt-3 grid grid-cols-3 divide-x divide-base-content/10 text-center">
@@ -140,11 +99,17 @@ export default function ProfilePage() {
         </div>
       </section>
 
-      {/* Contributions */}
-      <section className="flex-1 border-b border-base-content/10 px-5 py-4">
+      <section className="border-b border-base-content/10 px-5 py-4">
         <Cap>我的貢獻</Cap>
         {contributionsLoading ? (
-          <ContributionsSkeleton />
+          <ul className="mt-3 space-y-3">
+            {Array.from({ length: 3 }).map((_, i) => (
+              <li key={i}>
+                <div className="h-4 w-32 animate-pulse rounded bg-base-200" />
+                <div className="mt-1 h-3 w-20 animate-pulse rounded bg-base-200" />
+              </li>
+            ))}
+          </ul>
         ) : contributions.length === 0 ? (
           <p className="mt-3 text-sm text-base-content/55">還沒有貢獻紀錄</p>
         ) : (
@@ -165,17 +130,32 @@ export default function ProfilePage() {
         )}
       </section>
 
-      {/* Menu */}
       <ul className="divide-y divide-base-content/10 border-b border-base-content/10">
         <li>
-          <Link to="/settings" className="flex items-center gap-3 px-5 py-3 active:bg-base-200/60">
-            <HugeiconsIcon icon={Settings01Icon} size={16} strokeWidth={1.5} className="text-base-content/65" />
+          <Link
+            to="/settings"
+            className="flex items-center gap-3 px-5 py-3 active:bg-base-200/60"
+          >
+            <HugeiconsIcon
+              icon={Settings01Icon}
+              size={16}
+              strokeWidth={1.5}
+              className="text-base-content/65"
+            />
             <span className="text-sm">設定</span>
           </Link>
         </li>
         <li>
-          <a href="mailto:feedback@coffeepocket.tw" className="flex items-center gap-3 px-5 py-3 active:bg-base-200/60">
-            <HugeiconsIcon icon={Mail01Icon} size={16} strokeWidth={1.5} className="text-base-content/65" />
+          <a
+            href="mailto:feedback@coffeepocket.tw"
+            className="flex items-center gap-3 px-5 py-3 active:bg-base-200/60"
+          >
+            <HugeiconsIcon
+              icon={Mail01Icon}
+              size={16}
+              strokeWidth={1.5}
+              className="text-base-content/65"
+            />
             <span className="text-sm">反饋</span>
           </a>
         </li>
@@ -185,13 +165,16 @@ export default function ProfilePage() {
             onClick={() => setIsLogoutModalOpen(true)}
             className="flex w-full items-center gap-3 px-5 py-3 active:bg-base-200/60"
           >
-            <HugeiconsIcon icon={Logout01Icon} size={16} strokeWidth={1.5} className="text-base-content/65" />
+            <HugeiconsIcon
+              icon={Logout01Icon}
+              size={16}
+              strokeWidth={1.5}
+              className="text-base-content/65"
+            />
             <span className="text-sm">登出</span>
           </button>
         </li>
       </ul>
-
-      <MobileTabBar />
 
       <ConfirmModal
         isOpen={isLogoutModalOpen}

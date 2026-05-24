@@ -9,13 +9,19 @@ const TABS = [
   { to: "/profile", icon: UserIcon, label: "我" },
 ] as const;
 
-/** 手機底部分頁列 — 固定在螢幕最下方。 */
+/**
+ * 手機底部分頁列。
+ * 因為 sheet (vaul drawer) 用 z-20、cafe detail 用更高 z,這個 tab bar 必須 z 高過
+ * 它們才會永遠浮在最上層 — 切換 tab 是全應用的入口,不能被 sheet 蓋住。
+ * 改用半透明 bg + backdrop-blur,讓背景地圖在 tab bar 後方仍可隱約看見。
+ */
 export function MobileTabBar() {
   const { pathname } = useLocation();
 
   return (
-    <nav className="sticky bottom-0 z-30 flex border-t border-base-content/10 bg-base-100">
+    <nav className="fixed inset-x-0 bottom-0 z-40 flex border-t border-base-content/10 bg-base-100/90 backdrop-blur">
       {TABS.map((tab) => {
+        // /cafe/:slug 與其他子路由不主動點亮任何 tab — 點 ← 後 history 會回到正確 tab
         const active = pathname === tab.to;
         return (
           <Link

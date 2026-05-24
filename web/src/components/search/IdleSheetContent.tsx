@@ -1,0 +1,46 @@
+import { CafeListItem } from "@/components/search/CafeListItem";
+import type { CafeCard } from "@/types/cafe";
+
+interface Props {
+  cafes: CafeCard[];
+  isLoading: boolean;
+  isError: boolean;
+}
+
+/** Idle 模式的 sheet 內容 — 顯示「附近的好咖啡」推薦列表。 */
+export function IdleSheetContent({ cafes, isLoading, isError }: Props) {
+  return (
+    <>
+      <header className="flex items-baseline justify-between px-5 pb-2">
+        <h2 className="text-[15px] font-semibold">附近的好咖啡</h2>
+        <span className="text-xs text-base-content/55">推薦</span>
+      </header>
+      <div className="divider my-0" />
+      {isError ? (
+        <p className="px-5 py-6 text-center text-sm text-base-content/55">
+          載入失敗，請稍後再試
+        </p>
+      ) : isLoading ? (
+        <ul className="flex-1 divide-y divide-base-content/10 overflow-y-auto">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <li key={i} className="px-5 py-3">
+              <div className="h-14 animate-pulse rounded bg-base-200" />
+            </li>
+          ))}
+        </ul>
+      ) : cafes.length === 0 ? (
+        <p className="px-5 py-6 text-center text-sm text-base-content/55">
+          附近找不到咖啡店
+        </p>
+      ) : (
+        <ul className="flex-1 divide-y divide-base-content/10 overflow-y-auto">
+          {cafes.map((c) => (
+            <li key={c.id} data-cafe-id={c.id}>
+              <CafeListItem cafe={c} sortKey="smart" />
+            </li>
+          ))}
+        </ul>
+      )}
+    </>
+  );
+}

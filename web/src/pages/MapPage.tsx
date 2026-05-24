@@ -1,26 +1,26 @@
 import { useEffect, useMemo, useRef, useState, useCallback } from "react";
-import { useNavigate, useSearchParams, useMatch, Link, useLocation } from "react-router-dom";
+import { useNavigate, useSearchParams, useMatch, useLocation } from "react-router-dom";
 import { Drawer } from "vaul";
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
-  ArrowLeft02Icon,
-  Share01Icon,
-  Settings01Icon,
   ArrowDown01Icon,
   Cancel01Icon,
-  LinkForwardIcon,
-  Bookmark02Icon,
-  BookmarkCheck02Icon,
   AlertCircleIcon,
+  Settings01Icon,
 } from "@hugeicons/core-free-icons";
 import { useIsDesktop } from "@/components/layout/Responsive";
-import { FilterChipBar, type ChipOption } from "@/components/search/FilterChipBar";
 import { CafeListItem } from "@/components/search/CafeListItem";
 import { CafeMap } from "@/components/search/CafeMap";
-import { SCENARIO_BY_KEY } from "@/components/search/ScenarioGrid";
+import { SCENARIO_BY_KEY, type Scenario } from "@/components/search/ScenarioGrid";
 import { MobileChoiceSheet } from "@/components/primitives";
 import { CafeDetailContent } from "@/components/cafe/CafeDetailContent";
 import { CafeActionModals } from "@/components/cafe/CafeActionModals";
+import { MobileTabBar } from "@/components/layout/MobileTabBar";
+import { MapSearchOverlay, type SearchMode } from "@/components/search/MapSearchOverlay";
+import { IdleSheetContent } from "@/components/search/IdleSheetContent";
+import { SearchingSheetContent } from "@/components/search/SearchingSheetContent";
+import { PocketSheetContent } from "@/components/cafe/PocketSheetContent";
+import { ProfileSheetContent } from "@/components/cafe/ProfileSheetContent";
 import { useSearchSelection } from "@/hooks/useSearchSelection";
 import { useAllCafes, useCafeDetail } from "@/hooks/useCafes";
 import { useCafeActions } from "@/hooks/useCafeActions";
@@ -28,7 +28,21 @@ import { searchCafesLocal, type LocalSortKey } from "@/lib/cafeFilter";
 import { usePocketItems, usePockets } from "@/hooks/usePockets";
 import { useUserLocation } from "@/context/UserLocationContext";
 import { haversineKm } from "@/lib/format";
-import { shareUrl } from "@/lib/share";
+
+type MobileTab = "home" | "pocket" | "profile";
+
+/**
+ * Sheet snap points 依 (tab, isDetail) 組合切換。
+ *   - detail: [0.3, 0.5, 0.9]
+ *   - home / pocket: [0.3, 0.7]
+ *   - profile: [0.55, 0.9]
+ *
+ * Searching 模式不走 drawer,而是另一個全屏 overlay,所以這裡不列。
+ */
+const DETAIL_SNAPS: (number | string)[] = [0.3, 0.5, 0.9];
+const HOME_SNAPS: (number | string)[] = [0.3, 0.7];
+const POCKET_SNAPS: (number | string)[] = [0.3, 0.7];
+const PROFILE_SNAPS: (number | string)[] = [0.55, 0.9];
 
 const SORT_LABEL: Record<LocalSortKey, string> = {
   smart: "綜合",
@@ -42,106 +56,143 @@ const SORT_OPTIONS_MOBILE: { value: LocalSortKey; label: string; description: st
   { value: "rating", label: "評分", description: "Google 評分高的優先" },
 ];
 
-const CHIP_OPTIONS: ChipOption[] = [
-  { key: "now", label: "現在營業" },
-  { key: "no_limit", label: "不限時" },
-  { key: "socket", label: "有插座" },
-  { key: "study", label: "適合讀書" },
-];
+const IDLE_RECOMMEND_LIMIT = 30;
+
+function pathToTab(pathname: string): MobileTab {
+  if (pathname.startsWith("/pocket")) return "pocket";
+  if (pathname.startsWith("/profile")) return "profile";
+  return "home";
+}
 
 /**
- * Sheet snap points 參考 Google Maps:
- *   - 列表模式 (list):  [0.3, 0.7] —— peek / full
- *   - 詳細模式 (detail): [0.3, 0.5, 0.9] —— mini / half / expanded
- *
- * 改用 vaul 後,拖曳/momentum/snap/click-vs-drag/inner-scroll 全部由套件處理,
- * 我們只負責給 snapPoints 與監聽 activeSnapPoint 來連動地圖。
- */
-const LIST_SNAPS: (number | string)[] = [0.3, 0.7];
-const DETAIL_SNAPS: (number | string)[] = [0.3, 0.5, 0.9];
-
-/**
- * 桌面已在 / 首頁整合,/map 主要服務手機。
- * 為了直接連結時 desktop 也能看,desktop redirect 到首頁。
- *
- * 手機端 /cafe/:slug 也由本元件處理 —— 路徑包含 slug 即進入「詳細模式」,
- * sheet 內容從列表切成 CafeDetailContent,封面圖位置改放在 AI 摘要之後。
+ * 手機端的單一 shell:Map 永不卸載,MapSearchOverlay 浮動於上(僅 home tab),
+ * 底部 vaul Drawer 依 (tab, isDetail) 切換內容,searching 模式則覆蓋一層全屏 overlay。
+ * MobileTabBar 永遠在最底層 z-index 之上,可隨時切 home / pocket / profile。
  */
 export default function MapPage() {
   const isDesktop = useIsDesktop();
   const navigate = useNavigate();
-  const location = useLocation();
+  const routerLocation = useLocation();
   const [params] = useSearchParams();
   const cafeMatch = useMatch("/cafe/:slug");
   const detailSlug = cafeMatch?.params.slug ?? null;
   const isDetailMode = !!detailSlug;
+  const tab: MobileTab = pathToTab(routerLocation.pathname);
 
-  const initial = params.getAll("tag");
-  const initialScenario = params.get("scenario");
+  // URL 初始化(保留分享 / 書籤)
+  const initialTags = useMemo(() => params.getAll("tag"), [params]);
   const initialOpenAt = params.get("open_at");
+  const initialKeyword = params.get("q");
+  const initialScenario = params.get("scenario");
   const initialD = params.get("d");
   const initialRadiusM = initialD != null ? Number(initialD) * 1000 : null;
-  const initialKeyword = params.get("q");
-  const pocketId = params.get("pocket");
-  const { selected, orSelected, toggle, scenario, pickScenario, openAt, setOpenAt, radiusM, keyword } =
-    useSearchSelection(initial, initialRadiusM, initialKeyword);
+  const pocketIdFromUrl = params.get("pocket");
 
-  const [activeId, setActiveId] = useState<string | null>(null);
-  // 由 vaul 控制的 active snap。模式切換時在 effect 裡同步預設值。
-  const [snap, setSnap] = useState<number | string | null>(0.3);
-  const snapPoints = useMemo(() => (isDetailMode ? DETAIL_SNAPS : LIST_SNAPS), [isDetailMode]);
+  const {
+    selected,
+    orSelected,
+    toggle,
+    setAll,
+    setOrSelected,
+    query,
+    setQuery,
+    scenario,
+    pickScenario,
+    openAt,
+    setOpenAt,
+    radiusM,
+    setRadiusM,
+    keyword,
+    setKeyword,
+  } = useSearchSelection(initialTags, initialRadiusM, initialKeyword);
 
-  const [sortKey, setSortKey] = useState<LocalSortKey>("smart");
-  const [isSortOpen, setIsSortOpen] = useState(false);
+  // searchMode 衍生
+  const hasActiveSearch =
+    selected.size > 0 ||
+    !!keyword ||
+    !!query.trim() ||
+    !!scenario ||
+    !!openAt ||
+    radiusM != null;
+  const [isSearching, setIsSearching] = useState(false);
+  const searchMode: SearchMode = isSearching
+    ? "searching"
+    : hasActiveSearch
+    ? "results"
+    : "idle";
+
+  // 切到 detail 或非 home tab 時關掉 searching
+  useEffect(() => {
+    if (isDetailMode || tab !== "home") setIsSearching(false);
+  }, [isDetailMode, tab]);
+
+  // ─── Sheet snap (vaul) ──────────────────────────
+  const snapPoints = useMemo(() => {
+    if (isDetailMode) return DETAIL_SNAPS;
+    if (tab === "pocket") return POCKET_SNAPS;
+    if (tab === "profile") return PROFILE_SNAPS;
+    return HOME_SNAPS;
+  }, [isDetailMode, tab]);
+  const [snap, setSnap] = useState<number | string | null>(snapPoints[0]);
+
+  // 切換 mode → 重設 snap 到該模式預設位置
+  const prevSlugRef = useRef<string | null>(null);
+  const prevTabRef = useRef<MobileTab>(tab);
+  const sheetScrollRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (detailSlug && detailSlug !== prevSlugRef.current) {
+      setSnap(0.5);
+      sheetScrollRef.current?.scrollTo({ top: 0 });
+    } else if (!detailSlug && prevSlugRef.current) {
+      // 離開 detail → 回到當前 tab 的預設 snap
+      setSnap(snapPoints[0]);
+    }
+    prevSlugRef.current = detailSlug;
+  }, [detailSlug, snapPoints]);
+  useEffect(() => {
+    if (tab !== prevTabRef.current) {
+      setSnap(snapPoints[0]);
+      prevTabRef.current = tab;
+    }
+  }, [tab, snapPoints]);
+
   const [vh, setVh] = useState(() =>
     typeof window === "undefined" ? 0 : window.innerHeight,
   );
-  const listRef = useRef<HTMLUListElement>(null);
-  const sheetScrollRef = useRef<HTMLDivElement>(null);
-
-  // 啟動時根據 URL ?scenario= 還原場景模式 (僅執行一次)
-  useEffect(() => {
-    if (initialScenario && SCENARIO_BY_KEY[initialScenario]) {
-      pickScenario(SCENARIO_BY_KEY[initialScenario]);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  useEffect(() => {
-    if (initialOpenAt) {
-      setOpenAt(initialOpenAt);
-    }
-  }, [initialOpenAt, setOpenAt]);
-
   useEffect(() => {
     const onResize = () => setVh(window.innerHeight);
     window.addEventListener("resize", onResize);
     return () => window.removeEventListener("resize", onResize);
   }, []);
 
-  // 模式切換時把 snap 預設到該模式的常用位置 —— 進詳細頁停在 half(0.5),
-  // 回列表停在 peek(0.3)。切到別家店時也順便把 sheet 內容滾回頂端。
-  const prevSlugRef = useRef<string | null>(null);
+  // 啟動時根據 URL ?scenario= 還原(僅一次)
   useEffect(() => {
-    if (detailSlug && detailSlug !== prevSlugRef.current) {
-      setSnap(0.5);
-      sheetScrollRef.current?.scrollTo({ top: 0 });
-    } else if (!detailSlug && prevSlugRef.current) {
-      setSnap(0.3);
+    if (initialScenario && SCENARIO_BY_KEY[initialScenario]) {
+      pickScenario(SCENARIO_BY_KEY[initialScenario]);
     }
-    prevSlugRef.current = detailSlug;
-  }, [detailSlug]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  useEffect(() => {
+    if (initialOpenAt) setOpenAt(initialOpenAt);
+  }, [initialOpenAt, setOpenAt]);
 
-  const { location: userLocation } = useUserLocation();
   const currentRatio = typeof snap === "number" ? snap : 0.3;
-  // Mapbox flyTo 把這段高度當作不可見區域 —— expanded 時 sheet 蓋掉大部分畫面,
-  // padding 太大會讓 marker 飛到看不到的地方,所以鎖在 0.55 以下。
-  const sheetPaddingPx = Math.round(vh * Math.min(currentRatio, 0.55));
+  // searching 時 overlay 蓋全屏,但 Map 仍要保留可視中心(flyTo padding 太大會跑出畫面)。
+  // 鎖在 0.55 上限,符合 detail expanded 行為。
+  const sheetPaddingPx = Math.round(
+    vh * Math.min(isSearching ? 0.55 : currentRatio, 0.55),
+  );
 
+  // ─── 資料 ────────────────────────────────────────
+  const { location: userLocation } = useUserLocation();
   const allCafes = useAllCafes();
   const tagsArr = Array.from(selected);
   const tagsKey = tagsArr.join(",");
   const orKey = orSelected.join(",");
+  const [sortKey, setSortKey] = useState<LocalSortKey>("smart");
+  const [isSortOpen, setIsSortOpen] = useState(false);
+
+  // home tab 的搜尋結果
   const searchResult = useMemo(() => {
     const cafes = searchCafesLocal(allCafes.data, {
       tags: tagsArr,
@@ -150,211 +201,285 @@ export default function MapPage() {
       userLat: userLocation?.lat ?? null,
       radiusM,
       openAt,
-      q: keyword,
+      q: keyword || query.trim() || null,
       sort: sortKey,
     });
     return { cafes, total: cafes.length };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [allCafes.data, tagsKey, orKey, userLocation?.lng, userLocation?.lat, radiusM, openAt, keyword, sortKey]);
-  const searchQuery = {
-    data: searchResult,
-    isLoading: allCafes.isLoading,
-    isError: allCafes.isError,
-  };
+  }, [
+    allCafes.data,
+    tagsKey,
+    orKey,
+    userLocation?.lng,
+    userLocation?.lat,
+    radiusM,
+    openAt,
+    keyword,
+    query,
+    sortKey,
+  ]);
 
-  // Pocket 模式 —— 從 /pocket 點「在地圖上看這個口袋」進來。直接以 pocket items
-  // 取代 search 結果,並把鏡頭收進這批點(由 CafeMap 的 fitToCafesKey 觸發)。
-  const pocketItemsQuery = usePocketItems(pocketId);
+  // Idle 推薦
+  const idleRecommendations = useMemo(() => {
+    if (!allCafes.data) return [];
+    return searchCafesLocal(allCafes.data, {
+      userLng: userLocation?.lng ?? null,
+      userLat: userLocation?.lat ?? null,
+      sort: "smart",
+    }).slice(0, IDLE_RECOMMEND_LIMIT);
+  }, [allCafes.data, userLocation?.lng, userLocation?.lat]);
+
+  // Pocket items — pocket/profile tab 都顯示
   const { data: pockets } = usePockets();
-  const isPocketMode = !!pocketId;
-  const pocketCafes = (pocketItemsQuery.data ?? [])
-    .map((item) => item.cafe)
-    .filter((c): c is NonNullable<typeof c> => !!c)
-    .map((c) =>
-      userLocation
-        ? { ...c, distance_km: haversineKm(userLocation, { lng: c.lng, lat: c.lat }) }
-        : c,
-    )
-    .sort((a, b) => (userLocation ? a.distance_km - b.distance_km : 0));
-  const baseCafes = isPocketMode ? pocketCafes : (searchQuery.data?.cafes ?? []);
-  const totalCount = isPocketMode ? pocketCafes.length : (searchQuery.data?.total ?? 0);
-  const activePocket = pockets?.find((p) => p.id === pocketId) ?? null;
-  const activeScenario = scenario ? SCENARIO_BY_KEY[scenario] : null;
+  const [activePocketId, setActivePocketId] = useState<string | null>(pocketIdFromUrl);
+  useEffect(() => {
+    if (pocketIdFromUrl) setActivePocketId(pocketIdFromUrl);
+  }, [pocketIdFromUrl]);
+  useEffect(() => {
+    if (!activePocketId && pockets && pockets.length > 0) {
+      setActivePocketId(pockets[0].id);
+    }
+  }, [pockets, activePocketId]);
+  const pocketItemsQuery = usePocketItems(tab !== "home" ? activePocketId : null);
+  const pocketCafes = useMemo(
+    () =>
+      (pocketItemsQuery.data ?? [])
+        .map((item) => item.cafe)
+        .filter((c): c is NonNullable<typeof c> => !!c)
+        .map((c) =>
+          userLocation
+            ? { ...c, distance_km: haversineKm(userLocation, { lng: c.lng, lat: c.lat }) }
+            : c,
+        )
+        .sort((a, b) => (userLocation ? a.distance_km - b.distance_km : 0)),
+    [pocketItemsQuery.data, userLocation],
+  );
 
-  // 詳細模式時抓對應 cafe 詳細資料,並補上 marker
+  // 地圖 marker:home → search 結果(idle 沒 filter 也算搜尋,只是回傳全量,
+  //                         所以這裡 idle 也用搜尋結果但只取推薦清單作 marker)
+  //              pocket/profile → pocket items
+  const homeMapCafes = searchMode === "idle" ? idleRecommendations : searchResult.cafes;
+  const baseMapCafes = tab === "home" ? homeMapCafes : pocketCafes;
+
+  // Detail 補 marker
   const detailQuery = useCafeDetail(detailSlug);
   const detailCafe = detailQuery.data ?? null;
   const actions = useCafeActions(detailCafe?.id ?? null);
+  const mapCafes = useMemo(() => {
+    if (!detailCafe || baseMapCafes.some((c) => c.id === detailCafe.id)) return baseMapCafes;
+    return [
+      ...baseMapCafes,
+      userLocation
+        ? { ...detailCafe, distance_km: haversineKm(userLocation, { lng: detailCafe.lng, lat: detailCafe.lat }) }
+        : detailCafe,
+    ];
+  }, [baseMapCafes, detailCafe, userLocation]);
 
-  // 跟 DesktopApp 同樣處理 —— 被選中的咖啡廳如果不在 baseCafes(被 tag 過濾,
-  // 或不在 pocket 列表內),仍要在地圖補一個 marker,否則使用者進詳細頁卻看不到位置。
-  const mapCafes =
-    detailCafe && !baseCafes.some((c) => c.id === detailCafe.id)
-      ? [
-          ...baseCafes,
-          userLocation
-            ? { ...detailCafe, distance_km: haversineKm(userLocation, { lng: detailCafe.lng, lat: detailCafe.lat }) }
-            : detailCafe,
-        ]
-      : baseCafes;
-
-  // 詳細模式下 activeId = 詳細 cafe;列表模式下沿用原本的 markerClick 設的 activeId。
-  const effectiveActiveId = isDetailMode ? detailCafe?.id ?? null : activeId;
-
-  // 點圖標 → 自動把對應 list item 捲到可視區域(僅列表模式下有意義)。
-  useEffect(() => {
-    if (isDetailMode || !activeId) return;
-    const li = listRef.current?.querySelector<HTMLElement>(
-      `[data-cafe-id="${activeId}"]`,
-    );
-    if (li) {
-      li.scrollIntoView({ behavior: "smooth", block: "start" });
-    }
-  }, [activeId, baseCafes, isDetailMode]);
-
-  // 在 pocket 模式下,所有導航都要把 ?pocket=<id> 帶著走。
-  const pocketSearch = isPocketMode ? `?pocket=${encodeURIComponent(pocketId!)}` : "";
-
-  // 點地圖空白處:詳細模式縮成 mini,讓地圖放大顯示。列表模式不做事,
-  // 避免使用者只是想滑地圖卻意外把列表收起來。
-  const handleMapClick = useCallback(() => {
-    if (isDetailMode) setSnap(0.3);
-  }, [isDetailMode]);
+  // ─── 操作 handlers ───────────────────────────────
+  const [activeMarkerId, setActiveMarkerId] = useState<string | null>(null);
+  const effectiveActiveId = isDetailMode ? detailCafe?.id ?? null : activeMarkerId;
 
   const handleMarkerClick = (id: string) => {
     const c = mapCafes.find((x) => x.id === id);
     if (!c) return;
-    // 列表模式 → 點 marker = 進詳細頁;詳細模式 → 也允許切換到另一家(replace history)
     if (isDetailMode) {
-      navigate(`/cafe/${c.slug ?? c.id}${pocketSearch}`, { replace: true });
+      navigate(`/cafe/${c.slug ?? c.id}`, { replace: true });
     } else {
-      setActiveId(id);
+      setActiveMarkerId(id);
       setSnap(0.3);
-      navigate(`/cafe/${c.slug ?? c.id}${pocketSearch}`);
+      navigate(`/cafe/${c.slug ?? c.id}`);
     }
   };
 
+  const handleMapClick = useCallback(() => {
+    if (isDetailMode) setSnap(0.3);
+  }, [isDetailMode]);
+
+  // 搜尋提交 (AI 解析 / keyword / tag label)
+  const handleSubmitSearch = (
+    parsedTags: string[],
+    softTags: string[],
+    parsedOpenAt: string | null,
+    _distanceKm: number | null,
+    submittedKeyword: string | null,
+  ) => {
+    if (submittedKeyword) {
+      setAll([]);
+      setOpenAt(null);
+      setKeyword(submittedKeyword);
+    } else {
+      setAll(parsedTags);
+      setOrSelected(softTags);
+      setOpenAt(parsedOpenAt);
+      setQuery("");
+    }
+    setIsSearching(false);
+  };
+
+  const handleOverlayBack = () => {
+    if (isSearching) {
+      setIsSearching(false);
+      return;
+    }
+    // results 模式按 ← :清空回 idle
+    handleOverlayClear();
+  };
+  const handleOverlayClear = () => {
+    setAll([]);
+    setOpenAt(null);
+    setRadiusM(null);
+    setKeyword(null);
+    setQuery("");
+    setIsSearching(false);
+  };
+
+  const handleDetailBack = () => {
+    if (routerLocation.key !== "default") navigate(-1);
+    else navigate(tab === "home" ? "/" : `/${tab}`, { replace: true });
+  };
+
+  // ─── 桌面 redirect ───────────────────────────────
   if (isDesktop) {
     const p = new URLSearchParams();
-    initial.forEach((t) => p.append("tag", t));
+    initialTags.forEach((t) => p.append("tag", t));
     if (initialOpenAt) p.set("open_at", initialOpenAt);
     if (isDetailMode && detailSlug) {
       navigate(`/cafe/${detailSlug}?${p.toString()}`, { replace: true });
-    } else {
+    } else if (tab === "home") {
       navigate(`/?${p.toString()}`, { replace: true });
     }
     return null;
   }
 
-  // ─── Header (依模式切換) ────────────────────────────────────
-  const headerTitle = isDetailMode
-    ? detailCafe?.name ?? (detailQuery.isLoading ? "載入中…" : "找不到這間店")
-    : isPocketMode
-      ? activePocket
-        ? `${activePocket.emoji ? `${activePocket.emoji} ` : ""}${activePocket.name}`
-        : "口袋名單"
-      : activeScenario
-        ? activeScenario.title
-        : selected.size > 0
-          ? `${selected.size} 個條件`
-          : "臺南";
+  // ─── Sheet 內容 dispatch ─────────────────────────
+  const showMapSearchOverlay = !isDetailMode && tab === "home";
 
-  const handleBack = () => {
+  const renderDrawerContent = () => {
     if (isDetailMode) {
-      // location.key === "default" 代表沒有 history(直連進來的),fallback 到 /map
-      if (location.key !== "default") {
-        navigate(-1);
-      } else {
-        navigate(`/map${pocketSearch}`, { replace: true });
-      }
-    } else {
-      navigate("/");
+      return (
+        <div ref={sheetScrollRef} className="flex-1 overflow-y-auto overscroll-contain">
+          {detailQuery.isLoading ? (
+            <div className="space-y-3 p-5">
+              <div className="h-6 w-1/2 animate-pulse rounded bg-base-200" />
+              <div className="h-4 w-3/4 animate-pulse rounded bg-base-200" />
+              <div className="h-24 animate-pulse rounded bg-base-200" />
+              <div className="h-40 animate-pulse rounded bg-base-200" />
+            </div>
+          ) : detailCafe ? (
+            <CafeDetailContent
+              cafe={detailCafe}
+              isDesktop={false}
+              actions={actions}
+              coverPlacement="mid"
+            />
+          ) : (
+            <div className="flex h-full items-center justify-center p-6">
+              <div role="alert" className="alert alert-warning max-w-sm">
+                <HugeiconsIcon icon={AlertCircleIcon} size={18} strokeWidth={1.5} />
+                <span>{detailQuery.isError ? "載入失敗，請稍後再試" : "找不到這間店"}</span>
+              </div>
+            </div>
+          )}
+        </div>
+      );
     }
+    if (tab === "pocket") {
+      return (
+        <PocketSheetContent
+          activePocketId={activePocketId}
+          onActivePocketIdChange={setActivePocketId}
+        />
+      );
+    }
+    if (tab === "profile") {
+      return <ProfileSheetContent />;
+    }
+    // home tab
+    if (searchMode === "results") {
+      const isListLoading = allCafes.isLoading;
+      const isListError = allCafes.isError;
+      const total = searchResult.total;
+      const activeScenario = scenario ? SCENARIO_BY_KEY[scenario] : null;
+      const heading = isListLoading
+        ? "載入中…"
+        : activeScenario
+        ? `${total} 間${activeScenario.title}`
+        : `${total} 間 · 臺南`;
+      return (
+        <>
+          <header className="flex items-baseline justify-between px-5 pt-3 pb-2">
+            <h2 className="text-[15px] font-semibold">{heading}</h2>
+            <div className="flex items-center gap-1">
+              <button
+                type="button"
+                onClick={() => setIsSearching(true)}
+                className="flex items-center gap-1 px-1 py-0.5 text-xs text-base-content/65 hover:text-base-content"
+                aria-label="進階篩選"
+              >
+                <HugeiconsIcon icon={Settings01Icon} size={13} strokeWidth={1.5} />
+              </button>
+              <button
+                type="button"
+                onClick={() => setIsSortOpen(true)}
+                className="flex items-center gap-1 px-1 py-0.5 text-xs text-base-content/65 hover:text-base-content"
+                aria-haspopup="dialog"
+              >
+                {SORT_LABEL[sortKey]}
+                <HugeiconsIcon icon={ArrowDown01Icon} size={12} strokeWidth={1.5} />
+              </button>
+            </div>
+          </header>
+          <div className="divider my-0" />
+          {isListError ? (
+            <p className="px-5 py-6 text-center text-sm text-base-content/55">
+              載入失敗，請稍後再試
+            </p>
+          ) : isListLoading ? (
+            <ul className="flex-1 divide-y divide-base-content/10 overflow-y-auto">
+              {Array.from({ length: 4 }).map((_, i) => (
+                <li key={i} className="px-5 py-3">
+                  <div className="h-14 animate-pulse rounded bg-base-200" />
+                </li>
+              ))}
+            </ul>
+          ) : searchResult.cafes.length === 0 ? (
+            <p className="px-5 py-6 text-center text-sm text-base-content/55">
+              找不到符合條件的咖啡店
+            </p>
+          ) : (
+            <ul className="flex-1 divide-y divide-base-content/10 overflow-y-auto">
+              {searchResult.cafes.map((c) => (
+                <li key={c.id} data-cafe-id={c.id}>
+                  <CafeListItem cafe={c} active={c.id === activeMarkerId} sortKey={sortKey} />
+                </li>
+              ))}
+            </ul>
+          )}
+        </>
+      );
+    }
+    // idle (home + 無 filter)
+    return (
+      <IdleSheetContent
+        cafes={idleRecommendations}
+        isLoading={allCafes.isLoading}
+        isError={allCafes.isError}
+      />
+    );
   };
 
-  const isListLoading = isPocketMode ? pocketItemsQuery.isLoading : searchQuery.isLoading;
-  const isListError = isPocketMode ? pocketItemsQuery.isError : searchQuery.isError;
-  const listHeading = isListLoading
-    ? "載入中…"
-    : isPocketMode
-      ? `${totalCount} 間 · 口袋名單`
-      : activeScenario
-        ? `${totalCount} 間${activeScenario.title}`
-        : `${totalCount} 間 · 臺南`;
+  const drawerTitle = isDetailMode
+    ? `${detailCafe?.name ?? "咖啡店"}詳細資訊`
+    : tab === "pocket"
+    ? "口袋名單"
+    : tab === "profile"
+    ? "個人"
+    : searchMode === "results"
+    ? "搜尋結果"
+    : "附近推薦";
 
   return (
     <div className="flex h-screen flex-col bg-base-100">
-      {/* 固定 header */}
-      <header className="navbar sticky top-0 z-30 min-h-12 border-b border-base-content/10 bg-base-100/95 px-2 backdrop-blur">
-        {/* DaisyUI 把 `.navbar-start` / `.navbar-end` 寫死 `width: 50%`,
-            導致中間標題容器塌成 ~16px、長店名被切到剩一個字。`!w-auto` 把寬度交還
-            給 flex 自動分配,讓兩側只佔自己按鈕的寬度,中間 flex-1 才有空間。 */}
-        <div className="navbar-start !w-auto !flex-none">
-          <button
-            type="button"
-            onClick={handleBack}
-            className="btn btn-ghost btn-sm btn-square"
-            aria-label="返回"
-          >
-            <HugeiconsIcon icon={ArrowLeft02Icon} size={18} strokeWidth={1.5} />
-          </button>
-        </div>
-        <div className="min-w-0 flex-1 px-2">
-          <h1 className="truncate text-sm font-semibold text-center">{headerTitle}</h1>
-        </div>
-        <div className="navbar-end !w-auto !flex-none gap-1">
-          {isDetailMode && actions.user && detailCafe && (
-            <button
-              type="button"
-              onClick={actions.handlePocketClick}
-              disabled={actions.pocketDisabled}
-              aria-label={actions.inPocket ? "已加入口袋" : "加入口袋"}
-              className={`btn btn-ghost btn-sm btn-square ${actions.inPocket ? "text-primary" : ""}`}
-            >
-              <HugeiconsIcon
-                icon={actions.inPocket ? BookmarkCheck02Icon : Bookmark02Icon}
-                size={18}
-                strokeWidth={1.5}
-              />
-            </button>
-          )}
-          <button
-            type="button"
-            onClick={() => shareUrl(window.location.href, isDetailMode ? detailCafe?.name : undefined)}
-            aria-label="分享"
-            className="btn btn-ghost btn-sm btn-square"
-          >
-            <HugeiconsIcon icon={isDetailMode ? LinkForwardIcon : Share01Icon} size={18} strokeWidth={1.5} />
-          </button>
-        </div>
-      </header>
-
-      {/* chip bar — 僅列表模式顯示 */}
-      {!isDetailMode && (
-        <div className="flex items-center gap-1 border-b border-base-content/10 bg-base-100 px-3 py-2">
-          <FilterChipBar
-            options={CHIP_OPTIONS}
-            selected={selected}
-            onToggle={toggle}
-            className="flex-1"
-          />
-          <button
-            type="button"
-            onClick={() => {
-              const p = new URLSearchParams();
-              selected.forEach((t) => p.append("tag", t));
-              if (openAt) p.set("open_at", openAt);
-              navigate(`/filter?${p.toString()}`);
-            }}
-            className="btn btn-ghost btn-xs btn-square shrink-0"
-            aria-label="進階篩選"
-          >
-            <HugeiconsIcon icon={Settings01Icon} size={16} strokeWidth={1.5} />
-          </button>
-        </div>
-      )}
-
-      {/* 地圖區 + bottom sheet */}
       <div className="relative flex-1 overflow-hidden">
         <div className="absolute inset-0">
           <CafeMap
@@ -362,21 +487,31 @@ export default function MapPage() {
             activeId={effectiveActiveId}
             userLocation={userLocation}
             paddingBottom={sheetPaddingPx}
-            fitToCafesKey={isPocketMode ? `pocket:${pocketId}` : null}
+            fitToCafesKey={tab !== "home" ? `tab:${tab}:${activePocketId ?? ""}` : null}
             onMarkerClick={handleMarkerClick}
             onMapClick={handleMapClick}
-            // 手機:隱藏 +/- 改用手指縮放;定位按鈕 sheet 超過 50% 時隱藏(會被蓋住,
-            // 跟 Google Maps 行為一致)。currentRatio 來自 vaul 的 activeSnapPoint。
             hideZoomButtons
-            hideLocateButton={currentRatio > 0.5}
+            hideLocateButton={currentRatio > 0.5 || isSearching}
           />
         </div>
 
-        {/* Vaul Drawer ── 整面拖曳 + click/drag 自動區分 + 慣性 + 內部 scroll 共存。
-            modal=false:背後地圖保留互動(可拖、可點 marker)。
-            dismissible=false:最低 snap 是地板,使用者拉不下去 ── 關閉只能透過 ✕
-            按鈕或系統返回,語意更明確。
-            shouldScaleBackground=false:不縮放背景,避免地圖被擠壓變形。 */}
+        {/* 浮動搜尋層 — 僅 home tab 非 detail 時顯示 */}
+        {showMapSearchOverlay && (
+          <MapSearchOverlay
+            mode={searchMode}
+            query={query}
+            onQueryChange={setQuery}
+            selected={selected}
+            onToggleTag={toggle}
+            onFocusSearch={() => setIsSearching(true)}
+            onBack={handleOverlayBack}
+            onClearAll={handleOverlayClear}
+            onSubmit={handleSubmitSearch}
+          />
+        )}
+
+        {/* Vaul Drawer — 底部 sheet。home/pocket/profile/detail 都用它。
+            modal=false 保留地圖互動;dismissible=false 避免使用者誤拉到底。 */}
         <Drawer.Root
           open
           modal={false}
@@ -387,109 +522,53 @@ export default function MapPage() {
           setActiveSnapPoint={setSnap}
         >
           <Drawer.Portal>
-            <Drawer.Content
-              // vaul 的 snap 算式假設 Content 與 viewport 等高 —— 給 h-full(100vh)。
-              // 不能加 max-h,否則 translate 量會多出 drawer 與 viewport 的差,sheet
-              // 在 snap 0.3 看起來只露 ~25% 而不是 30%。snap 最大 0.9,top 不會碰到 header。
-              // z-20 < header 的 z-30,detail expanded 時若視覺超過 header 也被它蓋住。
-              className="fixed inset-x-0 bottom-0 z-20 flex h-full flex-col rounded-t-xl border-t border-base-content/10 bg-base-100 shadow-2xl outline-none"
-            >
-              {/* a11y:標題與描述對螢幕報讀器宣告,視覺上不顯示。
-                  Radix Dialog 強制要求兩者都要有 aria-* 對應,缺一會在 console 報 warn。 */}
-              <Drawer.Title className="sr-only">
-                {isDetailMode ? `${detailCafe?.name ?? "咖啡店"}詳細資訊` : "搜尋結果"}
-              </Drawer.Title>
+            <Drawer.Content className="fixed inset-x-0 bottom-0 z-20 flex h-full flex-col rounded-t-xl border-t border-base-content/10 bg-base-100 pb-[58px] shadow-2xl outline-none">
+              <Drawer.Title className="sr-only">{drawerTitle}</Drawer.Title>
               <Drawer.Description className="sr-only">
                 {isDetailMode ? "向下拖曳可關閉,或點右上角的關閉按鈕" : "可上下拖曳調整面板高度"}
               </Drawer.Description>
-
-              {/* 拖把手 ── vaul 內建 Handle 自帶 aria/pointer 行為。
-                  整個 Drawer.Content 都可以拖,Handle 只是視覺指示器。 */}
               <Drawer.Handle className="!mt-2 !mb-0 !h-1 !w-9 !bg-base-content/30" />
 
               {isDetailMode && (
                 <button
                   type="button"
-                  onClick={handleBack}
+                  onClick={handleDetailBack}
                   aria-label="關閉"
-                  className="btn btn-ghost btn-sm btn-circle absolute right-3 top-6 bg-base-100/70 backdrop-blur border border-base-content/10"
+                  className="btn btn-ghost btn-sm btn-circle absolute right-3 top-6 border border-base-content/10 bg-base-100/70 backdrop-blur"
                 >
                   <HugeiconsIcon icon={Cancel01Icon} size={16} strokeWidth={1.5} />
                 </button>
               )}
 
-              {isDetailMode ? (
-                <div ref={sheetScrollRef} className="flex-1 overflow-y-auto overscroll-contain">
-                  {detailQuery.isLoading ? (
-                    <div className="space-y-3 p-5">
-                      <div className="h-6 bg-base-200 animate-pulse rounded w-1/2" />
-                      <div className="h-4 bg-base-200 animate-pulse rounded w-3/4" />
-                      <div className="h-24 bg-base-200 animate-pulse rounded" />
-                      <div className="h-40 bg-base-200 animate-pulse rounded" />
-                    </div>
-                  ) : detailCafe ? (
-                    <CafeDetailContent cafe={detailCafe} isDesktop={false} actions={actions} coverPlacement="mid" />
-                  ) : (
-                    <div className="flex h-full items-center justify-center p-6">
-                      <div role="alert" className="alert alert-warning max-w-sm">
-                        <HugeiconsIcon icon={AlertCircleIcon} size={18} strokeWidth={1.5} />
-                        <span>{detailQuery.isError ? "載入失敗，請稍後再試" : "找不到這間店"}</span>
-                        <Link to="/" className="btn btn-sm btn-neutral">
-                          回首頁
-                        </Link>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              ) : (
-                <>
-                  <header className="flex items-baseline justify-between px-5 pt-3 pb-2">
-                    <h2 className="text-[15px] font-semibold">{listHeading}</h2>
-                    <button
-                      type="button"
-                      onClick={() => setIsSortOpen(true)}
-                      className="flex items-center gap-1 text-xs text-base-content/65 hover:text-base-content transition-colors px-1 py-0.5"
-                      aria-haspopup="dialog"
-                    >
-                      {SORT_LABEL[sortKey]}
-                      <HugeiconsIcon icon={ArrowDown01Icon} size={12} strokeWidth={1.5} />
-                    </button>
-                  </header>
-                  <div className="divider my-0" />
-                  {isListError ? (
-                    <p className="px-5 py-6 text-center text-sm text-base-content/55">
-                      載入失敗，請稍後再試
-                    </p>
-                  ) : isListLoading ? (
-                    <ul className="flex-1 divide-y divide-base-content/10 overflow-y-auto">
-                      {Array.from({ length: 4 }).map((_, i) => (
-                        <li key={i} className="px-5 py-3">
-                          <div className="h-14 bg-base-200 animate-pulse rounded" />
-                        </li>
-                      ))}
-                    </ul>
-                  ) : baseCafes.length === 0 ? (
-                    <p className="px-5 py-6 text-center text-sm text-base-content/55">
-                      {isPocketMode ? "這個口袋還沒有咖啡店" : "找不到符合條件的咖啡店"}
-                    </p>
-                  ) : (
-                    <ul
-                      ref={listRef}
-                      className="flex-1 divide-y divide-base-content/10 overflow-y-auto"
-                    >
-                      {baseCafes.map((c) => (
-                        <li key={c.id} data-cafe-id={c.id}>
-                          <CafeListItem cafe={c} active={c.id === activeId} sortKey={sortKey} />
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                </>
-              )}
+              {renderDrawerContent()}
             </Drawer.Content>
           </Drawer.Portal>
         </Drawer.Root>
+
+        {/* Searching 全屏 overlay — 蓋住 drawer,只露浮動搜尋框。
+            點 scenarios / 套用後關閉。z 介於 search overlay (z-40) 與 drawer (z-20) 之間,
+            但需要遮住 drawer,所以用 z-30,並從搜尋框下方開始(top padding ≈ search 高度)。 */}
+        {isSearching && tab === "home" && !isDetailMode && (
+          <div className="absolute inset-0 z-30 flex flex-col bg-base-100 pb-[58px] pt-[100px]">
+            <SearchingSheetContent
+              selected={selected}
+              onToggleTag={toggle}
+              openAt={openAt}
+              onOpenAtChange={setOpenAt}
+              radiusM={radiusM}
+              onRadiusMChange={setRadiusM}
+              scenarioKey={scenario}
+              onPickScenario={(s: Scenario) => {
+                pickScenario(s);
+                setIsSearching(false);
+              }}
+              onApply={() => setIsSearching(false)}
+            />
+          </div>
+        )}
       </div>
+
+      <MobileTabBar />
 
       <MobileChoiceSheet
         isOpen={isSortOpen}
@@ -500,7 +579,6 @@ export default function MapPage() {
         onChange={setSortKey}
       />
 
-      {/* 詳細模式下用到的 modal (回報、加入口袋等) */}
       {isDetailMode && <CafeActionModals actions={actions} />}
     </div>
   );
