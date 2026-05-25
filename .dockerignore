@@ -1,0 +1,36 @@
+# Keep the build context small — only src/ and services/ end up in the image.
+.git
+.gitignore
+.venv
+venv
+__pycache__
+*.pyc
+*.pyo
+.pytest_cache
+.mypy_cache
+.ruff_cache
+
+# Frontend — deployed separately
+web
+firebase.json
+
+# Local data / scratch — never goes into the image
+data
+scratch
+designs
+figma
+docs
+specs
+supabase
+skills-lock.json
+
+# Env files — secrets come from `fly secrets`, never bake them in
+.env
+.env.*
+!.env.example
+
+# Editor / OS junk
+.DS_Store
+.idea
+.vscode
+*.swp

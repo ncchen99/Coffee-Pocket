@@ -187,7 +187,7 @@ export function CafeDetailContent({ cafe, isDesktop, actions, coverPlacement = "
         <Cap>AI 摘要</Cap>
         <div
           role="status"
-          className="alert alert-info bg-base-200 mt-2 text-base-content border border-base-content/10"
+          className="alert alert-info bg-base-200 mt-2 text-base-content border border-base-content/10 text-left justify-items-start"
         >
           {cafe.ai_summary ? (
             <span className="text-sm leading-relaxed">{cafe.ai_summary}</span>
@@ -306,7 +306,7 @@ export function CafeDetailContent({ cafe, isDesktop, actions, coverPlacement = "
               使用者一進詳細頁(預設 50%)就先看到資訊、立刻能操作的功能按鈕;
               再往上拉才看到封面圖,接著才是 AI 摘要與標籤等深入內容。 */}
           {actionButtons}
-          <div className="mt-4">{cover}</div>
+          <div className="mt-4 px-5">{cover}</div>
           {aiSummary}
         </>
       )}

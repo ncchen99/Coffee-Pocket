@@ -41,11 +41,12 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name
 
 app = FastAPI(title="Coffee Pocket add-cafe service", version="0.1.0")
 
-# CORS — 前端 dev (Vite) 跑在 5173,正式環境的 domain 也允許。
-# 如果未來上正式,把 origin 收緊。
+# CORS — 從 settings.cors_allowed_origins 讀(comma-separated)。空值時 fallback
+# 成 "*",給本機開發用;正式環境一定要設,不然任何 origin 都能打。
+_origins = [o.strip() for o in settings.cors_allowed_origins.split(",") if o.strip()]
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=_origins or ["*"],
     allow_methods=["GET", "POST", "OPTIONS"],
     allow_headers=["*"],
 )

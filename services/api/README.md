@@ -31,9 +31,13 @@ Tell the frontend where the API lives by setting `VITE_ADD_CAFE_API_BASE` in
 
 ## Pipeline (sequential, per submitted cafe)
 
-1. `coffee_pocket.agents.enrich.google_scraper --cafe-id <uuid> --update-cafe`
-2. `coffee_pocket.agents.process.google_extract --file data/reviews/<place_id>.json`
-3. `coffee_pocket.agents.process.semantic --cafe-id <uuid>`
+1. `coffee_pocket.agents.prepare.generate_pinyin --apply`  ← 產生 `name_pinyin` / `slug`
+2. `coffee_pocket.agents.enrich.google_scraper --cafe-id <uuid> --update-cafe`
+3. `coffee_pocket.agents.process.google_extract --file data/reviews/<place_id>.json`
+4. `coffee_pocket.agents.process.semantic --cafe-id <uuid>`
+5. `coffee_pocket.agents.process.ai_summary --cafe-id <uuid>`  ← 寫入 `cafes.summary_ai`
+
+Stage 5(AI 摘要)失敗時不視為整體失敗 — 其他資料已就緒,摘要可日後補跑。
 
 Each stage is spawned as `uv run python -m …` so we reuse the existing CLIs
 without refactoring. See `worker.py` for the implementation.

@@ -1,0 +1,60 @@
+# Fly.io config for the add-cafe FastAPI service.
+# Deploy from repo root: `fly deploy`
+#
+# Secrets (set once via `fly secrets set ...`):
+#   SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY,
+#   GOOGLE_PLACES_API_KEY, OPENROUTER_API_KEY,
+#   (optional) R2_*  — only if storage.py uploads are exercised
+
+app = "coffee-pocket"
+primary_region = "nrt"          # Tokyo — closest to Tainan users / Supabase ap-northeast
+
+[build]
+  dockerfile = "Dockerfile"
+
+[env]
+  PORT = "8080"
+  # OPENROUTER_MODEL = "deepseek/deepseek-v4-flash:free"
+
+[http_service]
+  internal_port = 8080
+  force_https = true
+  # Background pipeline runs in-process via FastAPI BackgroundTasks. Fly won't
+  # stop a machine while tasks are running, but min=1 avoids cold-start latency
+  # on the first /places/search after idle (Playwright import is slow).
+  auto_stop_machines = "stop"
+  auto_start_machines = true
+  min_machines_running = 0
+  processes = ["app"]
+
+  [http_service.concurrency]
+    type = "requests"
+    # Pipeline subprocess (Playwright) is RAM-heavy; cap concurrency so one
+    # machine doesn't OOM running 5 scrapes in parallel.
+    soft_limit = 4
+    hard_limit = 8
+
+[[vm]]
+  size = "shared-cpu-2x"
+  memory = "2gb"                # Playwright Chromium needs ~1GB headroom
+  cpu_kind = "shared"
+  cpus = 2
+
+# Persistent volume for the Chrome profile (cookies / localStorage).
+# Without this, the scraper would be unauthenticated on every machine restart
+# and Google Maps would either rate-limit it or serve the simplified bot DOM.
+#
+# One-time setup:
+#   fly volumes create coffee_pocket_data --region nrt --size 1
+#   # then upload the local data/.auth/chrome-profile/ — see deploy notes
+[mounts]
+  source = "coffee_pocket_data"
+  destination = "/app/data"
+
+# Health check — matches GET /health in services/api/main.py
+[[http_service.checks]]
+  interval = "30s"
+  timeout = "5s"
+  grace_period = "20s"
+  method = "GET"
+  path = "/health"

@@ -23,5 +23,10 @@ class Settings(BaseSettings):
     r2_secret_access_key: str = ""
     r2_public_base: str = ""  # public worker URL or custom domain
 
+    # CORS for services/api. Comma-separated origins, e.g.
+    #   "http://localhost:5173,https://coffee-pocket.app"
+    # Leave empty to allow all (dev default).
+    cors_allowed_origins: str = ""
+
 
 settings = Settings()

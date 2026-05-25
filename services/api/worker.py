@@ -3,9 +3,13 @@
 Stages (sequential; if any fails we log + bail, partial state remains in DB so
 the next run picks up where this left off):
 
-  1. Scrape Google reviews  → data/reviews/<place_id>.json
-  2. LLM extract signals    → reviews_raw.extracted_signals
-  3. Semantic merge         → cafe_tags / tag_evidence
+  1. Pinyin / slug          → cafes.name_pinyin / cafes.slug
+                              (前端搜尋與路由需要;放最前面因為不依賴爬蟲。)
+  2. Scrape Google reviews  → data/reviews/<place_id>.json + cafes meta
+  3. LLM extract signals    → reviews_raw.extracted_signals
+  4. Semantic merge         → cafe_tags / tag_evidence
+  5. AI summary             → cafes.summary_ai
+                              (要等 step 2 把評論寫進 reviews_raw 後才有素材。)
 
 Each stage is invoked via ``uv run python -m <module> --cafe-id <uuid>`` rather
 than imported directly. Reasons:
@@ -65,7 +69,17 @@ async def _run_stage(label: str, argv: list[str]) -> bool:
 async def _run_pipeline_async(cafe_id: str, place_id: str | None, job_id: str) -> None:
     logger.info("[pipeline] job=%s cafe=%s start", job_id, cafe_id)
 
-    # Stage 1 — scrape Google reviews. --update-cafe writes meta (cover image,
+    # Stage 1 — name_pinyin + slug。generate_pinyin 不支援 --cafe-id,
+    # 但預設只處理 missing 的列,所以直接 --apply 即可,不會去動既有資料。
+    pinyin_argv = [
+        "uv", "run", "python", "-m",
+        "coffee_pocket.agents.prepare.generate_pinyin",
+        "--apply",
+    ]
+    if not await _run_stage("pinyin", pinyin_argv):
+        return
+
+    # Stage 2 — scrape Google reviews. --update-cafe writes meta (cover image,
     # hours, rating, etc.) back to cafes; without it the row would stay bare.
     scrape_argv = [
         "uv", "run", "python", "-m",
@@ -76,7 +90,7 @@ async def _run_pipeline_async(cafe_id: str, place_id: str | None, job_id: str) -
     if not await _run_stage("scrape", scrape_argv):
         return
 
-    # Stage 2 — LLM extract for the freshly scraped reviews JSON.
+    # Stage 3 — LLM extract for the freshly scraped reviews JSON.
     # google_extract walks data/reviews/*.json by default; we narrow to the
     # single file if we know the place_id.
     extract_argv = [
@@ -95,7 +109,7 @@ async def _run_pipeline_async(cafe_id: str, place_id: str | None, job_id: str) -
     if not await _run_stage("extract", extract_argv):
         return
 
-    # Stage 3 — merge extracted signals → cafe_tags.
+    # Stage 4 — merge extracted signals → cafe_tags.
     semantic_argv = [
         "uv", "run", "python", "-m",
         "coffee_pocket.agents.process.semantic",
@@ -103,6 +117,15 @@ async def _run_pipeline_async(cafe_id: str, place_id: str | None, job_id: str) -
     ]
     if not await _run_stage("semantic", semantic_argv):
         return
+
+    # Stage 5 — AI summary (map-reduce over reviews_raw) → cafes.summary_ai。
+    # 即使失敗也只是少了一段摘要,其他資料已就緒,不該擋住整體 done。
+    summary_argv = [
+        "uv", "run", "python", "-m",
+        "coffee_pocket.agents.process.ai_summary",
+        "--cafe-id", cafe_id,
+    ]
+    await _run_stage("ai_summary", summary_argv)
 
     logger.info("[pipeline] job=%s cafe=%s done", job_id, cafe_id)
 
