@@ -10,6 +10,7 @@ import {
   LinkForwardIcon,
   Navigation03Icon,
   Add01Icon,
+  GlobeIcon,
 } from "@hugeicons/core-free-icons";
 import { Cap, Placeholder, StarRating, TagBadge } from "@/components/primitives";
 import { TagConfidenceRow } from "@/components/cafe/TagConfidenceRow";
@@ -346,7 +347,7 @@ export function CafeDetailContent({ cafe, isDesktop, actions, coverPlacement = "
         </>
       )}
 
-      {(cafe.phone || cafe.ig_url) && (
+      {(cafe.phone || cafe.website_url) && (
         <>
           <div className="divider mx-5" />
           <section className="px-5">
@@ -355,9 +356,17 @@ export function CafeDetailContent({ cafe, isDesktop, actions, coverPlacement = "
               {cafe.phone && (
                 <LinkItem icon={Call02Icon} label={cafe.phone} href={`tel:${cafe.phone}`} />
               )}
-              {cafe.ig_url && (
-                <LinkItem icon={InstagramIcon} label="Instagram" href={cafe.ig_url} external />
-              )}
+              {cafe.website_url && (() => {
+                const isIg = /(?:^|\.)instagram\.com\//i.test(cafe.website_url);
+                return (
+                  <LinkItem
+                    icon={isIg ? InstagramIcon : GlobeIcon}
+                    label={isIg ? "Instagram" : "官方網站"}
+                    href={cafe.website_url}
+                    external
+                  />
+                );
+              })()}
             </ul>
           </section>
         </>

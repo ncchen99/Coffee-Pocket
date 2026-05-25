@@ -76,7 +76,7 @@ export interface TagDetail {
 export interface CafeDetail extends CafeCard {
   address: string;
   phone?: string;
-  ig_url?: string;
+  website_url?: string;
   google_url?: string;
   hours: Record<string, string>;
   tags: TagWithConfidence[];

@@ -351,7 +351,7 @@ export async function fetchCafeDetail(identifier: string): Promise<CafeDetail | 
     name: d.name,
     address: d.address ?? "",
     phone: d.phone ?? undefined,
-    ig_url: d.instagram_url ?? undefined,
+    website_url: d.website_url ?? undefined,
     google_url: d.google_maps_url ?? undefined,
     cover_url: d.cover_image_url ?? null,
     photos: normalizePhotos(d.photos),

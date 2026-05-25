@@ -4,7 +4,6 @@ import { Drawer } from "vaul";
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
   ArrowDown01Icon,
-  Cancel01Icon,
   AlertCircleIcon,
   Settings01Icon,
 } from "@hugeicons/core-free-icons";
@@ -333,11 +332,6 @@ export default function MapPage() {
     setIsSearching(false);
   };
 
-  const handleDetailBack = () => {
-    if (routerLocation.key !== "default") navigate(-1);
-    else navigate(tab === "home" ? "/" : `/${tab}`, { replace: true });
-  };
-
   // ─── 桌面 redirect ───────────────────────────────
   if (isDesktop) {
     const p = new URLSearchParams();
@@ -352,12 +346,24 @@ export default function MapPage() {
   }
 
   // ─── Sheet 內容 dispatch ─────────────────────────
-  const showMapSearchOverlay = !isDetailMode && tab === "home";
+  // 詳細模式下也保留搜尋框 — 使用者可以從 detail 直接觸發新的搜尋,
+  // 不需要先按返回。Pocket / Profile tab 仍然不顯示。
+  const showMapSearchOverlay = tab === "home";
+
+  // Tab bar 只在「首頁推薦 / 口袋 / 個人」這三個頁面顯示；
+  // 進入搜尋、結果列表、詳細資訊時都隱藏,避免擋到 sheet 操作。
+  const showTabBar =
+    !isDetailMode &&
+    !isSearching &&
+    (tab === "pocket" || tab === "profile" || (tab === "home" && searchMode === "idle"));
+  const drawerBottomPad = showTabBar ? "pb-[58px]" : "pb-0";
 
   const renderDrawerContent = () => {
     if (isDetailMode) {
+      // detail 模式保留浮動搜尋框 — 把 sheet 內容預留 top padding,
+      // 避免使用者把 sheet 拉到最高時搜尋框蓋住 cafe header。
       return (
-        <div ref={sheetScrollRef} className="flex-1 overflow-y-auto overscroll-contain">
+        <div ref={sheetScrollRef} className="flex-1 overflow-y-auto overscroll-contain pt-[92px]">
           {detailQuery.isLoading ? (
             <div className="space-y-3 p-5">
               <div className="h-6 w-1/2 animate-pulse rounded bg-base-200" />
@@ -479,7 +485,7 @@ export default function MapPage() {
     : "附近推薦";
 
   return (
-    <div className="flex h-screen flex-col bg-base-100">
+    <div className="flex h-full flex-col bg-base-100">
       <div className="relative flex-1 overflow-hidden">
         <div className="absolute inset-0">
           <CafeMap
@@ -491,7 +497,7 @@ export default function MapPage() {
             onMarkerClick={handleMarkerClick}
             onMapClick={handleMapClick}
             hideZoomButtons
-            hideLocateButton={currentRatio > 0.5 || isSearching}
+            hideLocateButton={currentRatio > 0.3 || isSearching}
           />
         </div>
 
@@ -522,23 +528,19 @@ export default function MapPage() {
           setActiveSnapPoint={setSnap}
         >
           <Drawer.Portal>
-            <Drawer.Content className="fixed inset-x-0 bottom-0 z-20 flex h-full flex-col rounded-t-xl border-t border-base-content/10 bg-base-100 pb-[58px] shadow-2xl outline-none">
+            <Drawer.Content
+              data-sheet-at-top={
+                typeof snap === "number" && snap === (snapPoints[snapPoints.length - 1] as number)
+                  ? "true"
+                  : "false"
+              }
+              className={`fixed inset-x-0 bottom-0 z-20 flex h-full flex-col rounded-t-xl border-t border-base-content/10 bg-base-100 ${drawerBottomPad} shadow-2xl outline-none`}
+            >
               <Drawer.Title className="sr-only">{drawerTitle}</Drawer.Title>
               <Drawer.Description className="sr-only">
                 {isDetailMode ? "向下拖曳可關閉,或點右上角的關閉按鈕" : "可上下拖曳調整面板高度"}
               </Drawer.Description>
               <Drawer.Handle className="!mt-2 !mb-0 !h-1 !w-9 !bg-base-content/30" />
-
-              {isDetailMode && (
-                <button
-                  type="button"
-                  onClick={handleDetailBack}
-                  aria-label="關閉"
-                  className="btn btn-ghost btn-sm btn-circle absolute right-3 top-6 border border-base-content/10 bg-base-100/70 backdrop-blur"
-                >
-                  <HugeiconsIcon icon={Cancel01Icon} size={16} strokeWidth={1.5} />
-                </button>
-              )}
 
               {renderDrawerContent()}
             </Drawer.Content>
@@ -549,7 +551,7 @@ export default function MapPage() {
             點 scenarios / 套用後關閉。z 介於 search overlay (z-40) 與 drawer (z-20) 之間,
             但需要遮住 drawer,所以用 z-30,並從搜尋框下方開始(top padding ≈ search 高度)。 */}
         {isSearching && tab === "home" && !isDetailMode && (
-          <div className="absolute inset-0 z-30 flex flex-col bg-base-100 pb-[58px] pt-[100px]">
+          <div className="absolute inset-0 z-30 flex flex-col bg-base-100 pt-[100px]">
             <SearchingSheetContent
               selected={selected}
               onToggleTag={toggle}
@@ -568,7 +570,7 @@ export default function MapPage() {
         )}
       </div>
 
-      <MobileTabBar />
+      {showTabBar && <MobileTabBar />}
 
       <MobileChoiceSheet
         isOpen={isSortOpen}

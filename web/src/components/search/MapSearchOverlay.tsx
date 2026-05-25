@@ -6,7 +6,6 @@ import {
   Loading03Icon,
   ArrowLeft02Icon,
   Cancel01Icon,
-  Menu01Icon,
   UserIcon,
 } from "@hugeicons/core-free-icons";
 import { FilterChipBar, type ChipOption } from "@/components/search/FilterChipBar";
@@ -124,16 +123,7 @@ export function MapSearchOverlay({
 
   const leftSlot = (() => {
     if (mode === "idle") {
-      return (
-        <button
-          type="button"
-          onClick={() => navigate("/profile")}
-          className="btn btn-ghost btn-sm btn-square"
-          aria-label="個人選單"
-        >
-          <HugeiconsIcon icon={Menu01Icon} size={18} strokeWidth={1.5} />
-        </button>
-      );
+      return null;
     }
     return (
       <button
@@ -182,7 +172,15 @@ export function MapSearchOverlay({
           e.preventDefault();
           void handleSubmit();
         }}
-        className="pointer-events-auto flex items-center gap-1 rounded-full border border-base-content/10 bg-base-100 px-1.5 py-1 shadow-lg"
+        onClick={() => {
+          // 整條搜尋列都是 tap target — 點到 icon、左右 padding 或邊框都能進入搜尋。
+          // (idle 模式下單純依賴 input onFocus 在手機上常常需要點兩次才會觸發。)
+          if (mode === "idle") {
+            onFocusSearch();
+            inputRef.current?.focus();
+          }
+        }}
+        className="pointer-events-auto flex items-center gap-1 rounded-full border border-base-content/10 bg-base-100 px-2 py-1.5 shadow-lg"
       >
         {leftSlot}
         <div className="flex flex-1 items-center gap-1.5 px-1 min-w-0">

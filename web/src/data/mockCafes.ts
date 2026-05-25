@@ -65,7 +65,7 @@ export const mockCafeDetail = (id: string): CafeDetail | null => {
     ...card,
     address: "臺南市中西區 ◯◯ 路 ◯◯ 號",
     phone: "06-000-0000",
-    ig_url: "https://instagram.com/",
+    website_url: "https://instagram.com/",
     google_url: "https://maps.google.com/",
     hours: {
       "週一": "11:00 – 22:00",

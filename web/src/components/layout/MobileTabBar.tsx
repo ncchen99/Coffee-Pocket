@@ -19,7 +19,10 @@ export function MobileTabBar() {
   const { pathname } = useLocation();
 
   return (
-    <nav className="fixed inset-x-0 bottom-0 z-40 flex border-t border-base-content/10 bg-base-100/90 backdrop-blur">
+    <nav
+      className="fixed inset-x-0 bottom-0 z-40 flex border-t border-base-content/10 bg-base-100/90 backdrop-blur"
+      style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
+    >
       {TABS.map((tab) => {
         // /cafe/:slug 與其他子路由不主動點亮任何 tab — 點 ← 後 history 會回到正確 tab
         const active = pathname === tab.to;

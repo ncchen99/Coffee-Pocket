@@ -411,9 +411,9 @@ export function CafeMap({
   return (
     <div className={`relative h-full w-full ${className ?? ""}`}>
       <div ref={container} className="h-full w-full" />
-      <div className="absolute right-2.5 top-2.5 z-10 flex flex-col gap-2">
-        {/* 縮放按鈕組 — 手機隱藏,讓使用者用雙指捏合縮放,避免占用 sheet 上方空間 */}
-        {!hideZoomButtons && (
+      {/* 縮放按鈕組 — 手機隱藏,讓使用者用雙指捏合縮放,避免占用 sheet 上方空間 */}
+      {!hideZoomButtons && (
+        <div className="absolute right-2.5 top-2.5 z-10 flex flex-col gap-2">
           <div className="flex flex-col rounded-lg shadow-md border border-base-content/10 overflow-hidden bg-base-100">
             <button
               type="button"
@@ -435,25 +435,27 @@ export function CafeMap({
               <HugeiconsIcon icon={Remove01Icon} size={16} strokeWidth={1.5} />
             </button>
           </div>
-        )}
+        </div>
+      )}
 
-        {/* 定位按鈕 — 手機 sheet > 50% 時隱藏(會被 sheet 蓋住) */}
-        {!hideLocateButton && (
-          <button
-            type="button"
-            onClick={handleLocateClick}
-            className="btn btn-square btn-sm border border-base-content/10 bg-base-100 shadow-md text-base-content hover:bg-base-200 transition-colors duration-200 h-8 w-8"
-            aria-label="回到現在位置"
-            title="回到現在位置"
-          >
-            {isLocationLoading ? (
-              <span className="loading loading-spinner loading-xs text-base-content/70" />
-            ) : (
-              <HugeiconsIcon icon={Navigation03Icon} size={16} strokeWidth={1.5} />
-            )}
-          </button>
-        )}
-      </div>
+      {/* 定位按鈕 — 改放右下,僅當 sheet 收到 30% 以下、使用者可看見地圖時顯示。
+          bottom 用 paddingBottom + 12px 來避開 sheet 上緣,讓按鈕貼在 sheet 上方。 */}
+      {!hideLocateButton && (
+        <button
+          type="button"
+          onClick={handleLocateClick}
+          className="absolute right-2.5 z-10 btn btn-square btn-sm border border-base-content/10 bg-base-100 shadow-md text-base-content hover:bg-base-200 transition-all duration-200 h-10 w-10"
+          style={{ bottom: `${paddingBottom + 12}px` }}
+          aria-label="回到現在位置"
+          title="回到現在位置"
+        >
+          {isLocationLoading ? (
+            <span className="loading loading-spinner loading-xs text-base-content/70" />
+          ) : (
+            <HugeiconsIcon icon={Navigation03Icon} size={18} strokeWidth={1.5} />
+          )}
+        </button>
+      )}
     </div>
   );
 }

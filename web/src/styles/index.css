@@ -18,6 +18,14 @@
     overscroll-behavior-y: none;
   }
 
+  /* 手機瀏覽器網址列會在捲動時自動隱藏 / 顯示,vh 在捲動瞬間會跳動。
+   * 用 100dvh (dynamic viewport) 取代 100vh,讓 #root 跟著「實際可見區域」走;
+   * 不支援 dvh 的舊瀏覽器則退回 100vh,不會比現在更差。
+   * standalone (PWA) / 全螢幕模式沒有網址列,dvh = vh,效果一致。 */
+  @supports (height: 100dvh) {
+    html, body, #root { height: 100dvh; }
+  }
+
   /* 把 input/textarea 的 placeholder 顏色從預設灰色換成沿著主題的低彩度 base-content,
      避免在咖啡色主題下顯得突兀 */
   input::placeholder,
@@ -153,6 +161,16 @@
 
 *::-webkit-scrollbar-button {
   display: none;
+}
+
+/* ─────────────────────────────────────
+ * Bottom sheet 拖曳優先 — Google Maps 風格。
+ * 當 sheet 不在最頂端 snap 時,把內部的縱向捲動區關掉,
+ * 讓任何手勢都先把 sheet 拖到最高;到頂後 (data-sheet-at-top="true") 才能滾內容。
+ * 只鎖縱向,水平的 chip 列 (overflow-x-auto) 不受影響。
+ * ────────────────────────────────── */
+[data-sheet-at-top="false"] .overflow-y-auto {
+  overflow-y: hidden !important;
 }
 
 /* 完全隱藏指定容器的 scrollbar — 用於水平 chip 列等不想出現滾動條的橫向捲動區 */
