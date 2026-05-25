@@ -14,11 +14,11 @@ interface Props {
 export function IdleSheetContent({ cafes, isLoading, isError, listRef, onScroll }: Props) {
   return (
     <>
-      <header className="flex items-center justify-between px-5 pt-1.5 pb-2">
+      <header className="flex items-center justify-between px-5 pt-1   pb-2">
         <h2 className="text-[15px] font-semibold">附近的好咖啡</h2>
         <span className="text-xs text-base-content/55">推薦</span>
       </header>
-      <div className="divider my-0" />
+      <div className="h-[1px] bg-base-content/10 w-full shrink-0" />
       {isError ? (
         <p className="px-5 py-6 text-center text-sm text-base-content/55">
           載入失敗，請稍後再試

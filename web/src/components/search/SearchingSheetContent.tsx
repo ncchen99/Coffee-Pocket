@@ -84,6 +84,7 @@ export function SearchingSheetContent({
   }
   const [selDay, setSelDay] = useState(initDay);
   const [selHour, setSelHour] = useState(initHour);
+  const [showAdvanced, setShowAdvanced] = useState(false);
 
   const handleTimeModeChange = (mode: "any" | "now" | "specific") => {
     setTimeMode(mode);
@@ -125,87 +126,102 @@ export function SearchingSheetContent({
           </div>
         </section>
 
-        <div className="divider my-3" />
+        {/* 進階篩選按鈕 */}
+        <div className="mt-4 mb-2 flex justify-center">
+          <button
+            type="button"
+            onClick={() => setShowAdvanced((prev) => !prev)}
+            className="btn btn-ghost btn-sm text-base-content/65 border border-base-content/15 gap-1.5 w-full max-w-[200px]"
+          >
+            {showAdvanced ? "收起進階篩選 ▴" : "進階篩選 ▾"}
+          </button>
+        </div>
 
-        <section>
-          <Cap>距離</Cap>
-          {location ? (
-            <>
-              <input
-                type="range"
-                min={1}
-                max={10}
-                value={distance}
-                onChange={(e) => onRadiusMChange(Number(e.target.value) * 1000)}
-                className="range range-sm mt-3"
-              />
-              <div className="mt-1 flex justify-between text-[10px] text-base-content/50">
-                <span>1km</span>
-                <span>3km</span>
-                <span>5km</span>
-                <span>10km</span>
+        {showAdvanced && (
+          <div className="cp-anim-slide-in">
+            <div className="divider my-3" />
+            <section>
+              <Cap>距離</Cap>
+              {location ? (
+                <>
+                  <input
+                    type="range"
+                    min={1}
+                    max={10}
+                    value={distance}
+                    onChange={(e) => onRadiusMChange(Number(e.target.value) * 1000)}
+                    className="range range-sm mt-3"
+                  />
+                  <div className="mt-1 flex justify-between text-[10px] text-base-content/55">
+                    <span>1km</span>
+                    <span>3km</span>
+                    <span>5km</span>
+                    <span>10km</span>
+                  </div>
+                </>
+              ) : (
+                <div className="mt-3 rounded border border-base-content/10 bg-base-200/50 px-4 py-3 text-center text-xs text-base-content/60">
+                  🔒 開啟定位後即可篩選距離
+                </div>
+              )}
+            </section>
+
+            <div className="divider my-3" />
+
+            <section className="mb-4">
+              <Cap>營業時間</Cap>
+              <div className="mt-2 flex flex-wrap gap-2">
+                {(["any", "now", "specific"] as const).map((m) => (
+                  <button
+                    key={m}
+                    type="button"
+                    onClick={() => handleTimeModeChange(m)}
+                    className={`btn btn-sm ${timeMode === m ? "btn-neutral" : "btn-ghost border border-base-content/15"}`}
+                  >
+                    {m === "any" ? "不限時間" : m === "now" ? "現在營業中" : "指定時間..."}
+                  </button>
+                ))}
               </div>
-            </>
-          ) : (
-            <div className="mt-3 rounded border border-base-content/10 bg-base-200/50 px-4 py-3 text-center text-xs text-base-content/60">
-              🔒 開啟定位後即可篩選距離
-            </div>
-          )}
-        </section>
+              {timeMode === "specific" && (
+                <div className="cp-anim-fade-in mt-3 flex gap-2">
+                  <CustomSelect
+                    options={WEEKDAY_OPTIONS}
+                    value={selDay}
+                    onChange={(v) => handleSpecificChange(v, selHour)}
+                    widthClass="flex-1 max-w-[120px]"
+                  />
+                  <CustomSelect
+                    options={HOUR_OPTIONS.map((h) => ({ value: h, label: h }))}
+                    value={selHour}
+                    onChange={(v) => handleSpecificChange(selDay, v)}
+                    widthClass="flex-1"
+                  />
+                </div>
+              )}
+            </section>
 
-        <div className="divider my-3" />
-
-        <section className="mb-4">
-          <Cap>營業時間</Cap>
-          <div className="mt-2 flex flex-wrap gap-2">
-            {(["any", "now", "specific"] as const).map((m) => (
-              <button
-                key={m}
-                type="button"
-                onClick={() => handleTimeModeChange(m)}
-                className={`btn btn-sm ${timeMode === m ? "btn-neutral" : "btn-ghost border border-base-content/15"}`}
-              >
-                {m === "any" ? "不限時間" : m === "now" ? "現在營業中" : "指定時間..."}
-              </button>
+            {FILTER_TAG_GROUPS.map((group) => (
+              <div key={group.label}>
+                <div className="divider my-3" />
+                <section className="mb-4">
+                  <Cap>{group.label}</Cap>
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    {group.tags.map((tag) => (
+                      <button
+                        key={tag.key}
+                        type="button"
+                        onClick={() => onToggleTag(tag.key)}
+                        className={`btn btn-sm ${selected.has(tag.key) ? "btn-neutral" : "btn-ghost border border-base-content/15"}`}
+                      >
+                        {tag.label}
+                      </button>
+                    ))}
+                  </div>
+                </section>
+              </div>
             ))}
           </div>
-          {timeMode === "specific" && (
-            <div className="cp-anim-fade-in mt-3 flex gap-2">
-              <CustomSelect
-                options={WEEKDAY_OPTIONS}
-                value={selDay}
-                onChange={(v) => handleSpecificChange(v, selHour)}
-                widthClass="flex-1 max-w-[120px]"
-              />
-              <CustomSelect
-                options={HOUR_OPTIONS.map((h) => ({ value: h, label: h }))}
-                value={selHour}
-                onChange={(v) => handleSpecificChange(selDay, v)}
-                widthClass="flex-1"
-              />
-            </div>
-          )}
-        </section>
-
-        <div className="divider my-3" />
-
-        {FILTER_TAG_GROUPS.map((group) => (
-          <section key={group.label} className="mb-4">
-            <Cap>{group.label}</Cap>
-            <div className="mt-2 flex flex-wrap gap-2">
-              {group.tags.map((tag) => (
-                <button
-                  key={tag.key}
-                  type="button"
-                  onClick={() => onToggleTag(tag.key)}
-                  className={`btn btn-sm ${selected.has(tag.key) ? "btn-neutral" : "btn-ghost border border-base-content/15"}`}
-                >
-                  {tag.label}
-                </button>
-              ))}
-            </div>
-          </section>
-        ))}
+        )}
       </div>
 
       {/* sticky apply 按鈕 — 不寫 sticky bottom,因為 sheet 自己會被 MobileTabBar 蓋住 */}

@@ -1,4 +1,4 @@
-import { useRef, useEffect } from "react";
+import { useRef, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
@@ -10,18 +10,22 @@ import {
 } from "@hugeicons/core-free-icons";
 import { FilterChipBar, type ChipOption } from "@/components/search/FilterChipBar";
 import { parsePrompt } from "@/lib/api";
-import { TAG_LABEL_TO_KEY } from "@/data/filterTags";
+import { TAG_LABEL_TO_KEY, TAG_KEY_TO_LABEL } from "@/data/filterTags";
 import { searchCafesLocal } from "@/lib/cafeFilter";
 import { useAllCafes } from "@/hooks/useCafes";
 import { useUserLocation } from "@/context/UserLocationContext";
+import { SCENARIO_BY_KEY } from "@/components/search/ScenarioGrid";
 
 export type SearchMode = "idle" | "searching" | "results";
 
-const CHIP_OPTIONS: ChipOption[] = [
+const ALL_MAP_CHIPS: ChipOption[] = [
   { key: "now", label: "現在營業" },
   { key: "no_limit", label: "不限時" },
   { key: "socket", label: "有插座" },
   { key: "study", label: "適合讀書" },
+  { key: "chat", label: "適合聊天" },
+  { key: "pet", label: "寵物友善" },
+  { key: "wifi", label: "有 Wi-Fi" },
 ];
 
 function matchTagLabelKey(q: string): string | null {
@@ -54,14 +58,16 @@ interface Props {
   ) => void;
   loading?: boolean;
   setLoading?: (b: boolean) => void;
+  keyword?: string | null;
+  scenario?: string | null;
 }
 
 /**
  * Google Maps 風格的浮動搜尋層。永遠絕對定位在地圖左上,z-index 高於 sheet。
  * 三種模式:
- *   - idle:左 slot = 漢堡(個人),右 slot 無;chips 顯示。
- *   - searching:左 slot = ←;chips 顯示;父層應同時把 sheet 撐到全屏覆蓋。
- *   - results:左 slot = ←,右 slot = ✕;chips 顯示。
+ *   - idle:左 slot = 無(或 nested icon); 右 slot = 個人頭貼; chips 顯示 4~5 個。
+ *   - searching:左 slot = ←; chips 顯示 7 個; 輸入框 editable。
+ *   - results:左 slot = search icon (不具 back 功能); 右 slot = ✕; chips 顯示 4~5 個; 輸入框唯讀並顯示篩選文字。
  */
 export function MapSearchOverlay({
   mode,
@@ -75,11 +81,44 @@ export function MapSearchOverlay({
   onSubmit,
   loading,
   setLoading,
+  keyword,
+  scenario,
 }: Props) {
   const navigate = useNavigate();
   const inputRef = useRef<HTMLInputElement>(null);
   const allCafes = useAllCafes();
   const { location } = useUserLocation();
+
+  // 自適應螢幕寬度量測
+  const [screenWidth, setScreenWidth] = useState(() =>
+    typeof window === "undefined" ? 375 : window.innerWidth
+  );
+
+  useEffect(() => {
+    const handleResize = () => setScreenWidth(window.innerWidth);
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
+  // tags 顯示數量邏輯
+  const isSearchingMode = mode === "searching";
+  const maxChips = isSearchingMode ? 7 : (screenWidth >= 390 ? 5 : 4);
+  const displayedChips = ALL_MAP_CHIPS.slice(0, maxChips);
+
+  // 搜尋條件顯示文字摘要
+  const displayQueryText = (() => {
+    if (keyword) return keyword;
+    if (scenario && SCENARIO_BY_KEY[scenario]) return SCENARIO_BY_KEY[scenario].title;
+    if (selected && selected.size > 0) {
+      const labels = Array.from(selected)
+        .map((key) => {
+          if (key === "now") return "現在營業";
+          return TAG_KEY_TO_LABEL[key] || key;
+        });
+      return labels.join(", ");
+    }
+    return "已套用篩選";
+  })();
 
   // searching 模式自動 focus,結束 searching 時 blur
   useEffect(() => {
@@ -124,6 +163,13 @@ export function MapSearchOverlay({
   const leftSlot = (() => {
     if (mode === "idle") {
       return null;
+    }
+    if (mode === "results") {
+      return (
+        <div className="flex h-8 w-8 items-center justify-center text-base-content/55">
+          <HugeiconsIcon icon={Search01Icon} size={18} strokeWidth={1.5} />
+        </div>
+      );
     }
     return (
       <button
@@ -172,12 +218,17 @@ export function MapSearchOverlay({
           e.preventDefault();
           void handleSubmit();
         }}
-        onClick={() => {
-          // 整條搜尋列都是 tap target — 點到 icon、左右 padding 或邊框都能進入搜尋。
-          // (idle 模式下單純依賴 input onFocus 在手機上常常需要點兩次才會觸發。)
-          if (mode === "idle") {
+        onClick={(e) => {
+          // 如果點擊了清除按鈕，不要觸發 focus
+          if ((e.target as HTMLElement).closest('[aria-label="清除"]')) {
+            return;
+          }
+          // 整條搜尋列都是 tap target
+          if (mode === "idle" || mode === "results") {
             onFocusSearch();
-            inputRef.current?.focus();
+            if (mode === "idle") {
+              inputRef.current?.focus();
+            }
           }
         }}
         className={`pointer-events-auto flex items-center gap-1 rounded-full border border-base-content/10 bg-base-100 px-2 py-1.5 transition-shadow duration-200 ${
@@ -194,16 +245,22 @@ export function MapSearchOverlay({
               className="shrink-0 text-base-content/55"
             />
           )}
-          <input
-            ref={inputRef}
-            type="text"
-            value={query}
-            onChange={(e) => onQueryChange(e.target.value)}
-            onFocus={onFocusSearch}
-            placeholder={mode === "idle" ? "搜尋咖啡廳或情境" : "輸入店名 / 情境"}
-            className="flex-1 bg-transparent text-sm focus:outline-none min-w-0"
-            disabled={loading}
-          />
+          {mode === "results" ? (
+            <div className="flex-1 text-sm text-base-content font-medium py-1 truncate cursor-pointer select-none">
+              {displayQueryText}
+            </div>
+          ) : (
+            <input
+              ref={inputRef}
+              type="text"
+              value={query}
+              onChange={(e) => onQueryChange(e.target.value)}
+              onFocus={onFocusSearch}
+              placeholder={mode === "idle" ? "搜尋咖啡廳或情境" : "輸入店名 / 情境"}
+              className="flex-1 bg-transparent text-sm focus:outline-none min-w-0"
+              disabled={loading}
+            />
+          )}
           {loading && (
             <HugeiconsIcon
               icon={Loading03Icon}
@@ -216,7 +273,7 @@ export function MapSearchOverlay({
       </form>
       <div className="pointer-events-auto overflow-x-auto no-scrollbar">
         <FilterChipBar
-          options={CHIP_OPTIONS}
+          options={displayedChips}
           selected={selected}
           onToggle={onToggleTag}
           className="flex"

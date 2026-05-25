@@ -210,6 +210,21 @@ export default function MapPage() {
     if (initialOpenAt) setOpenAt(initialOpenAt);
   }, [initialOpenAt, setOpenAt]);
 
+  // 阻斷 Vaul drawer 的 focus trap 以修復無法打字的問題
+  useEffect(() => {
+    if (isSearching) {
+      const handleFocus = (e: FocusEvent) => {
+        e.stopImmediatePropagation();
+      };
+      document.addEventListener("focusin", handleFocus, true);
+      document.addEventListener("focusout", handleFocus, true);
+      return () => {
+        document.removeEventListener("focusin", handleFocus, true);
+        document.removeEventListener("focusout", handleFocus, true);
+      };
+    }
+  }, [isSearching]);
+
   const currentRatio = typeof snap === "number" ? snap : 0.3;
   // searching 時 overlay 蓋全屏,但 Map 仍要保留可視中心(flyTo padding 太大會跑出畫面)。
   // 鎖在 0.55 上限,符合 detail expanded 行為。
@@ -274,16 +289,20 @@ export default function MapPage() {
 
   // home tab 的搜尋結果
   const searchResult = useMemo(() => {
+    const tagsWithoutNow = tagsArr.filter((t) => t !== "now");
+    const effectiveOpenAt = selected.has("now") ? new Date().toISOString() : openAt;
+
     const cafes = searchCafesLocal(allCafes.data, {
-      tags: tagsArr,
+      tags: tagsWithoutNow,
       tagsOr: orSelected,
       userLng: userLocation?.lng ?? null,
       userLat: userLocation?.lat ?? null,
       radiusM,
-      openAt,
+      openAt: effectiveOpenAt,
       q: keyword || query.trim() || null,
       sort: sortKey,
     });
+
     return { cafes, total: cafes.length };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
@@ -416,8 +435,8 @@ export default function MapPage() {
   };
 
   const handleMapClick = useCallback(() => {
-    if (isDetailMode) setSnap(0.3);
-  }, [isDetailMode]);
+    setSnap(0.3);
+  }, []);
 
   // 搜尋提交 (AI 解析 / keyword / tag label)
   const handleSubmitSearch = (
@@ -568,7 +587,7 @@ export default function MapPage() {
         : `${total} 間 · 臺南`;
       return (
         <>
-          <header className="flex items-center justify-between px-5 pt-1.5 pb-2">
+          <header className="flex items-center justify-between px-5 pt-1 pb-2">
             <h2 className="text-[15px] font-semibold">{heading}</h2>
             <div className="flex items-center gap-1">
               <button
@@ -590,7 +609,7 @@ export default function MapPage() {
               </button>
             </div>
           </header>
-          <div className="divider my-0" />
+          <div className="h-[1px] bg-base-content/10 w-full shrink-0" />
           {isListError ? (
             <p className="px-5 py-6 text-center text-sm text-base-content/55">
               載入失敗，請稍後再試
@@ -670,10 +689,17 @@ export default function MapPage() {
             onQueryChange={setQuery}
             selected={selected}
             onToggleTag={toggle}
-            onFocusSearch={() => setIsSearching(true)}
+            onFocusSearch={() => {
+              if (isDetailMode) {
+                navigate("/");
+              }
+              setIsSearching(true);
+            }}
             onBack={handleOverlayBack}
             onClearAll={handleOverlayClear}
             onSubmit={handleSubmitSearch}
+            keyword={keyword}
+            scenario={scenario}
           />
         )}
 
@@ -696,13 +722,17 @@ export default function MapPage() {
               onTouchEnd={handleSheetTouchEnd}
               onTouchCancel={handleSheetTouchEnd}
               onClick={(e) => {
+                const target = e.target as HTMLElement;
+                if (target.closest("button, a, input, select, textarea, [role='button']")) {
+                  return;
+                }
                 if (isDetailMode) {
-                  const target = e.target as HTMLElement;
-                  if (target.closest("button, a, input, select, textarea, [role='button']")) {
-                    return;
-                  }
                   if (snap !== 0.85) {
                     setSnap(0.85);
+                  }
+                } else if (tab === "home" || tab === "pocket") {
+                  if (snap !== 0.7) {
+                    setSnap(0.7);
                   }
                 }
               }}
