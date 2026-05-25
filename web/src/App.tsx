@@ -23,6 +23,7 @@ import OnboardingPage, { isOnboarded } from "./pages/OnboardingPage";
 import DesktopProfilePage from "./pages/DesktopProfilePage";
 import DesktopPocketPage from "./pages/DesktopPocketPage";
 import DesktopSettingsPage from "./pages/DesktopSettingsPage";
+import AddCafePage from "./pages/AddCafePage";
 export default function App() {
   const isDesktop = useIsDesktop();
   // 訂閱 location 以強制 App 在每次路由切換時 re-render —— 否則 `isOnboarded()`
@@ -38,6 +39,7 @@ export default function App() {
         <Route path="/profile" element={isOnboarded() ? <DesktopProfilePage /> : <Navigate to="/onboarding" replace />} />
         <Route path="/settings" element={isOnboarded() ? <DesktopSettingsPage /> : <Navigate to="/onboarding" replace />} />
         <Route path="/pocket" element={isOnboarded() ? <DesktopPocketPage /> : <Navigate to="/onboarding" replace />} />
+        <Route path="/add-cafe" element={isOnboarded() ? <AddCafePage /> : <Navigate to="/onboarding" replace />} />
         <Route path="*" element={isOnboarded() ? <DesktopApp /> : <Navigate to="/onboarding" replace />} />
       </Routes>
     );
@@ -51,6 +53,7 @@ export default function App() {
       <Route path="/onboarding" element={<OnboardingPage />} />
       <Route path="/login" element={isOnboarded() ? <LoginPage /> : <Navigate to="/onboarding" replace />} />
       <Route path="/settings" element={isOnboarded() ? <SettingsPage /> : <Navigate to="/onboarding" replace />} />
+      <Route path="/add-cafe" element={isOnboarded() ? <AddCafePage /> : <Navigate to="/onboarding" replace />} />
       <Route path="*" element={isOnboarded() ? <MapPage /> : <Navigate to="/onboarding" replace />} />
     </Routes>
   );

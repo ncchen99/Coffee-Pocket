@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Settings01Icon, Mail01Icon, Logout01Icon } from "@hugeicons/core-free-icons";
+import { Settings01Icon, Mail01Icon, Logout01Icon, PlusSignIcon } from "@hugeicons/core-free-icons";
 import { Cap, ConfirmModal } from "@/components/primitives";
 import { DesktopPageLayout } from "@/components/layout/DesktopPageLayout";
 import { useAuth } from "@/hooks/useAuth";
@@ -160,6 +160,12 @@ export default function DesktopProfilePage() {
       {/* Menu */}
       <section className="mt-6 rounded-xl border border-base-content/10 overflow-hidden">
         <ul className="divide-y divide-base-content/10">
+          <li>
+            <Link to="/add-cafe" className="flex items-center gap-3 px-5 py-3 hover:bg-base-200/60 transition-colors">
+              <HugeiconsIcon icon={PlusSignIcon} size={16} strokeWidth={1.5} className="text-base-content/65" />
+              <span className="text-sm">新增咖啡廳</span>
+            </Link>
+          </li>
           <li>
             <Link to="/settings" className="flex items-center gap-3 px-5 py-3 hover:bg-base-200/60 transition-colors">
               <HugeiconsIcon icon={Settings01Icon} size={16} strokeWidth={1.5} className="text-base-content/65" />

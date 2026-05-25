@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Settings01Icon, Mail01Icon, Logout01Icon } from "@hugeicons/core-free-icons";
+import { Settings01Icon, Mail01Icon, Logout01Icon, PlusSignIcon } from "@hugeicons/core-free-icons";
 import { Cap, ConfirmModal } from "@/components/primitives";
 import { useAuth } from "@/hooks/useAuth";
 import { useUserStats, useContributions } from "@/hooks/useProfile";
@@ -131,6 +131,20 @@ export function ProfileSheetContent() {
       </section>
 
       <ul className="divide-y divide-base-content/10 border-b border-base-content/10">
+        <li>
+          <Link
+            to="/add-cafe"
+            className="flex items-center gap-3 px-5 py-3 active:bg-base-200/60"
+          >
+            <HugeiconsIcon
+              icon={PlusSignIcon}
+              size={16}
+              strokeWidth={1.5}
+              className="text-base-content/65"
+            />
+            <span className="text-sm">新增咖啡廳</span>
+          </Link>
+        </li>
         <li>
           <Link
             to="/settings"

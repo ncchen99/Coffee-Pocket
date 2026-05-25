@@ -119,6 +119,53 @@ export async function parsePrompt(query: string): Promise<ParsedPrompt> {
 }
 
 // ===========================================================================
+// Add Cafe — Place search + submission (proxied through our FastAPI service)
+// ===========================================================================
+
+/**
+ * Endpoint base for our self-hosted Python service.
+ * Set `VITE_ADD_CAFE_API_BASE` in `.env` to e.g. `https://api.coffeepocket.tw`.
+ * Defaults to `http://localhost:8000` for local dev.
+ */
+const ADD_CAFE_API_BASE =
+  (import.meta.env.VITE_ADD_CAFE_API_BASE as string | undefined)?.replace(/\/$/, "") ||
+  "http://localhost:8000";
+
+export interface PlaceSearchResult {
+  place_id: string;
+  name: string;
+  address: string | null;
+  lat: number;
+  lng: number;
+  google_maps_url: string | null;
+  /** 後端比對 cafes 表後標記;true = 已經在 DB 裡。 */
+  already_exists: boolean;
+}
+
+export async function searchPlaces(query: string): Promise<PlaceSearchResult[]> {
+  const q = query.trim();
+  if (!q) return [];
+  const res = await fetch(`${ADD_CAFE_API_BASE}/places/search`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ query: q }),
+  });
+  if (!res.ok) throw new Error(`places search failed: ${res.status}`);
+  const data = await res.json();
+  return (data.results ?? []) as PlaceSearchResult[];
+}
+
+export async function submitCafe(placeId: string): Promise<{ job_id: string }> {
+  const res = await fetch(`${ADD_CAFE_API_BASE}/cafes`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ place_id: placeId }),
+  });
+  if (!res.ok) throw new Error(`submit cafe failed: ${res.status}`);
+  return res.json();
+}
+
+// ===========================================================================
 // Local search corpus
 // ===========================================================================
 

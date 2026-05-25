@@ -568,7 +568,7 @@ export default function MapPage() {
                 type="button"
                 onClick={handleDetailBack}
                 aria-label="關閉"
-                className="btn btn-ghost btn-sm btn-square text-base-content/65 hover:text-base-content shrink-0"
+                className="btn btn-ghost btn-sm btn-square -mt-1 -mr-2 text-base-content/65 hover:text-base-content shrink-0"
               >
                 <HugeiconsIcon icon={Cancel01Icon} size={18} strokeWidth={1.5} />
               </button>
@@ -584,7 +584,7 @@ export default function MapPage() {
           <div
             ref={sheetScrollRef}
             onScroll={(e) => setIsDetailScrolled(e.currentTarget.scrollTop > 0)}
-            className="flex-1 overflow-y-auto overscroll-contain pb-[15vh]"
+            className="flex-1 overflow-y-auto overscroll-contain pb-[max(20vh,140px)]"
           >
             {detailQuery.isLoading ? (
               <div className="space-y-3 p-5">
@@ -683,7 +683,7 @@ export default function MapPage() {
             <ul
               ref={searchListRefCallback}
               onScroll={handleSearchListScroll}
-              className="flex-1 divide-y divide-base-content/10 overflow-y-auto"
+              className="flex-1 divide-y divide-base-content/10 overflow-y-auto pb-[30vh]"
             >
               {searchResult.cafes.map((c) => (
                 <li key={c.id} data-cafe-id={c.id} data-cafe-slug={c.slug ?? undefined}>

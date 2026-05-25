@@ -784,6 +784,19 @@ def pick_cafes(
 # ----- Main ----------------------------------------------------------------
 
 
+# Pin a real Chrome UA so headless requests don't get a simplified "HeadlessChrome"
+# response from Google Maps. Symptom when this is missing: the place panel renders
+# rating ("4.6 顆星") but omits the "X 則評論" aria-label sibling inside `div.F7nice`,
+# which then makes `extract_place_meta` return review_count=None and the scraper
+# bails with stop_reason=no_reviews. Headful mode never hit this because launching
+# system Chrome with a display sends a normal UA.
+# Bump this string when Chrome's major version moves so we don't look obviously stale.
+_DESKTOP_UA = (
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 "
+    "(KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36"
+)
+
+
 def _launch_persistent(pw: Playwright, *, headful: bool):
     """Launch a real Chrome instance against our persistent profile dir.
 
@@ -801,11 +814,22 @@ def _launch_persistent(pw: Playwright, *, headful: bool):
         locale="zh-TW",
         timezone_id="Asia/Taipei",
         viewport={"width": 1280, "height": 900},
+        user_agent=_DESKTOP_UA,
         args=[
             "--disable-blink-features=AutomationControlled",
             "--lang=zh-TW",
         ],
         extra_http_headers={"Accept-Language": "zh-TW,zh;q=0.9,en;q=0.5"},
+    )
+    # Defensive: even with a UA override, Google sniffs `navigator.webdriver`
+    # and a couple of related flags on headless contexts. These are cheap to mask
+    # via an init script and let the page render its normal panel layout.
+    context.add_init_script(
+        """
+        Object.defineProperty(navigator, 'webdriver', { get: () => undefined });
+        Object.defineProperty(navigator, 'languages', { get: () => ['zh-TW', 'zh', 'en'] });
+        Object.defineProperty(navigator, 'plugins', { get: () => [1, 2, 3, 4, 5] });
+        """
     )
     return context
 
