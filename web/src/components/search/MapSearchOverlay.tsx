@@ -272,7 +272,7 @@ export function MapSearchOverlay({
         </div>
         {rightSlot}
       </form>
-      <div className="pointer-events-auto overflow-x-auto no-scrollbar">
+      <div className="pointer-events-auto overflow-x-auto no-scrollbar py-1 -my-1">
         <FilterChipBar
           options={displayedChips}
           selected={selected}

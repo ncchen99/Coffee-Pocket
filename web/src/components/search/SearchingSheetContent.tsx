@@ -83,7 +83,10 @@ export function SearchingSheetContent({
       </div>
 
       {/* sticky apply 按鈕 */}
-      <div className="border-t border-base-content/10 bg-base-100 px-5 py-3">
+      <div
+        className="border-t border-base-content/10 bg-base-100 px-5 pt-3"
+        style={{ paddingBottom: "calc(0.75rem + env(safe-area-inset-bottom))" }}
+      >
         <button
           type="button"
           onClick={onApply}

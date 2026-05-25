@@ -48,7 +48,7 @@ export function TagChip({
         sizeCls,
         "font-normal normal-case transition-shadow duration-200",
         selected
-          ? `border-neutral bg-neutral text-neutral-content ring-1 ring-neutral-content/40 hover:bg-neutral hover:border-neutral hover:text-neutral-content ${shadowCls}`
+          ? `border-neutral-content/70 bg-neutral text-neutral-content hover:bg-neutral hover:border-neutral-content/70 hover:text-neutral-content ${shadowCls}`
           : `border-base-300 bg-base-200 text-base-content hover:bg-base-300 hover:border-base-300 hover:text-base-content ${shadowCls}`,
         className,
       )}

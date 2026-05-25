@@ -33,7 +33,7 @@ export function FilterChipBar({
 }: FilterChipBarProps) {
   return (
     <div className={`flex items-center gap-2 ${className ?? ""}`}>
-      <div className="flex flex-1 items-center gap-1.5 overflow-x-auto no-scrollbar">
+      <div className="flex flex-1 items-center gap-1.5 overflow-x-auto no-scrollbar py-1 -my-1">
         {options.map((o) => {
           const isSel = selected.has(o.key);
           return (
