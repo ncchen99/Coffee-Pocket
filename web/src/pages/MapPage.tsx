@@ -38,7 +38,8 @@ type MobileTab = "home" | "pocket" | "profile";
  *
  * Searching 模式不走 drawer,而是另一個全屏 overlay,所以這裡不列。
  */
-const DETAIL_SNAPS: (number | string)[] = [0.3, 0.5, 0.9];
+// 詳細模式的最高 snap 留一點空間給浮動搜尋框 (~92px ≈ 11% vh),不讓它蓋到 cafe header。
+const DETAIL_SNAPS: (number | string)[] = [0.3, 0.5, 0.85];
 const HOME_SNAPS: (number | string)[] = [0.3, 0.7];
 const POCKET_SNAPS: (number | string)[] = [0.3, 0.7];
 const PROFILE_SNAPS: (number | string)[] = [0.55, 0.9];
@@ -332,6 +333,11 @@ export default function MapPage() {
     setIsSearching(false);
   };
 
+  const handleDetailBack = () => {
+    if (routerLocation.key !== "default") navigate(-1);
+    else navigate(tab === "home" ? "/" : `/${tab}`, { replace: true });
+  };
+
   // ─── 桌面 redirect ───────────────────────────────
   if (isDesktop) {
     const p = new URLSearchParams();
@@ -360,10 +366,8 @@ export default function MapPage() {
 
   const renderDrawerContent = () => {
     if (isDetailMode) {
-      // detail 模式保留浮動搜尋框 — 把 sheet 內容預留 top padding,
-      // 避免使用者把 sheet 拉到最高時搜尋框蓋住 cafe header。
       return (
-        <div ref={sheetScrollRef} className="flex-1 overflow-y-auto overscroll-contain pt-[92px]">
+        <div ref={sheetScrollRef} className="flex-1 overflow-y-auto overscroll-contain">
           {detailQuery.isLoading ? (
             <div className="space-y-3 p-5">
               <div className="h-6 w-1/2 animate-pulse rounded bg-base-200" />
@@ -377,6 +381,7 @@ export default function MapPage() {
               isDesktop={false}
               actions={actions}
               coverPlacement="mid"
+              onClose={handleDetailBack}
             />
           ) : (
             <div className="flex h-full items-center justify-center p-6">

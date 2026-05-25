@@ -11,6 +11,7 @@ import {
   Navigation03Icon,
   Add01Icon,
   GlobeIcon,
+  Cancel01Icon,
 } from "@hugeicons/core-free-icons";
 import { Cap, Placeholder, StarRating, TagBadge } from "@/components/primitives";
 import { TagConfidenceRow } from "@/components/cafe/TagConfidenceRow";
@@ -33,10 +34,15 @@ interface CafeDetailContentProps {
    *                  使用,讓使用者把 sheet 上拉時才看到封面,作為向上探索的獎勵。
    */
   coverPlacement?: "top" | "mid";
+  /**
+   * 點右上 × 關閉的回呼。手機 bottom sheet 模式下會傳入,讓使用者除了手勢之外
+   * 也能用按鈕回到上一頁;桌面/不需要關閉按鈕時不傳。
+   */
+  onClose?: () => void;
 }
 
 /** 詳細頁主體 — 桌面中間欄與手機 main 共用。 */
-export function CafeDetailContent({ cafe, isDesktop, actions, coverPlacement = "top" }: CafeDetailContentProps) {
+export function CafeDetailContent({ cafe, isDesktop, actions, coverPlacement = "top", onClose }: CafeDetailContentProps) {
   const { user } = useAuth();
   const [isAddTagOpen, setIsAddTagOpen] = useState(false);
   const { data: userVotes } = useUserVotesForCafe(user ? cafe.id : null);
@@ -201,21 +207,18 @@ export function CafeDetailContent({ cafe, isDesktop, actions, coverPlacement = "
 
       {/* === 1. 咖啡廳資訊 === */}
       <section className="px-5 pt-5">
-        <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
-          <h2 className="text-2xl font-bold tracking-tight">{cafe.name}</h2>
-          <div
-            className={`badge badge-outline ${
-              cafe.open_now ? "text-success" : cafe.opens_at ? "text-warning" : "text-error"
-            }`}
-          >
-            {cafe.open_now
-              ? cafe.closes_at
-                ? `營業中 · ${cafe.closes_at} 打烊`
-                : "營業中"
-              : cafe.opens_at
-                ? `尚未營業 · ${cafe.opens_at} 開門`
-                : "已休息"}
-          </div>
+        <div className="flex items-start justify-between gap-3">
+          <h2 className="text-2xl font-bold tracking-tight flex-1 min-w-0">{cafe.name}</h2>
+          {onClose && (
+            <button
+              type="button"
+              onClick={onClose}
+              aria-label="關閉"
+              className="btn btn-ghost btn-sm btn-square -mt-1 shrink-0 text-base-content/65 hover:text-base-content"
+            >
+              <HugeiconsIcon icon={Cancel01Icon} size={18} strokeWidth={1.5} />
+            </button>
+          )}
         </div>
 
         {/* 評分 / 星星 / 評論數 / 價位 */}
@@ -248,6 +251,24 @@ export function CafeDetailContent({ cafe, isDesktop, actions, coverPlacement = "
             {formatDistance(cafe.distance_km)}
           </div>
         )}
+
+        {/* 營業狀態 — 從原本「店名右側」搬到評分與地址之間,
+            視覺上比掛在標題旁更平衡,也讓 × 關閉按鈕能固定靠右。 */}
+        <div className="mt-2">
+          <div
+            className={`badge badge-outline ${
+              cafe.open_now ? "text-success" : cafe.opens_at ? "text-warning" : "text-error"
+            }`}
+          >
+            {cafe.open_now
+              ? cafe.closes_at
+                ? `營業中 · ${cafe.closes_at} 打烊`
+                : "營業中"
+              : cafe.opens_at
+                ? `尚未營業 · ${cafe.opens_at} 開門`
+                : "已休息"}
+          </div>
+        </div>
 
         {/* 地址 */}
         <div className="mt-2 flex items-start gap-1.5 px-1 text-xs text-base-content/70">
