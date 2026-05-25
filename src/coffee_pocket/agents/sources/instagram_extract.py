@@ -28,7 +28,7 @@ from pydantic import ValidationError
 
 from ...db import get_client
 from ...llm import LLMError, chat_json
-from ..process.google_places import CHUNK_SIZE, SYSTEM_PROMPT, ExtractionResult
+from ..process.google_places import CHUNK_SIZE, SYSTEM_PROMPT, ExtractionResult, Signal
 
 logger = logging.getLogger(__name__)
 
@@ -237,12 +237,34 @@ def mark_processed(review_ids: list[str], signals_by_review: dict[str, list[dict
         ).eq("id", rid).execute()
 
 
-def extract_chunk(chunk: list[dict[str, str]]) -> ExtractionResult:
+def extract_chunk(
+    chunk: list[dict[str, str]],
+) -> tuple[ExtractionResult, list[dict[str, Any]]]:
+    """Run LLM on a chunk; validate signals one-by-one.
+
+    Mirrors the per-signal tolerance in google_extract.extract_chunk so a
+    single hallucinated signal (e.g. polarity='false') does not nuke the
+    rest of the chunk's valid output. Returns (result, bad_signal_records).
+    """
     raw = chat_json(
         SYSTEM_PROMPT,
         json.dumps({"source": "instagram", "reviews": chunk}, ensure_ascii=False),
     )
-    return ExtractionResult.model_validate(raw)
+    if not isinstance(raw, dict):
+        raise ValueError(f"LLM returned non-dict payload: {type(raw).__name__}")
+
+    raw_signals = raw.get("signals") or []
+    if not isinstance(raw_signals, list):
+        raise ValueError(f"LLM returned non-list signals: {type(raw_signals).__name__}")
+
+    valid: list[Signal] = []
+    bad: list[dict[str, Any]] = []
+    for idx, item in enumerate(raw_signals):
+        try:
+            valid.append(Signal.model_validate(item))
+        except ValidationError as exc:
+            bad.append({"index": idx, "raw": item, "error": str(exc)})
+    return ExtractionResult(signals=valid), bad
 
 
 def process_file(
@@ -281,11 +303,21 @@ def process_file(
         if idx > 0:
             time.sleep(1.5)
         try:
-            result = extract_chunk(chunk)
-        except (LLMError, ValidationError) as exc:
+            result, bad_signals = extract_chunk(chunk)
+        except (LLMError, ValidationError, ValueError) as exc:
             logger.warning("LLM chunk failed: %s", exc)
             write_dead_letter({"file": str(path), "chunk": chunk}, str(exc))
             continue
+        if bad_signals:
+            logger.warning(
+                "LLM chunk had %d invalid signal(s); kept %d valid",
+                len(bad_signals),
+                len(result.signals),
+            )
+            write_dead_letter(
+                {"file": str(path), "chunk": chunk, "bad_signals": bad_signals},
+                f"{len(bad_signals)} invalid signals dropped",
+            )
         for sig in result.signals:
             total_signals += 1
             if sig.review_id and sig.review_id in signals_by_review:

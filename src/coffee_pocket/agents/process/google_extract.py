@@ -35,6 +35,7 @@ from .google_places import (  # reuse schema + prompt + chunk size
     CHUNK_SIZE,
     SYSTEM_PROMPT,
     ExtractionResult,
+    Signal,
 )
 
 logger = logging.getLogger(__name__)
@@ -127,9 +128,34 @@ def mark_processed(
     db.table("reviews_raw").upsert(rows, on_conflict="source_id,external_id").execute()
 
 
-def extract_chunk(chunk: list[dict[str, str]]) -> ExtractionResult:
+def extract_chunk(
+    chunk: list[dict[str, str]],
+) -> tuple[ExtractionResult, list[dict[str, Any]]]:
+    """Run LLM on a chunk; validate signals one-by-one.
+
+    Returns (result_with_valid_signals, bad_signal_records). The LLM
+    occasionally hallucinates non-literal values (e.g. polarity='false'),
+    which would otherwise reject the whole chunk and drop every other
+    valid signal in it. Per-signal validation keeps the good ones.
+    """
     raw = chat_json(SYSTEM_PROMPT, json.dumps({"reviews": chunk}, ensure_ascii=False))
-    return ExtractionResult.model_validate(raw)
+    if not isinstance(raw, dict):
+        raise ValidationError.from_exception_data(  # type: ignore[arg-type]
+            "ExtractionResult", [{"type": "dict_type", "loc": (), "input": raw}]
+        )
+
+    raw_signals = raw.get("signals") or []
+    if not isinstance(raw_signals, list):
+        raise ValueError(f"LLM returned non-list signals: {type(raw_signals).__name__}")
+
+    valid: list[Signal] = []
+    bad: list[dict[str, Any]] = []
+    for idx, item in enumerate(raw_signals):
+        try:
+            valid.append(Signal.model_validate(item))
+        except ValidationError as exc:
+            bad.append({"index": idx, "raw": item, "error": str(exc)})
+    return ExtractionResult(signals=valid), bad
 
 
 def process_file(path: Path, *, run_llm: bool, only_unprocessed: bool) -> dict[str, int]:
@@ -163,11 +189,26 @@ def process_file(path: Path, *, run_llm: bool, only_unprocessed: bool) -> dict[s
         if idx > 0:
             time.sleep(1.5)
         try:
-            result = extract_chunk(chunk)
-        except (LLMError, ValidationError) as exc:
+            result, bad_signals = extract_chunk(chunk)
+        except (LLMError, ValidationError, ValueError) as exc:
+            # Whole-chunk failure: LLM call errored or returned unparseable
+            # JSON. Leave reviews with processed_at=NULL so a re-run retries.
             logger.warning("  LLM chunk failed: %s", exc)
             write_dead_letter({"cafe_id": cafe_id, "chunk": chunk}, str(exc))
             continue
+        if bad_signals:
+            # Partial failure: some signals were invalid but the rest are
+            # usable. Record the bad ones for visibility, keep the chunk's
+            # reviews marked processed (no infinite retry on hallucinations).
+            logger.warning(
+                "  LLM chunk had %d invalid signal(s); kept %d valid",
+                len(bad_signals),
+                len(result.signals),
+            )
+            write_dead_letter(
+                {"cafe_id": cafe_id, "chunk": chunk, "bad_signals": bad_signals},
+                f"{len(bad_signals)} invalid signals dropped",
+            )
         for sig in result.signals:
             total_signals += 1
             if sig.review_id and sig.review_id in signals_by_review:
