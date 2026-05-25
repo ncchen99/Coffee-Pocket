@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type UIEvent } from "react";
 import { Link } from "react-router-dom";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Add01Icon } from "@hugeicons/core-free-icons";
@@ -11,10 +11,19 @@ interface Props {
   /** 由父層 MapPage 控制 — 改變時也會影響地圖 marker。 */
   activePocketId: string | null;
   onActivePocketIdChange: (id: string | null) => void;
+  listRef?: (el: HTMLDivElement | null) => void;
+  onScroll?: (e: UIEvent<HTMLDivElement>) => void;
+  detailSearch?: string;
 }
 
 /** 口袋 tab 的 sheet 內容 — 從原 PocketListPage 抽出,不再含 header/MobileTabBar。 */
-export function PocketSheetContent({ activePocketId, onActivePocketIdChange }: Props) {
+export function PocketSheetContent({
+  activePocketId,
+  onActivePocketIdChange,
+  listRef,
+  onScroll,
+  detailSearch = "",
+}: Props) {
   const { user, loading: authLoading } = useAuth();
   const { data: pockets, isLoading: pocketsLoading } = usePockets();
   const [isCreateOpen, setIsCreateOpen] = useState(false);
@@ -56,7 +65,7 @@ export function PocketSheetContent({ activePocketId, onActivePocketIdChange }: P
   const totalItems = (pockets ?? []).reduce((sum, p) => sum + (p.item_count ?? 0), 0);
 
   return (
-    <div className="flex h-full flex-col">
+    <div className="flex flex-col flex-1 overflow-hidden">
       <header className="flex items-center justify-between px-5 pt-1 pb-2">
         <div>
           <h2 className="text-[15px] font-semibold">口袋名單</h2>
@@ -94,7 +103,7 @@ export function PocketSheetContent({ activePocketId, onActivePocketIdChange }: P
         )}
       </div>
 
-      <div className="flex-1 overflow-y-auto">
+      <div ref={listRef} onScroll={onScroll} className="flex-1 overflow-y-auto">
         {!pocketsLoading && (pockets?.length ?? 0) === 0 ? (
           <div className="flex flex-col items-center justify-center py-12 text-center">
             <p className="text-base-content/55">還沒有口袋名單</p>
@@ -128,7 +137,11 @@ export function PocketSheetContent({ activePocketId, onActivePocketIdChange }: P
             {items.map((item) =>
               item.cafe ? (
                 <li key={item.id} data-cafe-id={item.cafe.id}>
-                  <PocketCafeCard cafe={item.cafe} personalNote={item.personal_note} />
+                  <PocketCafeCard
+                    cafe={item.cafe}
+                    personalNote={item.personal_note}
+                    detailSearch={detailSearch}
+                  />
                 </li>
               ) : null,
             )}

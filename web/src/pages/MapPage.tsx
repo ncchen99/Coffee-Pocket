@@ -21,6 +21,7 @@ import { IdleSheetContent } from "@/components/search/IdleSheetContent";
 import { SearchingSheetContent } from "@/components/search/SearchingSheetContent";
 import { PocketSheetContent } from "@/components/cafe/PocketSheetContent";
 import { ProfileSheetContent } from "@/components/cafe/ProfileSheetContent";
+import { MobileFilterPanel } from "@/components/search/MobileFilterPanel";
 import { useSearchSelection } from "@/hooks/useSearchSelection";
 import { useAllCafes, useCafeDetail } from "@/hooks/useCafes";
 import { useCafeActions } from "@/hooks/useCafeActions";
@@ -42,8 +43,8 @@ type MobileTab = "home" | "pocket" | "profile";
 // 詳細模式的最高 snap 留一點空間給浮動搜尋框 (~92px ≈ 11% vh),不讓它蓋到 cafe header。
 const DETAIL_SNAPS: (number | string)[] = [0.3, 0.5, 0.85];
 const HOME_SNAPS: (number | string)[] = [0.3, 0.7];
-const POCKET_SNAPS: (number | string)[] = [0.3, 0.7];
-const PROFILE_SNAPS: (number | string)[] = [0.55, 0.9];
+const POCKET_SNAPS: (number | string)[] = [0.3, 0.5, 0.85];
+const PROFILE_SNAPS: (number | string)[] = [0.3, 0.5, 0.85];
 
 const SORT_LABEL: Record<LocalSortKey, string> = {
   smart: "綜合",
@@ -78,7 +79,14 @@ export default function MapPage() {
   const cafeMatch = useMatch("/cafe/:slug");
   const detailSlug = cafeMatch?.params.slug ?? null;
   const isDetailMode = !!detailSlug;
-  const tab: MobileTab = pathToTab(routerLocation.pathname);
+  const filterMatch = useMatch("/filter");
+  const isFilterPage = !!filterMatch;
+  const tab: MobileTab = useMemo(() => {
+    const fromParam = params.get("from");
+    if (fromParam === "pocket") return "pocket";
+    if (fromParam === "profile") return "profile";
+    return pathToTab(routerLocation.pathname);
+  }, [routerLocation.pathname, params]);
 
   // ─── 資料 (提早宣告以供 useEffect 使用) ────────────────
   const { location: userLocation } = useUserLocation();
@@ -143,7 +151,11 @@ export default function MapPage() {
     if (tab === "profile") return PROFILE_SNAPS;
     return HOME_SNAPS;
   }, [isDetailMode, tab]);
-  const [snap, setSnap] = useState<number | string | null>(snapPoints[0]);
+  const [snap, setSnap] = useState<number | string | null>(() => {
+    const initialTab = pathToTab(window.location.pathname);
+    if (initialTab === "pocket" || initialTab === "profile") return 0.5;
+    return 0.3;
+  });
 
   // 切換 mode → 重設 snap 到該模式預設位置
   const prevSlugRef = useRef<string | null>(null);
@@ -157,6 +169,7 @@ export default function MapPage() {
   // 在 rAF 中還原,避開 vaul Drawer 在 snap 切換時的 scrollTop 重設。
   const searchScrollTopRef = useRef(0);
   const idleScrollTopRef = useRef(0);
+  const pocketScrollTopRef = useRef(0);
   const [isDetailScrolled, setIsDetailScrolled] = useState(false);
   // 把當前 snap 持續寫入 ref,避免 setActiveSnapPoint 拖曳時的更新沒有同步進 effect。
   const snapValueRef = useRef<number | string | null>(snap);
@@ -185,7 +198,11 @@ export default function MapPage() {
   }, [detailSlug, snapPoints, detailCafeFromAll]);
   useEffect(() => {
     if (tab !== prevTabRef.current) {
-      setSnap(snapPoints[0]);
+      if (tab === "pocket" || tab === "profile") {
+        setSnap(0.5);
+      } else {
+        setSnap(snapPoints[0]);
+      }
       prevTabRef.current = tab;
     }
   }, [tab, snapPoints]);
@@ -353,6 +370,13 @@ export default function MapPage() {
         .sort((a, b) => (userLocation ? a.distance_km - b.distance_km : 0)),
     [pocketItemsQuery.data, userLocation],
   );
+  const detailSourceSearch = useMemo(() => {
+    if (tab === "home") return "";
+    const search = new URLSearchParams();
+    search.set("from", tab);
+    if (activePocketId) search.set("pocket", activePocketId);
+    return `?${search.toString()}`;
+  }, [tab, activePocketId]);
 
   // 地圖 marker:home → search 結果(idle 沒 filter 也算搜尋,只是回傳全量,
   //                         所以這裡 idle 也用搜尋結果但只取推薦清單作 marker)
@@ -403,6 +427,20 @@ export default function MapPage() {
     });
   }, []);
 
+  const pocketListRefCallback = useCallback((el: HTMLDivElement | null) => {
+    if (!el) return;
+    requestAnimationFrame(() => {
+      if (el) {
+        el.scrollTop = pocketScrollTopRef.current;
+        requestAnimationFrame(() => {
+          if (el) {
+            el.scrollTop = pocketScrollTopRef.current;
+          }
+        });
+      }
+    });
+  }, []);
+
   const handleSearchListScroll = useCallback((e: React.UIEvent<HTMLUListElement>) => {
     searchScrollTopRef.current = e.currentTarget.scrollTop;
   }, []);
@@ -411,10 +449,19 @@ export default function MapPage() {
     idleScrollTopRef.current = e.currentTarget.scrollTop;
   }, []);
 
+  const handlePocketListScroll = useCallback((e: React.UIEvent<HTMLDivElement>) => {
+    pocketScrollTopRef.current = e.currentTarget.scrollTop;
+  }, []);
+
   // 搜尋條件變動 → 搜尋結果集換了，重設搜尋清單的捲動位置
   useEffect(() => {
     searchScrollTopRef.current = 0;
   }, [tagsKey, orKey, keyword, query, sortKey, openAt, radiusM]);
+
+  // 切換口袋時，重設捲動位置
+  useEffect(() => {
+    pocketScrollTopRef.current = 0;
+  }, [activePocketId]);
 
   // ─── 操作 handlers ───────────────────────────────
   const [activeMarkerId, setActiveMarkerId] = useState<string | null>(null);
@@ -426,11 +473,11 @@ export default function MapPage() {
     const c = mapCafes.find((x) => x.id === id);
     if (!c) return;
     if (isDetailMode) {
-      navigate(`/cafe/${c.slug ?? c.id}`, { replace: true });
+      navigate(`/cafe/${c.slug ?? c.id}${detailSourceSearch}`, { replace: true });
     } else {
       setActiveMarkerId(id);
       setSnap(0.3);
-      navigate(`/cafe/${c.slug ?? c.id}`);
+      navigate(`/cafe/${c.slug ?? c.id}${detailSourceSearch}`);
     }
   };
 
@@ -478,7 +525,10 @@ export default function MapPage() {
 
   const handleDetailBack = () => {
     if (routerLocation.key !== "default") navigate(-1);
-    else navigate(tab === "home" ? "/" : `/${tab}`, { replace: true });
+    else {
+      const pocketSearch = activePocketId ? `?pocket=${encodeURIComponent(activePocketId)}` : "";
+      navigate(tab === "home" ? "/" : `/${tab}${pocketSearch}`, { replace: true });
+    }
   };
 
   // ─── 桌面 redirect ───────────────────────────────
@@ -568,6 +618,9 @@ export default function MapPage() {
         <PocketSheetContent
           activePocketId={activePocketId}
           onActivePocketIdChange={setActivePocketId}
+          listRef={pocketListRefCallback}
+          onScroll={handlePocketListScroll}
+          detailSearch={detailSourceSearch}
         />
       );
     }
@@ -726,14 +779,9 @@ export default function MapPage() {
                 if (target.closest("button, a, input, select, textarea, [role='button']")) {
                   return;
                 }
-                if (isDetailMode) {
-                  if (snap !== 0.85) {
-                    setSnap(0.85);
-                  }
-                } else if (tab === "home" || tab === "pocket") {
-                  if (snap !== 0.7) {
-                    setSnap(0.7);
-                  }
+                const maxSnap = snapPoints[snapPoints.length - 1];
+                if (snap !== maxSnap) {
+                  setSnap(maxSnap);
                 }
               }}
               className={`fixed inset-x-0 bottom-0 z-20 flex h-full flex-col rounded-t-xl border-t border-base-content/10 bg-base-100 ${drawerBottomPad} shadow-2xl outline-none`}
@@ -756,11 +804,6 @@ export default function MapPage() {
           <div className="absolute inset-0 z-30 flex flex-col bg-base-100 pt-[100px]">
             <SearchingSheetContent
               selected={selected}
-              onToggleTag={toggle}
-              openAt={openAt}
-              onOpenAtChange={setOpenAt}
-              radiusM={radiusM}
-              onRadiusMChange={setRadiusM}
               scenarioKey={scenario}
               onPickScenario={(s: Scenario) => {
                 pickScenario(s);
@@ -772,6 +815,31 @@ export default function MapPage() {
               sortKey={sortKey}
             />
           </div>
+        )}
+
+        {/* Mobile 進階篩選全屏獨立頁面 */}
+        {isFilterPage && (
+          <MobileFilterPanel
+            selected={selected}
+            onToggle={toggle}
+            onReset={() => {
+              setAll([]);
+              setOpenAt(null);
+              setRadiusM(null);
+            }}
+            onApply={() => {
+              setIsSearching(false);
+              navigate("/");
+            }}
+            onClose={() => {
+              if (routerLocation.key !== "default") navigate(-1);
+              else navigate("/", { replace: true });
+            }}
+            openAt={openAt}
+            onOpenAtChange={setOpenAt}
+            radiusM={radiusM}
+            onRadiusMChange={setRadiusM}
+          />
         )}
       </div>
 

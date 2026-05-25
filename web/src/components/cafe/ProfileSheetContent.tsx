@@ -62,7 +62,7 @@ export function ProfileSheetContent() {
   const avatarUrl = user.user_metadata?.avatar_url as string | undefined;
 
   return (
-    <div className="flex h-full flex-col overflow-y-auto">
+    <div className="flex flex-col flex-1 overflow-y-auto">
       <section className="border-b border-base-content/10 px-5 py-4">
         <div className="flex items-center gap-3">
           {avatarUrl ? (

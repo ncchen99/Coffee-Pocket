@@ -232,8 +232,6 @@ export function CafeMap({
       style: "mapbox://styles/mapbox/standard",
       center: TAINAN_CENTER,
       zoom: DEFAULT_ZOOM,
-      minZoom: 14,
-      maxZoom: 17,
       // 鎖定俯視角 —— 不讓使用者拉成傾斜或旋轉,避免立體建築陰影回來。
       pitch: 0,
       maxPitch: 0,

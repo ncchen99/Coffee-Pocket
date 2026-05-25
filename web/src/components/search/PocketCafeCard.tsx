@@ -8,12 +8,13 @@ import clsx from "@/lib/clsx";
 interface PocketCafeCardProps {
   cafe: CafeCard;
   personalNote?: string | null;
+  detailSearch?: string;
 }
 
 /**
  * 口袋名單專用卡片 — 顯示封面、名稱、營業狀態、星評、評論數、價位、地址、標籤。
  */
-export function PocketCafeCard({ cafe, personalNote }: PocketCafeCardProps) {
+export function PocketCafeCard({ cafe, personalNote, detailSearch = "" }: PocketCafeCardProps) {
   // 即時計算營業狀態（避免 React Query 快取讓狀態過時）
   const liveStatus = cafe.business_hours
     ? isCafeOpenAt(cafe.business_hours, new Date())
@@ -27,7 +28,7 @@ export function PocketCafeCard({ cafe, personalNote }: PocketCafeCardProps) {
 
   return (
     <Link
-      to={`/cafe/${cafe.slug ?? cafe.id}`}
+      to={`/cafe/${cafe.slug ?? cafe.id}${detailSearch}`}
       className="flex gap-3 px-4 py-3 transition-colors hover:bg-base-200/60 active:bg-base-200"
     >
       {/* 封面圖 */}
