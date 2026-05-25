@@ -38,7 +38,7 @@ export default function AddCafePage() {
       case "pinyin":
         return "建立網址與拼音索引...";
       case "scrape":
-        return "正在爬取 Google 評論...";
+        return "正在擷取 Google 評論...";
       case "extract":
         return "AI 正在擷取店家特色...";
       case "semantic":
