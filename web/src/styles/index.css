@@ -165,12 +165,17 @@
 
 /* ─────────────────────────────────────
  * Bottom sheet 拖曳優先 — Google Maps 風格。
- * 當 sheet 不在最頂端 snap 時,把內部的縱向捲動區關掉,
- * 讓任何手勢都先把 sheet 拖到最高;到頂後 (data-sheet-at-top="true") 才能滾內容。
- * 只鎖縱向,水平的 chip 列 (overflow-x-auto) 不受影響。
+ * 當 sheet 不在最頂端 snap 時,做兩件事:
+ *   1. 把內部的縱向捲動區關掉 (overflow-y: hidden),不讓使用者捲到一半。
+ *   2. 把 touch-action 改為 pan-x,讓瀏覽器把所有垂直手勢交給 vaul 的 pointer events,
+ *      而不是當成「沒動的捲動」吃掉。沒有這行,iOS Safari 會在拖到一半時把 touch 收回去
+ *      當成 scroll,vaul 收不到完整的 pointermove,鬆手時就以為只拖了一點,
+ *      於是 snap 回原本的高度 — 視覺上看起來就是「動一下又彈回去」。
+ *   只鎖縱向,水平的 chip 列 (overflow-x-auto) 不受影響。
  * ────────────────────────────────── */
 [data-sheet-at-top="false"] .overflow-y-auto {
   overflow-y: hidden !important;
+  touch-action: pan-x !important;
 }
 
 /* 完全隱藏指定容器的 scrollbar — 用於水平 chip 列等不想出現滾動條的橫向捲動區 */
