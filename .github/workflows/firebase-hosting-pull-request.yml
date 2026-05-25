@@ -36,6 +36,7 @@ jobs:
           VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL }}
           VITE_SUPABASE_ANON_KEY: ${{ vars.VITE_SUPABASE_ANON_KEY }}
           VITE_MAPBOX_TOKEN: ${{ vars.VITE_MAPBOX_TOKEN }}
+          VITE_ADD_CAFE_API_BASE: ${{ vars.VITE_ADD_CAFE_API_BASE }}
         run: npm run build
 
       - uses: FirebaseExtended/action-hosting-deploy@v0
