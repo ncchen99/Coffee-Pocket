@@ -551,7 +551,6 @@ export default function MapPage() {
           ) : (
             <ul
               ref={listRefCallback}
-              onScroll={handleListScroll}
               className="flex-1 divide-y divide-base-content/10 overflow-y-auto"
             >
               {searchResult.cafes.map((c) => (
@@ -570,6 +569,7 @@ export default function MapPage() {
         cafes={idleRecommendations}
         isLoading={allCafes.isLoading}
         isError={allCafes.isError}
+        listRef={listRefCallback}
       />
     );
   };

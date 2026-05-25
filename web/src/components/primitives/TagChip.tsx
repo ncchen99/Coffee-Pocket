@@ -4,6 +4,7 @@ import clsx from "@/lib/clsx";
 interface TagChipProps {
   children: ReactNode;
   selected?: boolean;
+  /** 保留以維持既有呼叫端介面相容,目前視覺與未選相同。 */
   accent?: boolean;
   size?: "xs" | "sm";
   onClick?: () => void;
@@ -14,14 +15,13 @@ interface TagChipProps {
  * 標籤膠囊 — 建立在 daisyUI 的 `btn` 之上(可選 / 點擊)。
  * 沒有點擊行為的純展示標籤請改用 daisyUI `badge` (見 <TagBadge>)。
  *
- * - 預設:btn btn-outline btn-xs   (未選)
- * - selected:btn btn-neutral btn-xs (選中,深底反白)
- * - accent:btn btn-accent btn-outline btn-xs (推薦項)
+ * - 預設:bg-base-200 (跟著主題,實心淺/深底)
+ * - selected:bg-neutral (深底反白,加陰影)
  */
 export function TagChip({
   children,
   selected,
-  accent,
+  accent: _accent,
   size = "xs",
   onClick,
   className,
