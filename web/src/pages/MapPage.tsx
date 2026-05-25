@@ -133,7 +133,6 @@ export default function MapPage() {
     !!openAt ||
     radiusM != null;
   const [isSearching, setIsSearching] = useState(false);
-  const [drawerKey, setDrawerKey] = useState(0);
   const searchMode: SearchMode = isSearching
     ? "searching"
     : hasActiveSearch
@@ -227,21 +226,6 @@ export default function MapPage() {
   useEffect(() => {
     if (initialOpenAt) setOpenAt(initialOpenAt);
   }, [initialOpenAt, setOpenAt]);
-
-  // 阻斷 Vaul drawer 的 focus trap 以修復無法打字的問題
-  useEffect(() => {
-    if (isSearching) {
-      const handleFocus = (e: FocusEvent) => {
-        e.stopImmediatePropagation();
-      };
-      document.addEventListener("focusin", handleFocus, true);
-      document.addEventListener("focusout", handleFocus, true);
-      return () => {
-        document.removeEventListener("focusin", handleFocus, true);
-        document.removeEventListener("focusout", handleFocus, true);
-      };
-    }
-  }, [isSearching]);
 
   // 解決 Vaul 非模態下強制設定 aria-hidden 的 Bug
   useEffect(() => {
@@ -781,26 +765,17 @@ export default function MapPage() {
         {/* Vaul Drawer — 底部 sheet。home/pocket/profile/detail 都用它。
             modal=false 保留地圖互動;dismissible=false 避免使用者誤拉到底。 */}
         <Drawer.Root
-          key={drawerKey}
           open={true}
-          onOpenChange={(open) => {
-            if (!open) {
-              setDrawerKey((prev) => prev + 1);
-            }
-          }}
           modal={false}
           dismissible={false}
           shouldScaleBackground={false}
+          repositionInputs={false}
           snapPoints={snapPoints}
           activeSnapPoint={snap}
           setActiveSnapPoint={setSnap}
         >
           <Drawer.Portal>
             <Drawer.Content
-              onPointerDownOutside={(e) => e.preventDefault()}
-              onInteractOutside={(e) => e.preventDefault()}
-              onFocusOutside={(e) => e.preventDefault()}
-              onEscapeKeyDown={(e) => e.preventDefault()}
               data-sheet-at-bottom={!isAtMaxSnap ? "true" : "false"}
               onTouchStart={handleSheetTouchStart}
               onTouchMove={handleSheetTouchMove}
