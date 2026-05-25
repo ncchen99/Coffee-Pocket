@@ -242,6 +242,7 @@ export function PromptHero({
                   selected={isLateNightActive}
                   accent={t.accent && !isLateNightActive}
                   onClick={() => onOpenAtChange?.(isLateNightActive ? null : lateNightTarget)}
+                  noShadow
                 >
                   {isLateNightActive ? t.label : `＋ ${t.label}`}
                 </TagChip>
@@ -253,6 +254,7 @@ export function PromptHero({
                 selected={selected.has(t.key)}
                 accent={t.accent && !selected.has(t.key)}
                 onClick={() => onToggle(t.key)}
+                noShadow
               >
                 {selected.has(t.key) ? t.label : `＋ ${t.label}`}
               </TagChip>
@@ -362,6 +364,7 @@ export function PromptHero({
                 selected={isLateNightActive}
                 accent={t.accent && !isLateNightActive}
                 onClick={() => onOpenAtChange?.(isLateNightActive ? null : lateNightTarget)}
+                noShadow
               >
                 {isLateNightActive ? t.label : `＋ ${t.label}`}
               </TagChip>
@@ -373,6 +376,7 @@ export function PromptHero({
               selected={selected.has(t.key)}
               accent={t.accent && !selected.has(t.key)}
               onClick={() => onToggle(t.key)}
+              noShadow
             >
               {selected.has(t.key) ? t.label : `＋ ${t.label}`}
             </TagChip>

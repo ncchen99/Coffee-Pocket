@@ -208,24 +208,26 @@ export function CafeDetailContent({ cafe, isDesktop, actions, coverPlacement = "
       {/* === 1. 咖啡廳資訊 ===
           手機 sheet:把 pt 降到 2,因為上方已有 handle 指示器佔位,留太多 padding 反而鬆散。
           × 按鈕用 -mr-1 把右邊界從 px-5 (20px) 推到 16px,對齊上方搜尋列右側的 user avatar。*/}
-      <section className={`px-5 ${coverPlacement === "mid" ? "pt-2" : "pt-5"}`}>
-        <div className="flex items-start justify-between gap-3">
-          <h2 className="text-2xl font-bold tracking-tight flex-1 min-w-0">{cafe.name}</h2>
-          {onClose && (
-            <button
-              type="button"
-              onClick={onClose}
-              aria-label="關閉"
-              className="btn btn-ghost btn-sm btn-square -mt-1 -mr-1 shrink-0 text-base-content/65 hover:text-base-content"
-            >
-              <HugeiconsIcon icon={Cancel01Icon} size={18} strokeWidth={1.5} />
-            </button>
-          )}
-        </div>
+      <section className={`px-5 ${coverPlacement === "mid" ? "pt-0" : "pt-5"}`}>
+        {coverPlacement !== "mid" && (
+          <div className="flex items-start justify-between gap-3">
+            <h2 className="text-2xl font-bold tracking-tight flex-1 min-w-0">{cafe.name}</h2>
+            {onClose && (
+              <button
+                type="button"
+                onClick={onClose}
+                aria-label="關閉"
+                className="btn btn-ghost btn-sm btn-square -mt-1 -mr-1 shrink-0 text-base-content/65 hover:text-base-content"
+              >
+                <HugeiconsIcon icon={Cancel01Icon} size={18} strokeWidth={1.5} />
+              </button>
+            )}
+          </div>
+        )}
 
         {/* 評分 / 星星 / 評論數 / 價位 */}
         {(cafe.google_rating != null || cafe.price_level) && (
-          <div className="mt-1.5 flex items-center gap-2 text-xs text-base-content/70">
+          <div className={`flex items-center gap-2 text-xs text-base-content/70 ${coverPlacement !== "mid" ? "mt-1.5" : ""}`}>
             {cafe.google_rating != null && (
               <>
                 <span className="font-mono text-sm font-semibold text-base-content">

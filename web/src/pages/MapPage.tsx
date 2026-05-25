@@ -6,6 +6,7 @@ import {
   ArrowDown01Icon,
   AlertCircleIcon,
   Settings01Icon,
+  Cancel01Icon,
 } from "@hugeicons/core-free-icons";
 import { useIsDesktop } from "@/components/layout/Responsive";
 import { CafeListItem } from "@/components/search/CafeListItem";
@@ -156,6 +157,7 @@ export default function MapPage() {
   // 在 rAF 中還原,避開 vaul Drawer 在 snap 切換時的 scrollTop 重設。
   const searchScrollTopRef = useRef(0);
   const idleScrollTopRef = useRef(0);
+  const [isDetailScrolled, setIsDetailScrolled] = useState(false);
   // 把當前 snap 持續寫入 ref,避免 setActiveSnapPoint 拖曳時的更新沒有同步進 effect。
   const snapValueRef = useRef<number | string | null>(snap);
   useEffect(() => {
@@ -170,6 +172,7 @@ export default function MapPage() {
       }
       setSnap(0.5);
       sheetScrollRef.current?.scrollTo({ top: 0 });
+      setIsDetailScrolled(false);
       setActiveMarkerId(detailCafeFromAll?.id ?? detailSlug);
     } else if (!detailSlug && prevSlugRef.current) {
       // 離開 detail → 還原進 detail 前的 snap(沒記到就 fallback 預設),
@@ -218,13 +221,14 @@ export default function MapPage() {
   // 非最低 snap 時,把 sheet 內所有可滾動容器標上 data-vaul-no-drag,
   // 讓 vaul 不要在使用者單純捲動內容時搶手勢(原本會造成 sheet 抖動)。
   // 同時自行在 touch 事件裡監聽:「scrollTop=0 + 繼續往下拉」→ 收 sheet 到下一段 snap。
-  const atBottomSnap = typeof snap === "number" && snap === (snapPoints[0] as number);
+  const maxSnapPoint = snapPoints[snapPoints.length - 1];
+  const isAtMaxSnap = typeof snap === "number" && snap === (maxSnapPoint as number);
   useEffect(() => {
     const root = document.querySelector("[data-vaul-drawer]");
     if (!root) return;
     const apply = () => {
       root.querySelectorAll<HTMLElement>(".overflow-y-auto").forEach((el) => {
-        if (atBottomSnap) el.removeAttribute("data-vaul-no-drag");
+        if (!isAtMaxSnap) el.removeAttribute("data-vaul-no-drag");
         else el.setAttribute("data-vaul-no-drag", "");
       });
     };
@@ -233,7 +237,7 @@ export default function MapPage() {
     const mo = new MutationObserver(apply);
     mo.observe(root, { childList: true, subtree: true });
     return () => mo.disconnect();
-  }, [atBottomSnap]);
+  }, [isAtMaxSnap]);
 
   const touchDragYRef = useRef<number | null>(null);
   const touchDragScrollerRef = useRef<HTMLElement | null>(null);
@@ -247,7 +251,7 @@ export default function MapPage() {
     const scroller = touchDragScrollerRef.current;
     if (startY == null || !scroller) return;
     const dy = e.touches[0].clientY - startY;
-    if (scroller.scrollTop <= 0 && dy > 32 && typeof snap === "number") {
+    if (isAtMaxSnap && scroller.scrollTop <= 0 && dy > 32 && typeof snap === "number") {
       const idx = snapPoints.indexOf(snap);
       if (idx > 0) {
         setSnap(snapPoints[idx - 1]);
@@ -487,30 +491,56 @@ export default function MapPage() {
   const renderDrawerContent = () => {
     if (isDetailMode) {
       return (
-        <div ref={sheetScrollRef} className="flex-1 overflow-y-auto overscroll-contain">
-          {detailQuery.isLoading ? (
-            <div className="space-y-3 p-5">
-              <div className="h-6 w-1/2 animate-pulse rounded bg-base-200" />
-              <div className="h-4 w-3/4 animate-pulse rounded bg-base-200" />
-              <div className="h-24 animate-pulse rounded bg-base-200" />
-              <div className="h-40 animate-pulse rounded bg-base-200" />
-            </div>
-          ) : detailCafe ? (
-            <CafeDetailContent
-              cafe={detailCafe}
-              isDesktop={false}
-              actions={actions}
-              coverPlacement="mid"
-              onClose={handleDetailBack}
-            />
-          ) : (
-            <div className="flex h-full items-center justify-center p-6">
-              <div role="alert" className="alert alert-warning max-w-sm">
-                <HugeiconsIcon icon={AlertCircleIcon} size={18} strokeWidth={1.5} />
-                <span>{detailQuery.isError ? "載入失敗，請稍後再試" : "找不到這間店"}</span>
-              </div>
-            </div>
+        <div className="flex flex-col flex-1 overflow-hidden">
+          {detailCafe && (
+            <header className="px-5 pt-2 pb-2.5 flex items-center justify-between gap-3 shrink-0">
+              <h2 className="text-2xl font-bold tracking-tight truncate flex-1">{detailCafe.name}</h2>
+              <button
+                type="button"
+                onClick={handleDetailBack}
+                aria-label="關閉"
+                className="btn btn-ghost btn-sm btn-square text-base-content/65 hover:text-base-content shrink-0"
+              >
+                <HugeiconsIcon icon={Cancel01Icon} size={18} strokeWidth={1.5} />
+              </button>
+            </header>
           )}
+          {detailCafe && (
+            <div
+              className={`border-b border-base-content/10 transition-opacity duration-200 shrink-0 ${
+                isDetailScrolled ? "opacity-100" : "opacity-0"
+              }`}
+            />
+          )}
+          <div
+            ref={sheetScrollRef}
+            onScroll={(e) => setIsDetailScrolled(e.currentTarget.scrollTop > 0)}
+            className="flex-1 overflow-y-auto overscroll-contain pb-[15vh]"
+          >
+            {detailQuery.isLoading ? (
+              <div className="space-y-3 p-5">
+                <div className="h-6 w-1/2 animate-pulse rounded bg-base-200" />
+                <div className="h-4 w-3/4 animate-pulse rounded bg-base-200" />
+                <div className="h-24 animate-pulse rounded bg-base-200" />
+                <div className="h-40 animate-pulse rounded bg-base-200" />
+              </div>
+            ) : detailCafe ? (
+              <CafeDetailContent
+                cafe={detailCafe}
+                isDesktop={false}
+                actions={actions}
+                coverPlacement="mid"
+                onClose={handleDetailBack}
+              />
+            ) : (
+              <div className="flex h-full items-center justify-center p-6">
+                <div role="alert" className="alert alert-warning max-w-sm">
+                  <HugeiconsIcon icon={AlertCircleIcon} size={18} strokeWidth={1.5} />
+                  <span>{detailQuery.isError ? "載入失敗，請稍後再試" : "找不到這間店"}</span>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       );
     }
@@ -660,11 +690,22 @@ export default function MapPage() {
         >
           <Drawer.Portal>
             <Drawer.Content
-              data-sheet-at-bottom={atBottomSnap ? "true" : "false"}
+              data-sheet-at-bottom={!isAtMaxSnap ? "true" : "false"}
               onTouchStart={handleSheetTouchStart}
               onTouchMove={handleSheetTouchMove}
               onTouchEnd={handleSheetTouchEnd}
               onTouchCancel={handleSheetTouchEnd}
+              onClick={(e) => {
+                if (isDetailMode) {
+                  const target = e.target as HTMLElement;
+                  if (target.closest("button, a, input, select, textarea, [role='button']")) {
+                    return;
+                  }
+                  if (snap !== 0.85) {
+                    setSnap(0.85);
+                  }
+                }
+              }}
               className={`fixed inset-x-0 bottom-0 z-20 flex h-full flex-col rounded-t-xl border-t border-base-content/10 bg-base-100 ${drawerBottomPad} shadow-2xl outline-none`}
             >
               <Drawer.Title className="sr-only">{drawerTitle}</Drawer.Title>
