@@ -32,11 +32,9 @@ export function TagChip({
 }: TagChipProps) {
   const sizeCls = size === "sm" ? "btn-sm" : "btn-xs";
 
-  let shadowCls = "";
-  if (!noShadow) {
-    if (selected || hasShadow) {
-      shadowCls = "shadow-md";
-    }
+  let shadowCls = "shadow-none";
+  if (!noShadow && (selected || hasShadow)) {
+    shadowCls = "shadow-md";
   }
 
   return (

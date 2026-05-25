@@ -92,6 +92,9 @@ export default function DesktopProfilePage() {
   const displayName = user.user_metadata?.full_name ?? user.email ?? "使用者";
   const avatarUrl = user.user_metadata?.avatar_url as string | undefined;
 
+  const visibleContributions = contributions.slice(0, 5);
+  const totalContributions = (stats?.edits_count ?? 0) + (stats?.votes_count ?? 0);
+
   return (
     <DesktopPageLayout>
       {/* User info */}
@@ -112,15 +115,21 @@ export default function DesktopProfilePage() {
       {/* Stats */}
       <section className="rounded-xl border border-base-content/10 p-5">
         <Cap>我的數字</Cap>
-        <div className="mt-4 grid grid-cols-3 divide-x divide-base-content/10 text-center">
-          <div>
+        <div className="mt-4 grid grid-cols-3 divide-x divide-base-content/10 text-center items-center">
+          <Link
+            to="/pocket"
+            className="hover:bg-base-200/50 transition-colors py-2 rounded block"
+          >
             <p className="text-2xl font-bold">{stats?.pocket_items_count ?? 0}</p>
             <p className="text-xs text-base-content/55">收藏</p>
-          </div>
-          <div>
+          </Link>
+          <Link
+            to="/pocket"
+            className="hover:bg-base-200/50 transition-colors py-2 rounded block"
+          >
             <p className="text-2xl font-bold">{stats?.pocket_count ?? 0}</p>
             <p className="text-xs text-base-content/55">口袋</p>
-          </div>
+          </Link>
           <div>
             <p className="text-2xl font-bold">
               {(stats?.edits_count ?? 0) + (stats?.votes_count ?? 0)}
@@ -141,7 +150,7 @@ export default function DesktopProfilePage() {
           <p className="mt-3 text-sm text-base-content/55">還沒有貢獻紀錄</p>
         ) : (
           <ul className="mt-3 divide-y divide-base-content/10">
-            {contributions.map((c) => (
+            {visibleContributions.map((c) => (
               <li key={c.id} className="py-3">
                 <p className="text-sm">
                   {c.detail}
@@ -153,6 +162,11 @@ export default function DesktopProfilePage() {
                 </p>
               </li>
             ))}
+            {totalContributions > 5 && (
+              <li className="py-3 text-xs text-base-content/45">
+                還有 {totalContributions - 5} 筆貢獻
+              </li>
+            )}
           </ul>
         )}
       </section>
@@ -173,7 +187,7 @@ export default function DesktopProfilePage() {
             </Link>
           </li>
           <li>
-            <a href="mailto:feedback@coffeepocket.tw" className="flex items-center gap-3 px-5 py-3 hover:bg-base-200/60 transition-colors">
+            <a href="mailto:ncchen99@gmail.com" className="flex items-center gap-3 px-5 py-3 hover:bg-base-200/60 transition-colors">
               <HugeiconsIcon icon={Mail01Icon} size={16} strokeWidth={1.5} className="text-base-content/65" />
               <span className="text-sm">反饋</span>
             </a>

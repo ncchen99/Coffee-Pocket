@@ -61,6 +61,9 @@ export function ProfileSheetContent() {
   const displayName = user.user_metadata?.full_name ?? user.email ?? "使用者";
   const avatarUrl = user.user_metadata?.avatar_url as string | undefined;
 
+  const visibleContributions = contributions.slice(0, 5);
+  const totalContributions = (stats?.edits_count ?? 0) + (stats?.votes_count ?? 0);
+
   return (
     <div className="flex flex-col flex-1 overflow-y-auto pb-[max(20vh,140px)]">
       <section className="border-b border-base-content/10 px-5 py-4">
@@ -81,15 +84,21 @@ export function ProfileSheetContent() {
 
       <section className="border-b border-base-content/10 px-5 py-4">
         <Cap>我的數字</Cap>
-        <div className="mt-3 grid grid-cols-3 divide-x divide-base-content/10 text-center">
-          <div>
+        <div className="mt-3 grid grid-cols-3 divide-x divide-base-content/10 text-center items-center">
+          <Link
+            to="/pocket"
+            className="hover:bg-base-200/50 active:bg-base-200/80 transition-colors py-1 rounded block"
+          >
             <p className="text-xl font-bold">{stats?.pocket_items_count ?? 0}</p>
             <p className="text-xs text-base-content/55">收藏</p>
-          </div>
-          <div>
+          </Link>
+          <Link
+            to="/pocket"
+            className="hover:bg-base-200/50 active:bg-base-200/80 transition-colors py-1 rounded block"
+          >
             <p className="text-xl font-bold">{stats?.pocket_count ?? 0}</p>
             <p className="text-xs text-base-content/55">口袋</p>
-          </div>
+          </Link>
           <div>
             <p className="text-xl font-bold">
               {(stats?.edits_count ?? 0) + (stats?.votes_count ?? 0)}
@@ -114,7 +123,7 @@ export function ProfileSheetContent() {
           <p className="mt-3 text-sm text-base-content/55">還沒有貢獻紀錄</p>
         ) : (
           <ul className="mt-3 divide-y divide-base-content/10">
-            {contributions.map((c) => (
+            {visibleContributions.map((c) => (
               <li key={c.id} className="py-2">
                 <p className="text-sm">
                   {c.detail}
@@ -126,6 +135,11 @@ export function ProfileSheetContent() {
                 </p>
               </li>
             ))}
+            {totalContributions > 5 && (
+              <li className="py-2 text-xs text-base-content/45">
+                還有 {totalContributions - 5} 筆貢獻
+              </li>
+            )}
           </ul>
         )}
       </section>
@@ -161,7 +175,7 @@ export function ProfileSheetContent() {
         </li>
         <li>
           <a
-            href="mailto:feedback@coffeepocket.tw"
+            href="mailto:ncchen99@gmail.com"
             className="flex items-center gap-3 px-5 py-3 active:bg-base-200/60"
           >
             <HugeiconsIcon

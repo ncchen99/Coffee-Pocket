@@ -274,7 +274,10 @@ export function PromptHero({
         }}
         className="join w-full border border-base-content/25"
       >
-        <label className="input input-ghost join-item flex-1 flex items-center gap-2 pl-3 focus-within:bg-transparent">
+        <label
+          className="input input-ghost join-item flex-1 flex items-center gap-2 pl-3 focus-within:bg-transparent shadow-none focus-within:shadow-none"
+          style={{ boxShadow: "none" }}
+        >
           <HugeiconsIcon icon={Search01Icon} size={16} strokeWidth={1.5} className="text-base-content/55 flex-shrink-0" />
           <input
             ref={inputRef}

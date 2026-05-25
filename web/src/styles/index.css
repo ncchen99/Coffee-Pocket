@@ -78,6 +78,19 @@
     box-shadow: none !important;
   }
 
+  /* 僅限電腦版側邊欄（aside）內之按鈕與輸入框去除陰影 */
+  aside .btn,
+  aside .btn:focus,
+  aside .btn:active,
+  aside .input,
+  aside .input:focus,
+  aside .input:focus-within,
+  aside .input-ghost,
+  aside .input-ghost:focus,
+  aside .input-ghost:focus-within {
+    box-shadow: none !important;
+  }
+
   /* Mapbox attribution 縮小,不搶版面 */
   .mapboxgl-ctrl-attrib { font-size: 10px !important; }
   .mapboxgl-ctrl-attrib-inner { background: transparent !important; }
