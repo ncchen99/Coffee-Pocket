@@ -133,6 +133,7 @@ export default function MapPage() {
     !!openAt ||
     radiusM != null;
   const [isSearching, setIsSearching] = useState(false);
+  const [isDrawerOpen, setIsDrawerOpen] = useState(true);
   const searchMode: SearchMode = isSearching
     ? "searching"
     : hasActiveSearch
@@ -239,6 +240,17 @@ export default function MapPage() {
         document.removeEventListener("focusin", handleFocus, true);
         document.removeEventListener("focusout", handleFocus, true);
       };
+    }
+  }, [isSearching]);
+
+  // 解決行動裝置上輸入框聚焦與 aria-hidden 的衝突
+  useEffect(() => {
+    if (isSearching) {
+      const rootEl = document.getElementById("root");
+      if (rootEl) {
+        rootEl.removeAttribute("aria-hidden");
+        rootEl.removeAttribute("data-aria-hidden");
+      }
     }
   }, [isSearching]);
 
@@ -759,7 +771,13 @@ export default function MapPage() {
         {/* Vaul Drawer — 底部 sheet。home/pocket/profile/detail 都用它。
             modal=false 保留地圖互動;dismissible=false 避免使用者誤拉到底。 */}
         <Drawer.Root
-          open
+          open={isDrawerOpen}
+          onOpenChange={(open) => {
+            if (!open) {
+              setIsDrawerOpen(false);
+              setTimeout(() => setIsDrawerOpen(true), 0);
+            }
+          }}
           modal={false}
           dismissible={false}
           shouldScaleBackground={false}
@@ -769,6 +787,9 @@ export default function MapPage() {
         >
           <Drawer.Portal>
             <Drawer.Content
+              onPointerDownOutside={(e) => e.preventDefault()}
+              onInteractOutside={(e) => e.preventDefault()}
+              onEscapeKeyDown={(e) => e.preventDefault()}
               data-sheet-at-bottom={!isAtMaxSnap ? "true" : "false"}
               onTouchStart={handleSheetTouchStart}
               onTouchMove={handleSheetTouchMove}
