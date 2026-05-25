@@ -227,6 +227,21 @@ export default function MapPage() {
     if (initialOpenAt) setOpenAt(initialOpenAt);
   }, [initialOpenAt, setOpenAt]);
 
+  // 阻斷 Vaul drawer 的 focus trap,讓 MapSearchOverlay 內的 input 能正常 focus 打字
+  useEffect(() => {
+    if (isSearching) {
+      const handleFocus = (e: FocusEvent) => {
+        e.stopImmediatePropagation();
+      };
+      document.addEventListener("focusin", handleFocus, true);
+      document.addEventListener("focusout", handleFocus, true);
+      return () => {
+        document.removeEventListener("focusin", handleFocus, true);
+        document.removeEventListener("focusout", handleFocus, true);
+      };
+    }
+  }, [isSearching]);
+
   // 解決 Vaul 非模態下強制設定 aria-hidden 的 Bug
   useEffect(() => {
     const rootEl = document.getElementById("root");
