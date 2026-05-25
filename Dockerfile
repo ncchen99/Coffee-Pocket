@@ -3,7 +3,7 @@
 # so the whole `src/coffee_pocket` tree must be inside the image).
 #
 # Base image ships Chromium + system deps — saves a ~300MB `playwright install --with-deps`.
-FROM mcr.microsoft.com/playwright/python:v1.48.0-jammy
+FROM mcr.microsoft.com/playwright/python:v1.60.0-jammy
 
 # Install Google Chrome stable — scraper uses channel="chrome" against a
 # persistent profile (Google blocks login on bundled Chromium with "此瀏覽器不安全").

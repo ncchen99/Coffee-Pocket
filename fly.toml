@@ -15,6 +15,10 @@ primary_region = "nrt"          # Tokyo — closest to Tainan users / Supabase a
 [env]
   PORT = "8080"
   # OPENROUTER_MODEL = "deepseek/deepseek-v4-flash:free"
+  # Points the scraper at the storage_state JSON instead of the persistent
+  # profile dir (Chrome cookies are OS-keychain-encrypted and don't survive
+  # the macOS → Linux move). Generate locally with --export-state, sftp up.
+  GMAPS_STATE_PATH = "/app/data/.auth/state.json"
 
 [http_service]
   internal_port = 8080

@@ -45,6 +45,7 @@ import argparse
 import hashlib
 import json
 import logging
+import os
 import random
 import re
 from datetime import datetime, timedelta, timezone
@@ -72,6 +73,11 @@ AUTH_DIR = Path("data/.auth")
 # Using a real Chrome channel (not bundled Chromium) so Google doesn't flag
 # the browser as "insecure" during login.
 USER_DATA_DIR = AUTH_DIR / "chrome-profile"
+# Portable cookie/localStorage export. Chrome encrypts the on-disk Cookies
+# DB with the OS keychain (Keychain on macOS, gnome-keyring on Linux), so
+# copying the profile dir across OSes loses the login. storage_state JSON
+# is exported decrypted via CDP, so it's portable — used by containers.
+STATE_PATH = AUTH_DIR / "state.json"
 MAX_REVIEWS_DEFAULT = 200
 MAX_AGE_DAYS_DEFAULT = 3650
 SORT_OPTIONS = ("relevance", "newest")
@@ -797,6 +803,58 @@ _DESKTOP_UA = (
 )
 
 
+_INIT_STEALTH_JS = """
+Object.defineProperty(navigator, 'webdriver', { get: () => undefined });
+Object.defineProperty(navigator, 'languages', { get: () => ['zh-TW', 'zh', 'en'] });
+Object.defineProperty(navigator, 'plugins', { get: () => [1, 2, 3, 4, 5] });
+"""
+
+_CONTEXT_KWARGS: dict[str, Any] = {
+    "locale": "zh-TW",
+    "timezone_id": "Asia/Taipei",
+    "viewport": {"width": 1280, "height": 900},
+    "user_agent": _DESKTOP_UA,
+    "extra_http_headers": {"Accept-Language": "zh-TW,zh;q=0.9,en;q=0.5"},
+}
+
+_LAUNCH_ARGS = [
+    "--disable-blink-features=AutomationControlled",
+    "--lang=zh-TW",
+]
+
+
+def _state_path_from_env() -> Path | None:
+    """Return the storage_state path if GMAPS_STATE_PATH is set, else None.
+
+    Containerized deploys mount a small JSON of cookies+localStorage at this
+    path — the profile dir itself isn't portable across OSes because Chrome
+    encrypts its on-disk Cookies with the host's keychain.
+    """
+    p = os.environ.get("GMAPS_STATE_PATH")
+    return Path(p) if p else None
+
+
+def _launch_with_state(pw: Playwright, state_path: Path, *, headful: bool):
+    """Launch bundled Chromium and seed it with the exported storage_state.
+
+    Same UA + stealth init script as the persistent flow. `channel="chrome"`
+    is omitted on purpose — containers run headless and we don't need real
+    Chrome once cookies are pre-injected.
+    """
+    if not state_path.exists():
+        raise FileNotFoundError(
+            f"GMAPS_STATE_PATH={state_path} does not exist. "
+            "Run --export-state locally and upload the JSON to that path."
+        )
+    browser = pw.chromium.launch(
+        headless=not headful,
+        args=_LAUNCH_ARGS,
+    )
+    context = browser.new_context(storage_state=str(state_path), **_CONTEXT_KWARGS)
+    context.add_init_script(_INIT_STEALTH_JS)
+    return context
+
+
 def _launch_persistent(pw: Playwright, *, headful: bool):
     """Launch a real Chrome instance against our persistent profile dir.
 
@@ -811,27 +869,20 @@ def _launch_persistent(pw: Playwright, *, headful: bool):
         user_data_dir=str(USER_DATA_DIR),
         channel="chrome",
         headless=not headful,
-        locale="zh-TW",
-        timezone_id="Asia/Taipei",
-        viewport={"width": 1280, "height": 900},
-        user_agent=_DESKTOP_UA,
-        args=[
-            "--disable-blink-features=AutomationControlled",
-            "--lang=zh-TW",
-        ],
-        extra_http_headers={"Accept-Language": "zh-TW,zh;q=0.9,en;q=0.5"},
+        args=_LAUNCH_ARGS,
+        **_CONTEXT_KWARGS,
     )
-    # Defensive: even with a UA override, Google sniffs `navigator.webdriver`
-    # and a couple of related flags on headless contexts. These are cheap to mask
-    # via an init script and let the page render its normal panel layout.
-    context.add_init_script(
-        """
-        Object.defineProperty(navigator, 'webdriver', { get: () => undefined });
-        Object.defineProperty(navigator, 'languages', { get: () => ['zh-TW', 'zh', 'en'] });
-        Object.defineProperty(navigator, 'plugins', { get: () => [1, 2, 3, 4, 5] });
-        """
-    )
+    context.add_init_script(_INIT_STEALTH_JS)
     return context
+
+
+def _launch_for_scrape(pw: Playwright, *, headful: bool):
+    """Pick storage_state mode if GMAPS_STATE_PATH is set, else persistent profile."""
+    state = _state_path_from_env()
+    if state:
+        logger.info("Using storage_state from %s (container mode)", state)
+        return _launch_with_state(pw, state, headful=headful)
+    return _launch_persistent(pw, headful=headful)
 
 
 def login_flow(pw: Playwright) -> None:
@@ -848,6 +899,29 @@ def login_flow(pw: Playwright) -> None:
     context.close()
 
 
+def export_state(pw: Playwright, out_path: Path = STATE_PATH) -> None:
+    """Export cookies + localStorage from the persistent profile to portable JSON.
+
+    Run locally after a successful --login. The resulting file is a few KB of
+    plaintext cookies (decrypted via CDP, so no OS-keychain dependency) —
+    upload it to the container's GMAPS_STATE_PATH.
+    """
+    context = _launch_persistent(pw, headful=False)
+    page = context.pages[0] if context.pages else context.new_page()
+    # Visit Maps once so any session refresh tokens get exercised before export.
+    page.goto(_with_hl("https://www.google.com/maps"), wait_until="domcontentloaded")
+    page.wait_for_timeout(3000)
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    context.storage_state(path=str(out_path))
+    context.close()
+    print(f"storage_state written to {out_path}")
+    print("Upload to your container:")
+    print(f"  fly ssh sftp shell")
+    print(f"  » put {out_path} /app/data/.auth/state.json")
+    print("Then point the scraper at it:")
+    print("  fly secrets set GMAPS_STATE_PATH=/app/data/.auth/state.json")
+
+
 def run(
     pw: Playwright,
     cafes: list[dict[str, Any]],
@@ -859,7 +933,7 @@ def run(
     sort_mode: str = SORT_DEFAULT,
 ) -> None:
     OUT_DIR.mkdir(parents=True, exist_ok=True)
-    context = _launch_persistent(pw, headful=headful)
+    context = _launch_for_scrape(pw, headful=headful)
     page = context.pages[0] if context.pages else context.new_page()
 
     try:
@@ -934,6 +1008,11 @@ def main() -> None:
         help="Open a browser for manual Google login and save storage state, then exit",
     )
     parser.add_argument(
+        "--export-state",
+        action="store_true",
+        help="Export the persistent profile's cookies+localStorage to data/.auth/state.json (portable across OSes; upload this to your container)",
+    )
+    parser.add_argument(
         "--update-cafe",
         action="store_true",
         help="After each scrape, push extracted place meta back into the cafes table",
@@ -953,6 +1032,11 @@ def main() -> None:
     if args.login:
         with sync_playwright() as pw:
             login_flow(pw)
+        return
+
+    if args.export_state:
+        with sync_playwright() as pw:
+            export_state(pw)
         return
 
     if args.resolve_only:

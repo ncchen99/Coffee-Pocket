@@ -1,0 +1,35 @@
+# Auto-deploy the add-cafe FastAPI service to Fly.io when anything that
+# affects the built image lands on main. We deliberately watch more than
+# just `services/` — the worker imports from `src/coffee_pocket/*` and the
+# image build pulls in Dockerfile / fly.toml / pyproject / lockfile, so
+# changes there must redeploy too.
+name: Deploy to Fly.io
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "services/**"
+      - "src/coffee_pocket/**"
+      - "Dockerfile"
+      - "fly.toml"
+      - "pyproject.toml"
+      - "uv.lock"
+      - ".dockerignore"
+      - ".github/workflows/fly-deploy.yml"
+  workflow_dispatch: {}
+
+concurrency:
+  group: fly-deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: flyctl deploy
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: superfly/flyctl-actions/setup-flyctl@master
+      - run: flyctl deploy --remote-only
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
