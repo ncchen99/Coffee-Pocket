@@ -883,3 +883,42 @@ export async function updateUserPreferences(
   });
   if (error) throw error;
 }
+
+// ===========================================================================
+// Global progress observer for adding cafes in the background
+// ===========================================================================
+
+export interface ProgressState {
+  progress: string | null;
+  success: string | null;
+  error: string | null;
+}
+
+type ProgressListener = (state: ProgressState) => void;
+
+class GlobalProgressManager {
+  private listener: ProgressListener | null = null;
+  private currentState: ProgressState = { progress: null, success: null, error: null };
+
+  subscribe(l: ProgressListener) {
+    this.listener = l;
+    l(this.currentState);
+  }
+
+  unsubscribe() {
+    this.listener = null;
+  }
+
+  update(state: Partial<ProgressState>) {
+    this.currentState = { ...this.currentState, ...state };
+    if (this.listener) {
+      this.listener(this.currentState);
+    }
+  }
+
+  getState() {
+    return this.currentState;
+  }
+}
+
+export const globalProgress = new GlobalProgressManager();

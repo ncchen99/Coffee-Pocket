@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Routes, Route, Navigate, useMatch, useNavigate, useLocation, useSearchParams } from "react-router-dom";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Cancel01Icon, AlertCircleIcon } from "@hugeicons/core-free-icons";
+import { Cancel01Icon, AlertCircleIcon, CheckmarkCircle02Icon, Loading03Icon } from "@hugeicons/core-free-icons";
+import { globalProgress, type ProgressState } from "@/lib/api";
 import { useIsDesktop } from "@/components/layout/Responsive";
 import { Topbar } from "@/components/layout/Topbar";
 import { CafeMap } from "@/components/search/CafeMap";
@@ -27,21 +28,88 @@ import AddCafePage from "./pages/AddCafePage";
 export default function App() {
   const isDesktop = useIsDesktop();
   // 訂閱 location 以強制 App 在每次路由切換時 re-render —— 否則 `isOnboarded()`
-  // 只在 mount 時呼叫一次,Route element 把舊的 <Navigate to="/onboarding"> 物件
+  // 只在 mount 時呼叫一次,Route element 把舊 hometown <Navigate to="/onboarding"> 物件
   // 釘住,完成 onboarding 後跳轉到 "/" 仍會被推回 /onboarding。
   useLocation();
 
+  // 全域新增咖啡廳進度
+  const [progressState, setProgressState] = useState<ProgressState>({ progress: null, success: null, error: null });
+  const [showProgress, setShowProgress] = useState(false);
+
+  useEffect(() => {
+    globalProgress.subscribe((state) => {
+      setProgressState(state);
+      if (state.progress || state.success || state.error) {
+        setShowProgress(true);
+      }
+      
+      // 成功或失敗時，3 秒後隱藏並清空
+      if (state.success || state.error) {
+        const t = setTimeout(() => {
+          setShowProgress(false);
+          // 等待 transition 動畫播完後清空
+          setTimeout(() => {
+            globalProgress.update({ progress: null, success: null, error: null });
+          }, 300);
+        }, 3000);
+        return () => clearTimeout(t);
+      }
+    });
+    return () => globalProgress.unsubscribe();
+  }, []);
+
+  const progressUI = useMemo(() => {
+    if (!showProgress) return null;
+
+    const isSuccess = !!progressState.success;
+    const isError = !!progressState.error;
+    const text = progressState.progress || progressState.success || progressState.error || "";
+
+    return (
+      <div className={`fixed bottom-0 left-0 right-0 z-50 w-full px-4 py-4 shadow-2xl flex items-center justify-between gap-3 border-t border-base-content/10 transition-transform duration-300 ${
+        isSuccess ? "bg-success text-success-content" : isError ? "bg-error text-error-content" : "bg-base-content text-base-100"
+      }`}
+      style={{
+        paddingBottom: isDesktop ? "1rem" : "calc(1.1rem + env(safe-area-inset-bottom))",
+        animation: "slideUp 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards"
+      }}>
+        <style>{`
+          @keyframes slideUp {
+            from { transform: translateY(100%); }
+            to { transform: translateY(0); }
+          }
+        `}</style>
+        <div className="flex items-center gap-3">
+          {!isSuccess && !isError ? (
+            <HugeiconsIcon icon={Loading03Icon} size={16} className="animate-spin text-inherit shrink-0" />
+          ) : isSuccess ? (
+            <HugeiconsIcon icon={CheckmarkCircle02Icon} size={16} className="text-inherit shrink-0" />
+          ) : (
+            <HugeiconsIcon icon={AlertCircleIcon} size={16} className="text-inherit shrink-0" />
+          )}
+          <span className="text-sm font-medium">{text}</span>
+        </div>
+        <span className="text-[10px] bg-current opacity-15 text-current px-2.5 py-0.5 rounded-full font-semibold uppercase tracking-wider shrink-0 select-none">
+          {isSuccess ? "完成" : isError ? "錯誤" : "分析中"}
+        </span>
+      </div>
+    );
+  }, [showProgress, progressState, isDesktop]);
+
   if (isDesktop) {
     return (
-      <Routes>
-        <Route path="/onboarding" element={<OnboardingPage />} />
-        <Route path="/login" element={isOnboarded() ? <LoginPage /> : <Navigate to="/onboarding" replace />} />
-        <Route path="/profile" element={isOnboarded() ? <DesktopProfilePage /> : <Navigate to="/onboarding" replace />} />
-        <Route path="/settings" element={isOnboarded() ? <DesktopSettingsPage /> : <Navigate to="/onboarding" replace />} />
-        <Route path="/pocket" element={isOnboarded() ? <DesktopPocketPage /> : <Navigate to="/onboarding" replace />} />
-        <Route path="/add-cafe" element={isOnboarded() ? <AddCafePage /> : <Navigate to="/onboarding" replace />} />
-        <Route path="*" element={isOnboarded() ? <DesktopApp /> : <Navigate to="/onboarding" replace />} />
-      </Routes>
+      <>
+        <Routes>
+          <Route path="/onboarding" element={<OnboardingPage />} />
+          <Route path="/login" element={isOnboarded() ? <LoginPage /> : <Navigate to="/onboarding" replace />} />
+          <Route path="/profile" element={isOnboarded() ? <DesktopProfilePage /> : <Navigate to="/onboarding" replace />} />
+          <Route path="/settings" element={isOnboarded() ? <DesktopSettingsPage /> : <Navigate to="/onboarding" replace />} />
+          <Route path="/pocket" element={isOnboarded() ? <DesktopPocketPage /> : <Navigate to="/onboarding" replace />} />
+          <Route path="/add-cafe" element={isOnboarded() ? <AddCafePage /> : <Navigate to="/onboarding" replace />} />
+          <Route path="*" element={isOnboarded() ? <DesktopApp /> : <Navigate to="/onboarding" replace />} />
+        </Routes>
+        {progressUI}
+      </>
     );
   }
 
@@ -49,13 +117,16 @@ export default function App() {
   //（單一 shell 內依 pathname 衍生 tab,內部用 state 切換 idle/searching/results）。
   // 只剩需要全螢幕 / 獨立流程的頁面 (login / settings / onboarding) 走獨立 route。
   return (
-    <Routes>
-      <Route path="/onboarding" element={<OnboardingPage />} />
-      <Route path="/login" element={isOnboarded() ? <LoginPage /> : <Navigate to="/onboarding" replace />} />
-      <Route path="/settings" element={isOnboarded() ? <SettingsPage /> : <Navigate to="/onboarding" replace />} />
-      <Route path="/add-cafe" element={isOnboarded() ? <AddCafePage /> : <Navigate to="/onboarding" replace />} />
-      <Route path="*" element={isOnboarded() ? <MapPage /> : <Navigate to="/onboarding" replace />} />
-    </Routes>
+    <>
+      <Routes>
+        <Route path="/onboarding" element={<OnboardingPage />} />
+        <Route path="/login" element={isOnboarded() ? <LoginPage /> : <Navigate to="/onboarding" replace />} />
+        <Route path="/settings" element={isOnboarded() ? <SettingsPage /> : <Navigate to="/onboarding" replace />} />
+        <Route path="/add-cafe" element={isOnboarded() ? <AddCafePage /> : <Navigate to="/onboarding" replace />} />
+        <Route path="*" element={isOnboarded() ? <MapPage /> : <Navigate to="/onboarding" replace />} />
+      </Routes>
+      {progressUI}
+    </>
   );
 }
 

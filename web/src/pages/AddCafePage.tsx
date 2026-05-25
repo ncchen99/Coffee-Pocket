@@ -10,7 +10,7 @@ import {
 } from "@hugeicons/core-free-icons";
 import { Topbar } from "@/components/layout/Topbar";
 import { useIsDesktop } from "@/components/layout/Responsive";
-import { searchPlaces, submitCafeStream, type PlaceSearchResult } from "@/lib/api";
+import { searchPlaces, submitCafeStream, type PlaceSearchResult, globalProgress } from "@/lib/api";
 
 /**
  * 「新增咖啡廳」全螢幕頁。
@@ -32,26 +32,6 @@ export default function AddCafePage() {
 
   // 提交中的 place_id —— 防止連點重複觸發後端任務。
   const [submittingId, setSubmittingId] = useState<string | null>(null);
-  const [toast, setToast] = useState<{ kind: "success" | "error"; text: string } | null>(
-    null,
-  );
-
-  // 顯示在電腦 Header 的進度狀態文字
-  const [progressStatus, setProgressStatus] = useState<string | null>(null);
-
-  // 手機專用通知文字與 Timer
-  const [mobileNotification, setMobileNotification] = useState<string | null>(null);
-  const notificationTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  const triggerMobileNotification = (text: string) => {
-    if (notificationTimerRef.current) {
-      clearTimeout(notificationTimerRef.current);
-    }
-    setMobileNotification(text);
-    notificationTimerRef.current = setTimeout(() => {
-      setMobileNotification(null);
-    }, 2000);
-  };
 
   const mapEventToMessage = (event: any): string => {
     switch (event.stage) {
@@ -89,61 +69,53 @@ export default function AddCafePage() {
   const handleSubmit = async (place: PlaceSearchResult) => {
     if (submittingId) return;
     setSubmittingId(place.place_id);
-    setProgressStatus("開始新增...");
 
-    if (!isDesktop) {
-      triggerMobileNotification("開始新增店家...");
-    }
+    // Initialize global progress
+    globalProgress.update({
+      progress: "開始新增店家...",
+      success: null,
+      error: null,
+    });
 
-    try {
-      await submitCafeStream(place.place_id, (event) => {
-        if (event.type === "already_exists") {
-          setToast({
-            kind: "success",
-            text: `「${place.name}」已存在於資料庫中`,
-          });
-          setTimeout(() => navigate(-1), 1500);
-          return;
-        }
+    // Run stream analysis in the background
+    submitCafeStream(place.place_id, (event) => {
+      if (event.type === "already_exists") {
+        globalProgress.update({
+          progress: null,
+          success: `「${place.name}」已存在於資料庫中！`,
+          error: null,
+        });
+        return;
+      }
 
-        if (event.type === "pipeline_start") {
-          const msg = "準備分析資料...";
-          setProgressStatus(msg);
-          if (!isDesktop) triggerMobileNotification(msg);
-        } else if (event.type === "stage_start") {
-          const msg = mapEventToMessage(event);
-          setProgressStatus(msg);
-          if (!isDesktop) triggerMobileNotification(msg);
-        } else if (event.type === "pipeline_done") {
-          setProgressStatus("新增完成！");
-          if (!isDesktop) {
-            triggerMobileNotification("新增完成！已發布至地圖。");
-          }
-          setToast({
-            kind: "success",
-            text: `「${place.name}」分析完成！已成功加入地圖。`,
-          });
-          setTimeout(() => navigate(-1), 2000);
-        } else if (event.type === "pipeline_failed" || event.type === "pipeline_error") {
-          const errMsg = event.message || "店家分析失敗，請稍後再試";
-          setToast({
-            kind: "error",
-            text: errMsg,
-          });
-          setSubmittingId(null);
-          setProgressStatus(null);
-          setMobileNotification(null);
-        }
+      if (event.type === "pipeline_start") {
+        globalProgress.update({ progress: "準備分析資料..." });
+      } else if (event.type === "stage_start") {
+        globalProgress.update({ progress: mapEventToMessage(event) });
+      } else if (event.type === "pipeline_done") {
+        globalProgress.update({
+          progress: null,
+          success: `「${place.name}」分析完成！已成功加入地圖。`,
+          error: null,
+        });
+      } else if (event.type === "pipeline_failed" || event.type === "pipeline_error") {
+        const errMsg = event.message || "店家分析失敗，請稍後再試";
+        globalProgress.update({
+          progress: null,
+          success: null,
+          error: errMsg,
+        });
+      }
+    }).catch((e) => {
+      globalProgress.update({
+        progress: null,
+        success: null,
+        error: e instanceof Error ? e.message : "送出失敗，請稍後再試",
       });
-    } catch (e) {
-      setToast({
-        kind: "error",
-        text: e instanceof Error ? e.message : "送出失敗，請稍後再試",
-      });
-      setSubmittingId(null);
-      setProgressStatus(null);
-      setMobileNotification(null);
-    }
+    });
+
+    // Navigate back immediately so the user can continue their operations!
+    navigate(-1);
   };
 
   const handleBack = () => {
@@ -170,9 +142,7 @@ export default function AddCafePage() {
           >
             <HugeiconsIcon icon={ArrowLeft02Icon} size={18} strokeWidth={1.5} />
           </button>
-          <h1 className="flex-1 text-base font-semibold">
-            {progressStatus ? `新增中 (${progressStatus})` : "新增咖啡廳"}
-          </h1>
+          <h1 className="flex-1 text-base font-semibold">新增咖啡廳</h1>
           {submittingId && (
             <HugeiconsIcon icon={Loading03Icon} size={16} className="animate-spin text-base-content/55 mr-2" />
           )}
@@ -191,9 +161,7 @@ export default function AddCafePage() {
             >
               <HugeiconsIcon icon={ArrowLeft02Icon} size={18} strokeWidth={1.5} />
             </button>
-            <h1 className="text-lg font-bold">
-              {progressStatus ? `新增中 (${progressStatus})` : "新增咖啡廳"}
-            </h1>
+            <h1 className="text-lg font-bold">新增咖啡廳</h1>
             {submittingId && (
               <HugeiconsIcon icon={Loading03Icon} size={16} className="animate-spin text-base-content/55 ml-1" />
             )}
@@ -314,41 +282,6 @@ export default function AddCafePage() {
         </div>
       </div>
 
-      {/* Toast — 簡化版,fire-and-forget 流程僅需短暫訊息。 */}
-      {toast && (
-        <div
-          className={`pointer-events-none fixed inset-x-0 bottom-8 z-50 mx-auto w-fit max-w-[90vw] rounded-full px-4 py-2 text-sm shadow-lg ${
-            toast.kind === "success"
-              ? "bg-base-content text-base-100"
-              : "bg-error text-error-content"
-          }`}
-        >
-          {toast.text}
-        </div>
-      )}
-
-      {/* 手機專用底部通知 — 貼齊下方，覆蓋 navigation bar 區域 */}
-      {mobileNotification && (
-        <div className="fixed bottom-0 left-0 right-0 z-50 w-full bg-base-content text-base-100 px-4 py-4 shadow-2xl flex items-center justify-between gap-3 transition-transform duration-300 transform translate-y-0"
-             style={{ 
-               paddingBottom: "calc(1.1rem + env(safe-area-inset-bottom))",
-               animation: "slideUp 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards"
-             }}>
-          <style>{`
-            @keyframes slideUp {
-              from { transform: translateY(100%); }
-              to { transform: translateY(0); }
-            }
-          `}</style>
-          <div className="flex items-center gap-3">
-            <HugeiconsIcon icon={Loading03Icon} size={16} className="animate-spin text-base-100 shrink-0" />
-            <span className="text-sm font-medium">{mobileNotification}</span>
-          </div>
-          <span className="text-[10px] text-base-100/70 bg-base-100/15 px-2.5 py-0.5 rounded-full font-semibold uppercase tracking-wider shrink-0">
-            分析中
-          </span>
-        </div>
-      )}
     </div>
   );
 }
