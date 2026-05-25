@@ -78,8 +78,8 @@ export const mockCafeDetail = (id: string): CafeDetail | null => {
     },
     tags: [
       { key: "time_limit", label: "不限時", confidence: 0.92, evidence_count: 8 },
-      { key: "socket_available", label: "有插座", confidence: 0.88, evidence_count: 6 },
-      { key: "study_friendly", label: "適合讀書", confidence: 0.74, evidence_count: 4 },
+      { key: "socket_most", label: "多有插座", confidence: 0.88, evidence_count: 6 },
+      { key: "study_friendly", label: "適合讀書辦公", confidence: 0.74, evidence_count: 4 },
       { key: "discussion_friendly", label: "可討論", confidence: 0.42, evidence_count: 2 },
       { key: "reservable", label: "可訂位", confidence: 0.65, evidence_count: 3 },
     ],

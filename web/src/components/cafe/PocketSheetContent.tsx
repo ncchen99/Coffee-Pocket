@@ -57,7 +57,7 @@ export function PocketSheetContent({ activePocketId, onActivePocketIdChange }: P
 
   return (
     <div className="flex h-full flex-col">
-      <header className="flex items-center justify-between px-5 pb-2">
+      <header className="flex items-center justify-between px-5 pt-1.5 pb-2">
         <div>
           <h2 className="text-[15px] font-semibold">口袋名單</h2>
           <p className="text-[11px] text-base-content/55">

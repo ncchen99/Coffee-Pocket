@@ -79,6 +79,15 @@ export default function MapPage() {
   const isDetailMode = !!detailSlug;
   const tab: MobileTab = pathToTab(routerLocation.pathname);
 
+  // ─── 資料 (提早宣告以供 useEffect 使用) ────────────────
+  const { location: userLocation } = useUserLocation();
+  const allCafes = useAllCafes();
+  const detailCafeFromAll = useMemo(() => {
+    if (!detailSlug || !allCafes.data) return null;
+    return allCafes.data.find((c) => c.slug === detailSlug || c.id === detailSlug) ?? null;
+  }, [detailSlug, allCafes.data]);
+
+
   // URL 初始化(保留分享 / 書籤)
   const initialTags = useMemo(() => params.getAll("tag"), [params]);
   const initialOpenAt = params.get("open_at");
@@ -161,6 +170,7 @@ export default function MapPage() {
       }
       setSnap(0.5);
       sheetScrollRef.current?.scrollTo({ top: 0 });
+      setActiveMarkerId(detailCafeFromAll?.id ?? detailSlug);
     } else if (!detailSlug && prevSlugRef.current) {
       // 離開 detail → 還原進 detail 前的 snap(沒記到就 fallback 預設),
       // 並清掉 active marker,讓 CafeMap 偵測到 activeId 由有變無、把鏡頭還原。
@@ -169,7 +179,7 @@ export default function MapPage() {
       setActiveMarkerId(null);
     }
     prevSlugRef.current = detailSlug;
-  }, [detailSlug, snapPoints]);
+  }, [detailSlug, snapPoints, detailCafeFromAll]);
   useEffect(() => {
     if (tab !== prevTabRef.current) {
       setSnap(snapPoints[0]);
@@ -252,8 +262,6 @@ export default function MapPage() {
   };
 
   // ─── 資料 ────────────────────────────────────────
-  const { location: userLocation } = useUserLocation();
-  const allCafes = useAllCafes();
   const tagsArr = Array.from(selected);
   const tagsKey = tagsArr.join(",");
   const orKey = orSelected.join(",");
@@ -387,7 +395,9 @@ export default function MapPage() {
 
   // ─── 操作 handlers ───────────────────────────────
   const [activeMarkerId, setActiveMarkerId] = useState<string | null>(null);
-  const effectiveActiveId = isDetailMode ? detailCafe?.id ?? null : activeMarkerId;
+  const effectiveActiveId = isDetailMode
+    ? (detailCafeFromAll?.id ?? detailSlug)
+    : activeMarkerId;
 
   const handleMarkerClick = (id: string) => {
     const c = mapCafes.find((x) => x.id === id);
@@ -528,7 +538,7 @@ export default function MapPage() {
         : `${total} 間 · 臺南`;
       return (
         <>
-          <header className="flex items-baseline justify-between px-5 pt-1.5 pb-2">
+          <header className="flex items-center justify-between px-5 pt-1.5 pb-2">
             <h2 className="text-[15px] font-semibold">{heading}</h2>
             <div className="flex items-center gap-1">
               <button

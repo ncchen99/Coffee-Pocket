@@ -14,7 +14,7 @@ interface Props {
 export function IdleSheetContent({ cafes, isLoading, isError, listRef, onScroll }: Props) {
   return (
     <>
-      <header className="flex items-baseline justify-between px-5 pb-2">
+      <header className="flex items-center justify-between px-5 pt-1.5 pb-2">
         <h2 className="text-[15px] font-semibold">附近的好咖啡</h2>
         <span className="text-xs text-base-content/55">推薦</span>
       </header>

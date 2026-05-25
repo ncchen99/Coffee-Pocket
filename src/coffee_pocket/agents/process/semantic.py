@@ -55,14 +55,14 @@ DEPRECATED_TAGS = {"socket_available", "pet_friendly"}
 # Boolean tag 的證據門檻設定
 # minimum_evidence: 至少 N 筆正向證據才成立
 # minimum_ratio:    positive / max(total_reviews, pos+neg) 至少 R
-DEFAULT_BOOL_THRESHOLD = {"min_evidence": 2, "min_ratio": 0.15}
+DEFAULT_BOOL_THRESHOLD = {"min_evidence": 2, "min_ratio": 0.0}
 TAG_THRESHOLDS: dict[str, dict[str, float]] = {
-    # 駐店動物比較稀疏，門檻略放寬
-    "has_resident_cat": {"min_evidence": 2, "min_ratio": 0.10},
-    "has_resident_dog": {"min_evidence": 2, "min_ratio": 0.10},
-    # reservable / outdoor_seating 稀疏訊號，1 筆即可（保留 v1.0 行為）
-    "reservable": {"min_evidence": 1, "min_ratio": 0.0},
-    "outdoor_seating": {"min_evidence": 1, "min_ratio": 0.0},
+    # 駐店動物比較稀疏，門檻設為 2 筆，比例設為 0
+    "has_resident_cat": {"min_evidence": 2, "min_ratio": 0.0},
+    "has_resident_dog": {"min_evidence": 2, "min_ratio": 0.0},
+    # reservable / outdoor_seating 也設為至少 2 筆，比例為 0
+    "reservable": {"min_evidence": 2, "min_ratio": 0.0},
+    "outdoor_seating": {"min_evidence": 2, "min_ratio": 0.0},
 }
 
 # high_cp_value 用「正向佔比 >= positive_ratio」的特殊規則

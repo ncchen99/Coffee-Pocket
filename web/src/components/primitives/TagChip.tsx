@@ -9,6 +9,8 @@ interface TagChipProps {
   size?: "xs" | "sm";
   onClick?: () => void;
   className?: string;
+  noShadow?: boolean;
+  hasShadow?: boolean;
 }
 
 /**
@@ -25,8 +27,18 @@ export function TagChip({
   size = "xs",
   onClick,
   className,
+  noShadow = false,
+  hasShadow = false,
 }: TagChipProps) {
   const sizeCls = size === "sm" ? "btn-sm" : "btn-xs";
+
+  let shadowCls = "";
+  if (!noShadow) {
+    if (selected || hasShadow) {
+      shadowCls = "shadow-md";
+    }
+  }
+
   return (
     <button
       type="button"
@@ -34,10 +46,10 @@ export function TagChip({
       className={clsx(
         "btn",
         sizeCls,
-        "font-normal normal-case",
+        "font-normal normal-case transition-shadow duration-200",
         selected
-          ? "border-neutral bg-neutral text-neutral-content shadow-md ring-1 ring-neutral-content/40 hover:bg-neutral hover:border-neutral hover:text-neutral-content"
-          : "border-base-300 bg-base-200 text-base-content hover:bg-base-300 hover:border-base-300 hover:text-base-content",
+          ? `border-neutral bg-neutral text-neutral-content ring-1 ring-neutral-content/40 hover:bg-neutral hover:border-neutral hover:text-neutral-content ${shadowCls}`
+          : `border-base-300 bg-base-200 text-base-content hover:bg-base-300 hover:border-base-300 hover:text-base-content ${shadowCls}`,
         className,
       )}
     >

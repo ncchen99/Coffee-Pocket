@@ -180,7 +180,9 @@ export function MapSearchOverlay({
             inputRef.current?.focus();
           }
         }}
-        className="pointer-events-auto flex items-center gap-1 rounded-full border border-base-content/10 bg-base-100 px-2 py-1.5 shadow-lg"
+        className={`pointer-events-auto flex items-center gap-1 rounded-full border border-base-content/10 bg-base-100 px-2 py-1.5 transition-shadow duration-200 ${
+          mode === "searching" ? "" : "shadow-lg"
+        }`}
       >
         {leftSlot}
         <div className="flex flex-1 items-center gap-1.5 px-1 min-w-0">
@@ -218,6 +220,8 @@ export function MapSearchOverlay({
           selected={selected}
           onToggle={onToggleTag}
           className="flex"
+          hasShadow={mode !== "searching"}
+          noShadow={mode === "searching"}
         />
       </div>
     </div>

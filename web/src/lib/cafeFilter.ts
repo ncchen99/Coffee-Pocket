@@ -199,7 +199,7 @@ function toCafeCard(c: ScoredCafe): CafeCard {
     slug: c.slug,
     name: c.name,
     cover_url: c.cover_image_url,
-    top_tags: c.top_tags.map(dbTagLabel),
+    top_tags: c.top_tags.filter((t) => t !== "high_cp_value").map(dbTagLabel),
     distance_km: c._distance_km,
     open_now: false, // CafeListItem 會根據 business_hours 即時算
     lng: c.lng,

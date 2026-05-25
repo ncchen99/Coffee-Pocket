@@ -383,7 +383,7 @@ export function CafeMap({
   // 也避免日後想新增動畫效果時需要逐個複寫 inline style。
   useEffect(() => {
     markersRef.current.forEach((h, id) => {
-      const selected = id === activeId;
+      const selected = id === activeId || cafes.find((c) => c.id === id)?.slug === activeId;
       h.circle.parentElement!.classList.toggle("cp-cafe-marker--active", selected);
       h.circle.parentElement!.style.zIndex = selected ? "2" : "1";
     });
@@ -405,7 +405,7 @@ export function CafeMap({
     }
 
     if (!activeId || !map) return;
-    const cafe = cafes.find((c) => c.id === activeId);
+    const cafe = cafes.find((c) => c.id === activeId || c.slug === activeId);
     if (!cafe) return;
     // 由無變有 → 暫存當前鏡頭,日後關閉詳細頁時還原。已存的不覆寫,
     // 因為使用者可能在 detail 內切換到另一家(marker click),原始搜尋結果視野要保留。

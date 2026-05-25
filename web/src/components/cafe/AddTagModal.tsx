@@ -5,6 +5,13 @@ import { Add01Icon, AlertCircleIcon } from "@hugeicons/core-free-icons";
 import { DB_TAG_LABEL } from "@/data/tagMapping";
 import { useAddCafeTag } from "@/hooks/useTagVote";
 
+const DEPRECATED_TAG_KEYS = new Set([
+  "socket_available",
+  "pet_friendly",
+  "large_desks",
+  "parking_friendly",
+]);
+
 interface AddTagModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -36,7 +43,7 @@ export function AddTagModal({
   // 篩選出該店家目前尚未擁有的標準標籤
   const existingSet = new Set(existingTags);
   const unownedStandardTags = Object.entries(DB_TAG_LABEL).filter(
-    ([key]) => !existingSet.has(key)
+    ([key]) => !existingSet.has(key) && !DEPRECATED_TAG_KEYS.has(key)
   );
 
   const handleAddTag = (tagKey: string) => {

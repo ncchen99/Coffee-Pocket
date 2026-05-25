@@ -221,7 +221,7 @@ export async function searchCafes(params: SearchParams): Promise<SearchResult> {
       slug: row.slug,
       name: row.name,
       cover_url: row.cover_image_url,
-      top_tags: (row.top_tags ?? []).map(dbTagLabel),
+      top_tags: (row.top_tags ?? []).filter((t: string) => t !== "high_cp_value").map(dbTagLabel),
       distance_km: row.distance_m != null ? row.distance_m / 1000 : 0,
       open_now: row.open_now ?? false,
       lng: row.lng,
@@ -329,12 +329,12 @@ export async function fetchCafeDetail(identifier: string): Promise<CafeDetail | 
 
   // top_tag_keys 由 cafe_detail RPC 直接回(confidence 前 3,已排序)。
   // 舊版 RPC 沒這個欄位時 fallback 到 client 端計算,保持相容。
-  const topTagKeys: string[] = Array.isArray(d.top_tag_keys) && d.top_tag_keys.length > 0
+  const topTagKeys: string[] = (Array.isArray(d.top_tag_keys) && d.top_tag_keys.length > 0
     ? d.top_tag_keys
     : [...tagsDetail]
         .sort((a, b) => (b.confidence ?? 0) - (a.confidence ?? 0))
-        .slice(0, 3)
-        .map((t) => t.key);
+        .map((t) => t.key)
+  ).filter((key: string) => key !== "high_cp_value").slice(0, 3);
 
   const tags: TagWithConfidence[] = tagsDetail.map((t) => ({
     key: t.key as PlatformTagKey,
@@ -438,7 +438,7 @@ export async function fetchPocketItems(pocketId: string): Promise<PocketItem[]> 
       slug: row.cafe_slug ?? null,
       name: row.cafe_name,
       cover_url: row.cover_image_url ?? null,
-      top_tags: (row.top_tags ?? []).map(dbTagLabel),
+      top_tags: (row.top_tags ?? []).filter((t: string) => t !== "high_cp_value").map(dbTagLabel),
       distance_km: 0,
       open_now: false,
       lng: row.lng ?? 0,

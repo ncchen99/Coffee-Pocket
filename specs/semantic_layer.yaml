@@ -24,7 +24,7 @@ platform_tags:
     confidence_rules:
       minimum_confidence: 0.7
       minimum_evidence: 2
-      minimum_evidence_ratio: 0.15
+      minimum_evidence_ratio: 0.0
     description: >
       多數座位附近有插座可使用（每桌都有 / 大部分桌子有 / 整面牆都是插座）。
       與 socket_few 互斥；當 socket_most 成立時 socket_few 不再產生。
@@ -52,7 +52,7 @@ platform_tags:
     confidence_rules:
       minimum_confidence: 0.7
       minimum_evidence: 2
-      minimum_evidence_ratio: 0.15
+      minimum_evidence_ratio: 0.0
     description: >
       只有少部分座位有插座（牆邊 / 角落 / 吧台才有）。
     source_mapping:
@@ -76,7 +76,7 @@ platform_tags:
     confidence_rules:
       minimum_confidence: 0.7
       minimum_evidence: 2
-      minimum_evidence_ratio: 0.15
+      minimum_evidence_ratio: 0.0
     description: >
       多數座位都是適合 4 人以上使用的大桌。需要評論明確提到「大桌」、
       「桌子很大」、「桌面寬」、「四人桌很多」等具體描述。
@@ -98,7 +98,7 @@ platform_tags:
     confidence_rules:
       minimum_confidence: 0.7
       minimum_evidence: 2
-      minimum_evidence_ratio: 0.15
+      minimum_evidence_ratio: 0.0
     description: >
       只有少數大桌（多數是雙人桌 / 小圓桌）。
     source_mapping:
@@ -117,7 +117,7 @@ platform_tags:
     confidence_rules:
       minimum_confidence: 0.7
       minimum_evidence: 2
-      minimum_evidence_ratio: 0.15
+      minimum_evidence_ratio: 0.0
     description: >
       店家有提供可使用的 Wi-Fi。評論需明確提到 Wi-Fi 才成立。
     source_mapping:
@@ -174,7 +174,7 @@ platform_tags:
     confidence_rules:
       minimum_confidence: 0.7
       minimum_evidence: 2
-      minimum_evidence_ratio: 0.15
+      minimum_evidence_ratio: 0.0
     source_mapping:
       google_reviews:
         positive_keywords:
@@ -193,7 +193,7 @@ platform_tags:
     confidence_rules:
       minimum_confidence: 0.7
       minimum_evidence: 2
-      minimum_evidence_ratio: 0.15
+      minimum_evidence_ratio: 0.0
     source_mapping:
       google_reviews:
         positive_keywords:
@@ -215,7 +215,7 @@ platform_tags:
     confidence_rules:
       minimum_confidence: 0.7
       minimum_evidence: 2
-      minimum_evidence_ratio: 0.10
+      minimum_evidence_ratio: 0.0
     description: >
       店內有駐店貓（店貓 / 老闆養的貓）。注意：
       「可以帶寵物」、「歡迎毛小孩」**不算**店貓——只記錄駐店動物。
@@ -235,7 +235,7 @@ platform_tags:
     confidence_rules:
       minimum_confidence: 0.7
       minimum_evidence: 2
-      minimum_evidence_ratio: 0.10
+      minimum_evidence_ratio: 0.0
     description: >
       店內有駐店狗（店狗 / 老闆養的狗）。
     source_mapping:
@@ -384,7 +384,7 @@ platform_tags:
     type: boolean
     confidence_rules:
       minimum_confidence: 0.7
-      minimum_evidence: 1
+      minimum_evidence: 2
     description: >
       店家是否可事先訂位 / 預約座位。cafe_nomad 沒有對應欄位，
       由 Google reviews / Instagram 抽取。
@@ -414,7 +414,7 @@ platform_tags:
     type: boolean
     confidence_rules:
       minimum_confidence: 0.7
-      minimum_evidence: 1
+      minimum_evidence: 2
     description: >
       店家是否有戶外座位 / 室外區 / 露天座位。cafe_nomad 沒有對應欄位，
       由 Google reviews / Instagram 抽取。
@@ -501,6 +501,6 @@ source_priority:
 aggregation_defaults:
   boolean:
     minimum_evidence: 2
-    minimum_evidence_ratio: 0.15   # positives / max(total_reviews_for_cafe, pos+neg)
+    minimum_evidence_ratio: 0.0   # positives / max(total_reviews_for_cafe, pos+neg)
     minimum_confidence: 0.7
   community_override: true         # community 來源不受門檻限制

@@ -15,6 +15,8 @@ interface FilterChipBarProps {
   resultCount?: number;
   sortLabel?: string;
   className?: string;
+  hasShadow?: boolean;
+  noShadow?: boolean;
 }
 
 /** 篩選 chip 條 — 桌面 / 手機共用。底層用 daisyUI btn (TagChip)。 */
@@ -26,6 +28,8 @@ export function FilterChipBar({
   resultCount,
   sortLabel,
   className,
+  hasShadow,
+  noShadow,
 }: FilterChipBarProps) {
   return (
     <div className={`flex items-center gap-2 ${className ?? ""}`}>
@@ -33,7 +37,13 @@ export function FilterChipBar({
         {options.map((o) => {
           const isSel = selected.has(o.key);
           return (
-            <TagChip key={o.key} selected={isSel} onClick={() => onToggle(o.key)}>
+            <TagChip
+              key={o.key}
+              selected={isSel}
+              onClick={() => onToggle(o.key)}
+              hasShadow={hasShadow}
+              noShadow={noShadow}
+            >
               {o.label}
               {isSel && (
                 <HugeiconsIcon

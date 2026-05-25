@@ -10,8 +10,8 @@
 
 // 一個 filter 對應到的 DB tag_keys，**第一個是最有把握的版本**（給 server-side AND 用）。
 export const FILTER_TO_DB: Record<string, readonly string[]> = {
-  socket: ["socket_most", "socket_few"],
-  big_table: ["large_table_most", "large_table_few"],
+  socket: ["socket_most", "socket_few", "socket_available"],
+  big_table: ["large_table_most", "large_table_few", "large_desks"],
   no_limit: ["time_limit"],
   study: ["study_friendly"],
   chat: ["discussion_friendly"],
@@ -21,13 +21,13 @@ export const FILTER_TO_DB: Record<string, readonly string[]> = {
   pet_cat: ["has_resident_cat"],
   pet_dog: ["has_resident_dog"],
   // 寵物複合 filter：店貓 OR 店狗都算
-  pet: ["has_resident_cat", "has_resident_dog"],
+  pet: ["has_resident_cat", "has_resident_dog", "pet_friendly"],
   wifi: ["wifi_available"],
   budget: ["high_cp_value"],
   parking_scooter: ["scooter_parking_easy"],
   parking_car: ["car_parking_easy"],
   // 停車複合 filter：機車好停 OR 汽車好停都算
-  parking: ["scooter_parking_easy", "car_parking_easy"],
+  parking: ["scooter_parking_easy", "car_parking_easy", "parking_friendly"],
 };
 
 // 反向 mapping — 給 smart-search edge function 回傳的 db tag 轉回前端 short key。
@@ -50,6 +50,11 @@ export const DB_TO_FILTER: Record<string, string> = {
   high_cp_value: "budget",
   scooter_parking_easy: "parking_scooter",
   car_parking_easy: "parking_car",
+  // Backward compatibility for deprecated tags in existing DB entries
+  socket_available: "socket",
+  pet_friendly: "pet",
+  large_desks: "big_table",
+  parking_friendly: "parking",
 };
 
 /**
@@ -107,13 +112,13 @@ export const DB_TAG_LABEL: Record<string, string> = {
   // 既有
   reservable: "可訂位",
   outdoor_seating: "戶外座",
-  study_friendly: "適合讀書",
+  study_friendly: "適合讀書辦公",
   discussion_friendly: "適合討論",
-  group_chat_friendly: "適合多人",
+  group_chat_friendly: "適合多人聊天",
   time_limit: "不限時",
   // 新增
-  wifi_available: "有Wi-Fi",
-  high_cp_value: "高CP值",
+  wifi_available: "有 Wi-Fi",
+  high_cp_value: "社群評論高 CP 值",
   scooter_parking_easy: "機車好停",
   car_parking_easy: "汽車好停",
   has_resident_cat: "有店貓",
