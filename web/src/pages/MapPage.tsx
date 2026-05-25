@@ -142,11 +142,11 @@ export default function MapPage() {
   // 進入 detail 前的 sheet 高度 —— 關閉 detail 時要還原,避免使用者本來把面板拉到
   // 70% 在瀏覽清單,回來卻被重設成 30% 預設值。
   const savedSnapRef = useRef<number | string | null>(null);
-  // 搜尋結果清單的捲動進度 —— 進入 detail 時 ul 會卸載,回到結果時要回到剛瀏覽的位置。
-  // vaul Drawer 在 snap 切換時會插手內部 scroll,直接保存/還原 scrollTop 不夠穩,
-  // 改用「回來時把剛點擊那家滾到清單頂端」。視覺上等於從你選的那家接著看。
-  // 存的是 URL 識別子(slug 或 id),li 上同時掛這兩個 data-* 屬性以便還原時對應。
-  const lastViewedSlugRef = useRef<string | null>(null);
+  // 搜尋結果 / 推薦清單的捲動進度 —— 進入 detail 時 ul 會卸載,回到清單時要還原到剛剛
+  // 瀏覽的捲動位置(像素級)。用 onScroll 持續寫進 ref;ul 重新 mount 時透過 callback ref
+  // 在 rAF 中還原,避開 vaul Drawer 在 snap 切換時的 scrollTop 重設。
+  const searchScrollTopRef = useRef(0);
+  const idleScrollTopRef = useRef(0);
   // 把當前 snap 持續寫入 ref,避免 setActiveSnapPoint 拖曳時的更新沒有同步進 effect。
   const snapValueRef = useRef<number | string | null>(snap);
   useEffect(() => {
@@ -159,9 +159,6 @@ export default function MapPage() {
       if (!prevSlugRef.current) {
         savedSnapRef.current = snapValueRef.current;
       }
-      // 記住剛點擊的那家咖啡廳,回到清單時把它滾到最上面。detailSlug 可能是 slug 或 id,
-      // 直接存 URL 識別子;li 上同時掛 data-cafe-id 與 data-cafe-slug,還原時兩種都能對到。
-      lastViewedSlugRef.current = detailSlug;
       setSnap(0.5);
       sheetScrollRef.current?.scrollTo({ top: 0 });
     } else if (!detailSlug && prevSlugRef.current) {
@@ -346,24 +343,46 @@ export default function MapPage() {
     ];
   }, [baseMapCafes, detailCafe, userLocation]);
 
-  // 結果清單 ul 重新 mount 時,把記下的咖啡廳滾到清單最上端。
-  const listRefCallback = useCallback((el: HTMLUListElement | null) => {
+  // ─── 捲動位置記錄與還原 ──────────────────────────
+  const searchListRefCallback = useCallback((el: HTMLUListElement | null) => {
     if (!el) return;
-    const slug = lastViewedSlugRef.current;
-    if (!slug) return;
-    const esc = CSS.escape(slug);
-    const target = el.querySelector<HTMLElement>(
-      `[data-cafe-id="${esc}"], [data-cafe-slug="${esc}"]`,
-    );
-    if (target) {
-      const offset = target.offsetTop - el.offsetTop;
-      el.scrollTop = offset;
-    }
-    lastViewedSlugRef.current = null;
+    requestAnimationFrame(() => {
+      if (el) {
+        el.scrollTop = searchScrollTopRef.current;
+        requestAnimationFrame(() => {
+          if (el) {
+            el.scrollTop = searchScrollTopRef.current;
+          }
+        });
+      }
+    });
   }, []);
-  // 搜尋條件變動 → 結果集換了,記住的點擊目標作廢。
+
+  const idleListRefCallback = useCallback((el: HTMLUListElement | null) => {
+    if (!el) return;
+    requestAnimationFrame(() => {
+      if (el) {
+        el.scrollTop = idleScrollTopRef.current;
+        requestAnimationFrame(() => {
+          if (el) {
+            el.scrollTop = idleScrollTopRef.current;
+          }
+        });
+      }
+    });
+  }, []);
+
+  const handleSearchListScroll = useCallback((e: React.UIEvent<HTMLUListElement>) => {
+    searchScrollTopRef.current = e.currentTarget.scrollTop;
+  }, []);
+
+  const handleIdleListScroll = useCallback((e: React.UIEvent<HTMLUListElement>) => {
+    idleScrollTopRef.current = e.currentTarget.scrollTop;
+  }, []);
+
+  // 搜尋條件變動 → 搜尋結果集換了，重設搜尋清單的捲動位置
   useEffect(() => {
-    lastViewedSlugRef.current = null;
+    searchScrollTopRef.current = 0;
   }, [tagsKey, orKey, keyword, query, sortKey, openAt, radiusM]);
 
   // ─── 操作 handlers ───────────────────────────────
@@ -550,7 +569,8 @@ export default function MapPage() {
             </p>
           ) : (
             <ul
-              ref={listRefCallback}
+              ref={searchListRefCallback}
+              onScroll={handleSearchListScroll}
               className="flex-1 divide-y divide-base-content/10 overflow-y-auto"
             >
               {searchResult.cafes.map((c) => (
@@ -569,7 +589,8 @@ export default function MapPage() {
         cafes={idleRecommendations}
         isLoading={allCafes.isLoading}
         isError={allCafes.isError}
-        listRef={listRefCallback}
+        listRef={idleListRefCallback}
+        onScroll={handleIdleListScroll}
       />
     );
   };

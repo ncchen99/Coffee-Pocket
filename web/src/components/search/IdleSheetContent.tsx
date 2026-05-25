@@ -5,12 +5,13 @@ interface Props {
   cafes: CafeCard[];
   isLoading: boolean;
   isError: boolean;
-  /** 結果清單 ul 重新 mount 時的 callback,讓父層把剛點擊的那家滾到頂端。 */
+  /** 結果清單 ul 重新 mount 時的 callback,讓父層還原捲動位置。 */
   listRef?: (el: HTMLUListElement | null) => void;
+  onScroll?: (e: React.UIEvent<HTMLUListElement>) => void;
 }
 
 /** Idle 模式的 sheet 內容 — 顯示「附近的好咖啡」推薦列表。 */
-export function IdleSheetContent({ cafes, isLoading, isError, listRef }: Props) {
+export function IdleSheetContent({ cafes, isLoading, isError, listRef, onScroll }: Props) {
   return (
     <>
       <header className="flex items-baseline justify-between px-5 pb-2">
@@ -35,7 +36,7 @@ export function IdleSheetContent({ cafes, isLoading, isError, listRef }: Props) 
           附近找不到咖啡店
         </p>
       ) : (
-        <ul ref={listRef} className="flex-1 divide-y divide-base-content/10 overflow-y-auto">
+        <ul ref={listRef} onScroll={onScroll} className="flex-1 divide-y divide-base-content/10 overflow-y-auto">
           {cafes.map((c) => (
             <li key={c.id} data-cafe-id={c.id} data-cafe-slug={c.slug ?? undefined}>
               <CafeListItem cafe={c} sortKey="smart" />
