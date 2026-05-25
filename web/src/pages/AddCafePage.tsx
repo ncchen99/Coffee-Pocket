@@ -118,44 +118,45 @@ export default function AddCafePage() {
           輸入店名後按 Enter，會用 Google 地圖搜尋；找到後點選即可加入。
         </p>
 
-        {/* 搜尋列 — 視覺風格對齊 MapSearchOverlay 的圓角搜尋框。 */}
+        {/* 搜尋列 — 與 PromptHero (桌面搜尋欄) 的 join 樣式對齊。 */}
         <form
           onSubmit={(e) => {
             e.preventDefault();
             void handleSearch();
           }}
-          className="flex items-center gap-1 rounded-full border border-base-content/10 bg-base-100 px-2 py-1.5 shadow-sm"
+          className="join w-full border border-base-content/25"
         >
-          <span className="px-2 text-base-content/55">
-            <HugeiconsIcon icon={Search01Icon} size={18} strokeWidth={1.5} />
-          </span>
-          <input
-            ref={inputRef}
-            type="text"
-            inputMode="search"
-            enterKeyHint="search"
-            autoFocus
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="例如：黑浮咖啡 台南民族店"
-            className="flex-1 bg-transparent text-sm focus:outline-none min-w-0"
-            disabled={isSearching}
-          />
-          {isSearching ? (
+          <label className="input input-ghost join-item flex-1 flex items-center gap-2 pl-3 focus-within:bg-transparent">
             <HugeiconsIcon
-              icon={Loading03Icon}
+              icon={Search01Icon}
               size={16}
-              className="mx-2 animate-spin text-base-content/55"
+              strokeWidth={1.5}
+              className="text-base-content/55 flex-shrink-0"
             />
-          ) : (
-            <button
-              type="submit"
-              disabled={!query.trim()}
-              className="btn btn-neutral btn-xs rounded-full px-3 disabled:opacity-40"
-            >
-              搜尋
-            </button>
-          )}
+            <input
+              ref={inputRef}
+              type="text"
+              inputMode="search"
+              enterKeyHint="search"
+              autoFocus
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="例如：黑浮咖啡 台南民族店"
+              className="grow focus:outline-none bg-transparent text-sm h-full"
+              disabled={isSearching}
+            />
+          </label>
+          <button
+            type="submit"
+            disabled={!query.trim() || isSearching}
+            className="btn btn-neutral join-item"
+          >
+            {isSearching ? (
+              <HugeiconsIcon icon={Loading03Icon} size={14} className="animate-spin" />
+            ) : (
+              "搜尋"
+            )}
+          </button>
         </form>
 
         {/* 結果區 */}
