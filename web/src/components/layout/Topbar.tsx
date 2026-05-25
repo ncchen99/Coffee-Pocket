@@ -1,10 +1,11 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Coffee02Icon, UserIcon, BookmarkAdd01Icon, Settings01Icon, Logout01Icon } from "@hugeicons/core-free-icons";
+import { Coffee02Icon, UserIcon, BookmarkAdd01Icon, Settings01Icon, Logout01Icon, Loading03Icon, CheckmarkCircle02Icon, AlertCircleIcon } from "@hugeicons/core-free-icons";
 import { ThemeToggle } from "./ThemeToggle";
 import { ConfirmModal } from "@/components/primitives";
 import { useAuth } from "@/hooks/useAuth";
+import { globalProgress, type ProgressState } from "@/lib/api";
 
 interface TopbarProps {
   variant?: "mobile" | "desktop";
@@ -14,6 +15,16 @@ interface TopbarProps {
 export function Topbar({ variant = "desktop" }: TopbarProps) {
   const { user, signInWithGoogle, signOut } = useAuth();
   const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
+
+  // 全域新增咖啡廳進度
+  const [progress, setProgress] = useState<ProgressState>({ progress: null, success: null, error: null });
+
+  useEffect(() => {
+    if (variant === "desktop") {
+      globalProgress.subscribe((state) => setProgress(state));
+      return () => globalProgress.unsubscribe();
+    }
+  }, [variant]);
 
   if (variant === "mobile") {
     return (
@@ -32,9 +43,14 @@ export function Topbar({ variant = "desktop" }: TopbarProps) {
   }
 
   // desktop — logo 左,主題 + 登入右,中間留白
+  const hasProgress = !!(progress.progress || progress.success || progress.error);
+  const isSuccess = !!progress.success;
+  const isError = !!progress.error;
+  const text = progress.progress || progress.success || progress.error || "";
+
   return (
     <header className="navbar min-h-14 border-b border-base-content/10 bg-base-100 px-6">
-      <div className="navbar-start gap-3">
+      <div className="navbar-start gap-4">
         <Link to="/" className="flex items-center gap-2">
           <HugeiconsIcon icon={Coffee02Icon} size={22} strokeWidth={1.5} />
           <span className="text-lg font-semibold tracking-tight">咖啡口袋</span>
@@ -42,6 +58,22 @@ export function Topbar({ variant = "desktop" }: TopbarProps) {
             Tainan · 臺南
           </span>
         </Link>
+
+        {/* 桌面版背景進度提示 */}
+        {hasProgress && (
+          <div className={`flex items-center gap-2 text-xs border px-3.5 py-1.5 rounded-full shadow-sm animate-pulse max-w-[280px] lg:max-w-[400px] truncate ${
+            isSuccess ? "bg-success/15 border-success/30 text-success" : isError ? "bg-error/15 border-error/30 text-error" : "bg-base-200 border-base-content/10 text-base-content/85"
+          }`}>
+            {!isSuccess && !isError ? (
+              <HugeiconsIcon icon={Loading03Icon} size={13} className="animate-spin text-primary shrink-0" />
+            ) : isSuccess ? (
+              <HugeiconsIcon icon={CheckmarkCircle02Icon} size={13} className="text-success shrink-0" />
+            ) : (
+              <HugeiconsIcon icon={AlertCircleIcon} size={13} className="text-error shrink-0" />
+            )}
+            <span className="font-medium truncate">{text}</span>
+          </div>
+        )}
       </div>
       <div className="navbar-end gap-2">
         <ThemeToggle />

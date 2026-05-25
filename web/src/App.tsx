@@ -35,27 +35,36 @@ export default function App() {
   // 全域新增咖啡廳進度
   const [progressState, setProgressState] = useState<ProgressState>({ progress: null, success: null, error: null });
   const [showProgress, setShowProgress] = useState(false);
+  const hideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     globalProgress.subscribe((state) => {
       setProgressState(state);
       if (state.progress || state.success || state.error) {
         setShowProgress(true);
-      }
-      
-      // 成功或失敗時，3 秒後隱藏並清空
-      if (state.success || state.error) {
-        const t = setTimeout(() => {
+
+        if (hideTimerRef.current) {
+          clearTimeout(hideTimerRef.current);
+        }
+
+        // 手機版：每當狀態有更新，只顯示 2 秒（成功或失敗顯示 3 秒）以避免長時間遮擋 navigation bar
+        const duration = (state.success || state.error) ? 3000 : 2000;
+        hideTimerRef.current = setTimeout(() => {
           setShowProgress(false);
-          // 等待 transition 動畫播完後清空
-          setTimeout(() => {
-            globalProgress.update({ progress: null, success: null, error: null });
-          }, 300);
-        }, 3000);
-        return () => clearTimeout(t);
+          if (state.success || state.error) {
+            setTimeout(() => {
+              globalProgress.update({ progress: null, success: null, error: null });
+            }, 300);
+          }
+        }, duration);
       }
     });
-    return () => globalProgress.unsubscribe();
+    return () => {
+      globalProgress.unsubscribe();
+      if (hideTimerRef.current) {
+        clearTimeout(hideTimerRef.current);
+      }
+    };
   }, []);
 
   const progressUI = useMemo(() => {
@@ -89,9 +98,6 @@ export default function App() {
           )}
           <span className="text-sm font-medium">{text}</span>
         </div>
-        <span className="text-[10px] bg-current opacity-15 text-current px-2.5 py-0.5 rounded-full font-semibold uppercase tracking-wider shrink-0 select-none">
-          {isSuccess ? "完成" : isError ? "錯誤" : "分析中"}
-        </span>
       </div>
     );
   }, [showProgress, progressState, isDesktop]);
