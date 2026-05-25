@@ -133,7 +133,7 @@ export default function MapPage() {
     !!openAt ||
     radiusM != null;
   const [isSearching, setIsSearching] = useState(false);
-  const [isDrawerOpen, setIsDrawerOpen] = useState(true);
+  const [drawerKey, setDrawerKey] = useState(0);
   const searchMode: SearchMode = isSearching
     ? "searching"
     : hasActiveSearch
@@ -243,16 +243,26 @@ export default function MapPage() {
     }
   }, [isSearching]);
 
-  // 解決行動裝置上輸入框聚焦與 aria-hidden 的衝突
+  // 解決 Vaul 非模態下強制設定 aria-hidden 的 Bug
   useEffect(() => {
-    if (isSearching) {
-      const rootEl = document.getElementById("root");
-      if (rootEl) {
+    const rootEl = document.getElementById("root");
+    if (!rootEl) return;
+    const cleanup = () => {
+      if (rootEl.hasAttribute("aria-hidden")) {
         rootEl.removeAttribute("aria-hidden");
+      }
+      if (rootEl.hasAttribute("data-aria-hidden")) {
         rootEl.removeAttribute("data-aria-hidden");
       }
-    }
-  }, [isSearching]);
+    };
+    cleanup();
+    const observer = new MutationObserver(cleanup);
+    observer.observe(rootEl, {
+      attributes: true,
+      attributeFilter: ["aria-hidden", "data-aria-hidden"],
+    });
+    return () => observer.disconnect();
+  }, []);
 
   const currentRatio = typeof snap === "number" ? snap : 0.3;
   // searching 時 overlay 蓋全屏,但 Map 仍要保留可視中心(flyTo padding 太大會跑出畫面)。
@@ -771,11 +781,11 @@ export default function MapPage() {
         {/* Vaul Drawer — 底部 sheet。home/pocket/profile/detail 都用它。
             modal=false 保留地圖互動;dismissible=false 避免使用者誤拉到底。 */}
         <Drawer.Root
-          open={isDrawerOpen}
+          key={drawerKey}
+          open={true}
           onOpenChange={(open) => {
             if (!open) {
-              setIsDrawerOpen(false);
-              setTimeout(() => setIsDrawerOpen(true), 0);
+              setDrawerKey((prev) => prev + 1);
             }
           }}
           modal={false}
@@ -789,6 +799,7 @@ export default function MapPage() {
             <Drawer.Content
               onPointerDownOutside={(e) => e.preventDefault()}
               onInteractOutside={(e) => e.preventDefault()}
+              onFocusOutside={(e) => e.preventDefault()}
               onEscapeKeyDown={(e) => e.preventDefault()}
               data-sheet-at-bottom={!isAtMaxSnap ? "true" : "false"}
               onTouchStart={handleSheetTouchStart}
