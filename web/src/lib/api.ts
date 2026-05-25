@@ -165,6 +165,62 @@ export async function submitCafe(placeId: string): Promise<{ job_id: string }> {
   return res.json();
 }
 
+export async function submitCafeStream(
+  placeId: string,
+  onEvent: (event: any) => void
+): Promise<void> {
+  const res = await fetch(`${ADD_CAFE_API_BASE}/cafes`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ place_id: placeId }),
+  });
+  if (!res.ok) throw new Error(`新增失敗 (HTTP ${res.status})`);
+
+  const reader = res.body?.getReader();
+  if (!reader) throw new Error("瀏覽器不支援讀取串流");
+
+  const decoder = new TextDecoder();
+  let buffer = "";
+
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split("\n");
+      buffer = lines.pop() || "";
+
+      for (const line of lines) {
+        const trimmed = line.trim();
+        if (!trimmed) continue;
+        if (trimmed.startsWith("data: ")) {
+          try {
+            const dataStr = trimmed.slice(6);
+            const data = JSON.parse(dataStr);
+            onEvent(data);
+          } catch (e) {
+            console.error("Failed to parse SSE event data:", trimmed, e);
+          }
+        }
+      }
+    }
+
+    if (buffer && buffer.trim().startsWith("data: ")) {
+      try {
+        const dataStr = buffer.trim().slice(6);
+        const data = JSON.parse(dataStr);
+        onEvent(data);
+      } catch (e) {
+        console.error("Failed to parse final SSE event data:", buffer, e);
+      }
+    }
+  } catch (err) {
+    console.error("Error reading SSE stream:", err);
+    throw err;
+  }
+}
+
 // ===========================================================================
 // Local search corpus
 // ===========================================================================

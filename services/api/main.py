@@ -26,15 +26,17 @@ import logging
 from typing import Any
 from uuid import uuid4
 
+import json
 import httpx
 from fastapi import BackgroundTasks, FastAPI, HTTPException
+from fastapi.responses import StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
 from coffee_pocket.config import settings
 from coffee_pocket.db import get_client
 
-from .worker import run_pipeline_for_cafe
+from .worker import run_pipeline_for_cafe, run_pipeline_stream
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s %(message)s")
@@ -180,15 +182,9 @@ def places_search(req: PlaceSearchRequest) -> PlaceSearchResponse:
     return PlaceSearchResponse(results=results)
 
 
-@app.post("/cafes", response_model=SubmitCafeResponse)
-def submit_cafe(req: SubmitCafeRequest, tasks: BackgroundTasks) -> SubmitCafeResponse:
-    """Insert a cafe row + queue full pipeline run.
-
-    The Places search response already had everything we need to write the cafe
-    row (name / address / lat-lng / google_maps_url). But the frontend only
-    sends `place_id` — we re-fetch via Place Details to make the endpoint safe
-    against tampering and to canonicalize the data.
-    """
+@app.post("/cafes")
+async def submit_cafe(req: SubmitCafeRequest):
+    """Insert a cafe row + stream full pipeline run using SSE."""
     headers = _places_headers()
     details_url = f"https://places.googleapis.com/v1/places/{req.place_id}"
     details_field_mask = ",".join([
@@ -200,8 +196,9 @@ def submit_cafe(req: SubmitCafeRequest, tasks: BackgroundTasks) -> SubmitCafeRes
         "businessStatus",
     ])
     try:
-        with httpx.Client(timeout=15.0) as client:
-            r = client.get(
+        # Using AsyncClient since we are in an async def handler
+        async with httpx.AsyncClient(timeout=15.0) as client:
+            r = await client.get(
                 details_url,
                 headers={**headers, "X-Goog-FieldMask": details_field_mask},
                 params={"languageCode": "zh-TW"},
@@ -232,36 +229,52 @@ def submit_cafe(req: SubmitCafeRequest, tasks: BackgroundTasks) -> SubmitCafeRes
         .data
         or []
     )
-    if existing:
-        cafe_id = existing[0]["id"]
-        logger.info("cafe already exists, skipping pipeline: %s (%s)", cafe_id, name)
-        return SubmitCafeResponse(
-            job_id="noop",
-            cafe_id=cafe_id,
-            already_existed=True,
-        )
+    
+    already_existed = len(existing) > 0
+    cafe_id = existing[0]["id"] if already_existed else None
 
-    # 寫入新 cafe row。location 用 PostGIS WKT。
-    # source='user_submitted' 對應 migration 0031 加的欄位 —— 區隔系統種子資料
-    # 與使用者透過 /add-cafe 送出的資料,方便之後審核 / 顯示徽章。
-    inserted = (
-        db.table("cafes")
-        .insert({
-            "name": name,
-            "address": address,
-            "google_place_id": req.place_id,
-            "google_maps_url": google_maps_url,
-            "location": f"SRID=4326;POINT({float(lng)} {float(lat)})",
-            "source": "user_submitted",
-        })
-        .execute()
-        .data
-    )
-    if not inserted:
-        raise HTTPException(status_code=500, detail="failed to insert cafe")
-    cafe_id = inserted[0]["id"]
-    logger.info("inserted cafe %s (%s) → queueing pipeline", cafe_id, name)
+    if not already_existed:
+        # 寫入新 cafe row。location 用 PostGIS WKT。
+        # source='user_submitted' 對應 migration 0031 加的欄位
+        inserted = (
+            db.table("cafes")
+            .insert({
+                "name": name,
+                "address": address,
+                "google_place_id": req.place_id,
+                "google_maps_url": google_maps_url,
+                "location": f"SRID=4326;POINT({float(lng)} {float(lat)})",
+                "source": "user_submitted",
+            })
+            .execute()
+            .data
+        )
+        if not inserted:
+            raise HTTPException(status_code=500, detail="failed to insert cafe")
+        cafe_id = inserted[0]["id"]
+        logger.info("inserted cafe %s (%s) → streaming pipeline", cafe_id, name)
+    else:
+        logger.info("cafe already exists: %s (%s)", cafe_id, name)
 
     job_id = uuid4().hex
-    tasks.add_task(run_pipeline_for_cafe, cafe_id=cafe_id, job_id=job_id)
-    return SubmitCafeResponse(job_id=job_id, cafe_id=cafe_id, already_existed=False)
+
+    async def event_generator():
+        try:
+            if already_existed:
+                yield f"data: {json.dumps({'type': 'already_exists', 'cafe_id': cafe_id})}\n\n"
+                return
+
+            async for event in run_pipeline_stream(cafe_id=cafe_id, place_id=req.place_id, job_id=job_id):
+                yield f"data: {json.dumps(event)}\n\n"
+        except Exception as exc:
+            logger.exception("Error in event_generator for job=%s cafe=%s", job_id, cafe_id)
+            yield f"data: {json.dumps({'type': 'pipeline_error', 'message': str(exc)})}\n\n"
+
+    # SSE headers
+    sse_headers = {
+        "Content-Type": "text/event-stream",
+        "Cache-Control": "no-cache, no-transform",
+        "Connection": "keep-alive",
+        "X-Accel-Buffering": "no",
+    }
+    return StreamingResponse(event_generator(), headers=sse_headers)

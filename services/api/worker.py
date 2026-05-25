@@ -24,6 +24,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import os
 from pathlib import Path
 
 logger = logging.getLogger(__name__)
@@ -157,3 +158,127 @@ def run_pipeline_for_cafe(cafe_id: str, job_id: str, place_id: str | None = None
     except Exception:
         # 任何 unhandled 都吞掉 + 記錄,免得 BackgroundTasks 直接 kill 整個請求 task。
         logger.exception("[pipeline] job=%s cafe=%s crashed", job_id, cafe_id)
+
+
+async def _run_stage_stream(label: str, argv: list[str]):
+    """Run one pipeline stage and yield status and logs in real-time."""
+    logger.info("[pipeline] start stage=%s argv=%s (stream)", label, argv)
+    env = {**os.environ, "PYTHONUNBUFFERED": "1"}
+    yield {"type": "stage_start", "stage": label}
+
+    proc = await asyncio.create_subprocess_exec(
+        *argv,
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.STDOUT,
+        env=env,
+    )
+
+    try:
+        while True:
+            line_bytes = await proc.stdout.readline()
+            if not line_bytes:
+                break
+            line = line_bytes.decode("utf-8", errors="replace").strip()
+            if line:
+                yield {"type": "log", "stage": label, "message": line}
+    except Exception as exc:
+        proc.kill()
+        await proc.wait()
+        logger.exception("[pipeline] stage=%s exception during stream", label)
+        yield {"type": "stage_error", "stage": label, "message": str(exc)}
+        yield {"type": "stage_failed", "stage": label}
+        return
+
+    await proc.wait()
+    if proc.returncode == 0:
+        logger.info("[pipeline] stage=%s OK (stream)", label)
+        yield {"type": "stage_done", "stage": label}
+    else:
+        logger.error("[pipeline] stage=%s FAILED rc=%s (stream)", label, proc.returncode)
+        yield {"type": "stage_failed", "stage": label, "returncode": proc.returncode}
+
+
+async def run_pipeline_stream(cafe_id: str, place_id: str | None, job_id: str):
+    logger.info("[pipeline] job=%s cafe=%s starting stream", job_id, cafe_id)
+    yield {"type": "pipeline_start", "cafe_id": cafe_id, "job_id": job_id}
+
+    # Stage 1 — name_pinyin + slug
+    pinyin_argv = [
+        "uv", "run", "python", "-m",
+        "coffee_pocket.agents.prepare.generate_pinyin",
+        "--apply",
+    ]
+    pinyin_success = False
+    async for event in _run_stage_stream("pinyin", pinyin_argv):
+        yield event
+        if event["type"] == "stage_done":
+            pinyin_success = True
+    if not pinyin_success:
+        yield {"type": "pipeline_failed", "error_stage": "pinyin"}
+        return
+
+    # Stage 2 — scrape Google reviews
+    scrape_argv = [
+        "uv", "run", "python", "-m",
+        "coffee_pocket.agents.enrich.google_scraper",
+        "--cafe-id", cafe_id,
+        "--update-cafe",
+    ]
+    scrape_success = False
+    async for event in _run_stage_stream("scrape", scrape_argv):
+        yield event
+        if event["type"] == "stage_done":
+            scrape_success = True
+    if not scrape_success:
+        yield {"type": "pipeline_failed", "error_stage": "scrape"}
+        return
+
+    # Stage 3 — LLM extract
+    extract_argv = [
+        "uv", "run", "python", "-m",
+        "coffee_pocket.agents.process.google_extract",
+    ]
+    if place_id:
+        target = REVIEWS_DIR / f"{place_id}.json"
+        if target.exists():
+            extract_argv.extend(["--file", str(target)])
+        else:
+            logger.warning(
+                "[pipeline] expected reviews file missing: %s — falling back to bulk extract",
+                target,
+            )
+    extract_success = False
+    async for event in _run_stage_stream("extract", extract_argv):
+        yield event
+        if event["type"] == "stage_done":
+            extract_success = True
+    if not extract_success:
+        yield {"type": "pipeline_failed", "error_stage": "extract"}
+        return
+
+    # Stage 4 — merge extracted signals → cafe_tags
+    semantic_argv = [
+        "uv", "run", "python", "-m",
+        "coffee_pocket.agents.process.semantic",
+        "--cafe-id", cafe_id,
+    ]
+    semantic_success = False
+    async for event in _run_stage_stream("semantic", semantic_argv):
+        yield event
+        if event["type"] == "stage_done":
+            semantic_success = True
+    if not semantic_success:
+        yield {"type": "pipeline_failed", "error_stage": "semantic"}
+        return
+
+    # Stage 5 — AI summary
+    summary_argv = [
+        "uv", "run", "python", "-m",
+        "coffee_pocket.agents.process.ai_summary",
+        "--cafe-id", cafe_id,
+    ]
+    async for event in _run_stage_stream("ai_summary", summary_argv):
+        yield event
+
+    logger.info("[pipeline] job=%s cafe=%s done (stream)", job_id, cafe_id)
+    yield {"type": "pipeline_done", "cafe_id": cafe_id, "job_id": job_id}

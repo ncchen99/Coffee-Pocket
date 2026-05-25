@@ -23,9 +23,9 @@ primary_region = "nrt"          # Tokyo — closest to Tainan users / Supabase a
 [http_service]
   internal_port = 8080
   force_https = true
-  # Background pipeline runs in-process via FastAPI BackgroundTasks. Fly won't
-  # stop a machine while tasks are running, but min=1 avoids cold-start latency
-  # on the first /places/search after idle (Playwright import is slow).
+  # SSE streaming keeps the HTTP connection open during the entire scrape->extract->semantic
+  # pipeline, so Fly won't auto-stop the machine mid-pipeline. We can safely enable auto-stop
+  # and scale to 0 machines when idle to save hosting costs.
   auto_stop_machines = "stop"
   auto_start_machines = true
   min_machines_running = 0
