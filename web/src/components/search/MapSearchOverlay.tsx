@@ -124,6 +124,10 @@ export function MapSearchOverlay({
   useEffect(() => {
     if (mode === "searching") {
       inputRef.current?.focus();
+      const t = setTimeout(() => {
+        inputRef.current?.focus();
+      }, 20);
+      return () => clearTimeout(t);
     } else {
       inputRef.current?.blur();
     }
@@ -161,24 +165,26 @@ export function MapSearchOverlay({
   };
 
   const leftSlot = (() => {
-    if (mode === "idle") {
-      return null;
-    }
-    if (mode === "results") {
+    if (mode === "searching") {
       return (
-        <div className="flex h-8 w-8 items-center justify-center text-base-content/55">
-          <HugeiconsIcon icon={Search01Icon} size={18} strokeWidth={1.5} />
-        </div>
+        <button
+          type="button"
+          onClick={onBack}
+          className="btn btn-ghost btn-sm btn-square -mr-1"
+          aria-label="返回"
+        >
+          <HugeiconsIcon icon={ArrowLeft02Icon} size={18} strokeWidth={1.5} />
+        </button>
       );
     }
+    // idle or results mode: search button (non-interactive)
     return (
       <button
         type="button"
-        onClick={onBack}
-        className="btn btn-ghost btn-sm btn-square"
-        aria-label="返回"
+        className="btn btn-ghost btn-sm btn-square -mr-1 text-base-content/55 cursor-default pointer-events-none"
+        aria-hidden="true"
       >
-        <HugeiconsIcon icon={ArrowLeft02Icon} size={18} strokeWidth={1.5} />
+        <HugeiconsIcon icon={Search01Icon} size={18} strokeWidth={1.5} />
       </button>
     );
   })();
@@ -228,6 +234,9 @@ export function MapSearchOverlay({
             onFocusSearch();
             if (mode === "idle") {
               inputRef.current?.focus();
+              setTimeout(() => {
+                inputRef.current?.focus();
+              }, 20);
             }
           }
         }}
@@ -236,15 +245,7 @@ export function MapSearchOverlay({
         }`}
       >
         {leftSlot}
-        <div className="flex flex-1 items-center gap-1.5 px-1 min-w-0">
-          {mode === "idle" && (
-            <HugeiconsIcon
-              icon={Search01Icon}
-              size={16}
-              strokeWidth={1.5}
-              className="shrink-0 text-base-content/55"
-            />
-          )}
+        <div className="flex flex-1 items-center gap-1.5 pl-0 pr-1 min-w-0">
           {mode === "results" ? (
             <div className="flex-1 text-sm text-base-content font-medium py-1 truncate cursor-pointer select-none">
               {displayQueryText}

@@ -767,6 +767,9 @@ export default function MapPage() {
                 setIsSearching(false);
               }}
               onApply={() => setIsSearching(false)}
+              query={query}
+              cafes={searchResult.cafes}
+              sortKey={sortKey}
             />
           </div>
         )}
