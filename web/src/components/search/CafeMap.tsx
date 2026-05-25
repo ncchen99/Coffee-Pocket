@@ -183,6 +183,13 @@ export function CafeMap({
   const markersRef = useRef<Map<string, MarkerHandle>>(new Map());
   const userMarkerRef = useRef<mapboxgl.Marker | null>(null);
   const hasFlownToUserRef = useRef(false);
+  // 進入 detail / 選中 marker 之前的鏡頭狀態 —— 離開 detail 時要把地圖還原到原本的
+  // 位置與縮放,讓使用者能延續搜尋結果的視野。null 表示目前沒有暫存(沒選中)。
+  const savedCameraRef = useRef<{
+    center: [number, number];
+    zoom: number;
+  } | null>(null);
+  const prevActiveIdRef = useRef<string | null | undefined>(null);
 
   const handleLocateClick = () => {
     if (userLocation) {
@@ -356,10 +363,19 @@ export function CafeMap({
   // 不只用在 flyTo / easeTo,連手動 pan / resize 也會以此重算中心。
   // 沒有這段時,沒有 activeId 的情況下(剛載入)中心會落在 container 幾何中心,
   // 結果被 sheet 整個吞掉。
+  // 首次套用用同步 setPadding 避免初始畫面從 0 動畫過來;之後 sheet snap 變動時,
+  // 用 easeTo 配合 vaul ~500ms 的轉場讓地圖中心平順跟著移動,避免一次跳到位的突兀感。
+  const isFirstPaddingApplyRef = useRef(true);
   useEffect(() => {
     const map = mapRef.current;
     if (!map) return;
-    map.setPadding({ top: 0, right: 0, bottom: paddingBottom, left: paddingLeft });
+    const padding = { top: 0, right: 0, bottom: paddingBottom, left: paddingLeft };
+    if (isFirstPaddingApplyRef.current) {
+      map.setPadding(padding);
+      isFirstPaddingApplyRef.current = false;
+    } else {
+      map.easeTo({ padding, duration: 480 });
+    }
   }, [paddingBottom, paddingLeft]);
 
   // highlight active —— 桌面 / 手機都顯示色彩切換
@@ -371,10 +387,32 @@ export function CafeMap({
       h.circle.parentElement!.classList.toggle("cp-cafe-marker--active", selected);
       h.circle.parentElement!.style.zIndex = selected ? "2" : "1";
     });
-    if (!activeId || !mapRef.current) return;
+    const map = mapRef.current;
+    const prev = prevActiveIdRef.current;
+    prevActiveIdRef.current = activeId ?? null;
+
+    // activeId 由有變無 → 還原到進入詳細頁前的鏡頭。
+    if (prev && !activeId && map && savedCameraRef.current) {
+      const { center, zoom } = savedCameraRef.current;
+      savedCameraRef.current = null;
+      map.flyTo({
+        center,
+        zoom,
+        duration: 600,
+        padding: { top: 0, right: 0, bottom: paddingBottom, left: paddingLeft },
+      });
+      return;
+    }
+
+    if (!activeId || !map) return;
     const cafe = cafes.find((c) => c.id === activeId);
     if (!cafe) return;
-    const map = mapRef.current;
+    // 由無變有 → 暫存當前鏡頭,日後關閉詳細頁時還原。已存的不覆寫,
+    // 因為使用者可能在 detail 內切換到另一家(marker click),原始搜尋結果視野要保留。
+    if (!prev && !savedCameraRef.current) {
+      const c = map.getCenter();
+      savedCameraRef.current = { center: [c.lng, c.lat], zoom: map.getZoom() };
+    }
     // 詳細欄是 absolute overlay,地圖容器寬度不變、不會 resize/reproject,
     // 但 overlay 會遮住左側一段視覺寬度,所以 flyTo padding.left 帶 paddingLeft
     // 把選中咖啡廳對到「剩餘可見區域」的中心。手機則一律帶入 sheet 的 paddingBottom。

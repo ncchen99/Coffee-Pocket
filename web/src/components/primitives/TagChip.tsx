@@ -37,9 +37,7 @@ export function TagChip({
         "font-normal normal-case",
         selected
           ? "border-neutral bg-neutral text-neutral-content shadow-md ring-1 ring-neutral-content/40 hover:bg-neutral hover:border-neutral hover:text-neutral-content"
-          : accent
-            ? "border-neutral bg-neutral/80 text-neutral-content hover:bg-neutral hover:text-neutral-content"
-            : "border-neutral bg-neutral/80 text-neutral-content hover:bg-neutral hover:text-neutral-content",
+          : "border-base-300 bg-base-200 text-base-content hover:bg-base-300 hover:border-base-300 hover:text-base-content",
         className,
       )}
     >

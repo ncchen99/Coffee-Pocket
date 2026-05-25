@@ -205,8 +205,10 @@ export function CafeDetailContent({ cafe, isDesktop, actions, coverPlacement = "
     <>
       {coverPlacement === "top" && cover}
 
-      {/* === 1. 咖啡廳資訊 === */}
-      <section className="px-5 pt-5">
+      {/* === 1. 咖啡廳資訊 ===
+          手機 sheet:把 pt 降到 2,因為上方已有 handle 指示器佔位,留太多 padding 反而鬆散。
+          × 按鈕用 -mr-1 把右邊界從 px-5 (20px) 推到 16px,對齊上方搜尋列右側的 user avatar。*/}
+      <section className={`px-5 ${coverPlacement === "mid" ? "pt-2" : "pt-5"}`}>
         <div className="flex items-start justify-between gap-3">
           <h2 className="text-2xl font-bold tracking-tight flex-1 min-w-0">{cafe.name}</h2>
           {onClose && (
@@ -214,7 +216,7 @@ export function CafeDetailContent({ cafe, isDesktop, actions, coverPlacement = "
               type="button"
               onClick={onClose}
               aria-label="關閉"
-              className="btn btn-ghost btn-sm btn-square -mt-1 shrink-0 text-base-content/65 hover:text-base-content"
+              className="btn btn-ghost btn-sm btn-square -mt-1 -mr-1 shrink-0 text-base-content/65 hover:text-base-content"
             >
               <HugeiconsIcon icon={Cancel01Icon} size={18} strokeWidth={1.5} />
             </button>

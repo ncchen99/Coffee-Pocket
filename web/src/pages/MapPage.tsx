@@ -139,13 +139,37 @@ export default function MapPage() {
   const prevSlugRef = useRef<string | null>(null);
   const prevTabRef = useRef<MobileTab>(tab);
   const sheetScrollRef = useRef<HTMLDivElement>(null);
+  // 進入 detail 前的 sheet 高度 —— 關閉 detail 時要還原,避免使用者本來把面板拉到
+  // 70% 在瀏覽清單,回來卻被重設成 30% 預設值。
+  const savedSnapRef = useRef<number | string | null>(null);
+  // 搜尋結果清單的捲動進度 —— 進入 detail 時 ul 會卸載,回到結果時要回到剛瀏覽的位置。
+  // vaul Drawer 在 snap 切換時會插手內部 scroll,直接保存/還原 scrollTop 不夠穩,
+  // 改用「回來時把剛點擊那家滾到清單頂端」。視覺上等於從你選的那家接著看。
+  // 存的是 URL 識別子(slug 或 id),li 上同時掛這兩個 data-* 屬性以便還原時對應。
+  const lastViewedSlugRef = useRef<string | null>(null);
+  // 把當前 snap 持續寫入 ref,避免 setActiveSnapPoint 拖曳時的更新沒有同步進 effect。
+  const snapValueRef = useRef<number | string | null>(snap);
+  useEffect(() => {
+    snapValueRef.current = snap;
+  }, [snap]);
   useEffect(() => {
     if (detailSlug && detailSlug !== prevSlugRef.current) {
+      // 第一次進入 detail(從非 detail 切過去)時記下原本的 snap;
+      // detail 內切換另一家(prevSlugRef 也是非 null)時不要覆蓋,保留最初的值。
+      if (!prevSlugRef.current) {
+        savedSnapRef.current = snapValueRef.current;
+      }
+      // 記住剛點擊的那家咖啡廳,回到清單時把它滾到最上面。detailSlug 可能是 slug 或 id,
+      // 直接存 URL 識別子;li 上同時掛 data-cafe-id 與 data-cafe-slug,還原時兩種都能對到。
+      lastViewedSlugRef.current = detailSlug;
       setSnap(0.5);
       sheetScrollRef.current?.scrollTo({ top: 0 });
     } else if (!detailSlug && prevSlugRef.current) {
-      // 離開 detail → 回到當前 tab 的預設 snap
-      setSnap(snapPoints[0]);
+      // 離開 detail → 還原進 detail 前的 snap(沒記到就 fallback 預設),
+      // 並清掉 active marker,讓 CafeMap 偵測到 activeId 由有變無、把鏡頭還原。
+      setSnap(savedSnapRef.current ?? snapPoints[0]);
+      savedSnapRef.current = null;
+      setActiveMarkerId(null);
     }
     prevSlugRef.current = detailSlug;
   }, [detailSlug, snapPoints]);
@@ -182,6 +206,53 @@ export default function MapPage() {
   const sheetPaddingPx = Math.round(
     vh * Math.min(isSearching ? 0.55 : currentRatio, 0.55),
   );
+
+  // ─── Sheet 內捲動與拖曳的協作 ──────────────────────
+  // 非最低 snap 時,把 sheet 內所有可滾動容器標上 data-vaul-no-drag,
+  // 讓 vaul 不要在使用者單純捲動內容時搶手勢(原本會造成 sheet 抖動)。
+  // 同時自行在 touch 事件裡監聽:「scrollTop=0 + 繼續往下拉」→ 收 sheet 到下一段 snap。
+  const atBottomSnap = typeof snap === "number" && snap === (snapPoints[0] as number);
+  useEffect(() => {
+    const root = document.querySelector("[data-vaul-drawer]");
+    if (!root) return;
+    const apply = () => {
+      root.querySelectorAll<HTMLElement>(".overflow-y-auto").forEach((el) => {
+        if (atBottomSnap) el.removeAttribute("data-vaul-no-drag");
+        else el.setAttribute("data-vaul-no-drag", "");
+      });
+    };
+    apply();
+    // 切 tab / 進出 detail 時 sheet 內容會換成新的 DOM 節點,observer 持續補上屬性。
+    const mo = new MutationObserver(apply);
+    mo.observe(root, { childList: true, subtree: true });
+    return () => mo.disconnect();
+  }, [atBottomSnap]);
+
+  const touchDragYRef = useRef<number | null>(null);
+  const touchDragScrollerRef = useRef<HTMLElement | null>(null);
+  const handleSheetTouchStart = (e: React.TouchEvent) => {
+    const target = e.target as HTMLElement;
+    touchDragScrollerRef.current = target.closest<HTMLElement>(".overflow-y-auto");
+    touchDragYRef.current = e.touches[0].clientY;
+  };
+  const handleSheetTouchMove = (e: React.TouchEvent) => {
+    const startY = touchDragYRef.current;
+    const scroller = touchDragScrollerRef.current;
+    if (startY == null || !scroller) return;
+    const dy = e.touches[0].clientY - startY;
+    if (scroller.scrollTop <= 0 && dy > 32 && typeof snap === "number") {
+      const idx = snapPoints.indexOf(snap);
+      if (idx > 0) {
+        setSnap(snapPoints[idx - 1]);
+        touchDragYRef.current = null;
+        touchDragScrollerRef.current = null;
+      }
+    }
+  };
+  const handleSheetTouchEnd = () => {
+    touchDragYRef.current = null;
+    touchDragScrollerRef.current = null;
+  };
 
   // ─── 資料 ────────────────────────────────────────
   const { location: userLocation } = useUserLocation();
@@ -275,6 +346,26 @@ export default function MapPage() {
     ];
   }, [baseMapCafes, detailCafe, userLocation]);
 
+  // 結果清單 ul 重新 mount 時,把記下的咖啡廳滾到清單最上端。
+  const listRefCallback = useCallback((el: HTMLUListElement | null) => {
+    if (!el) return;
+    const slug = lastViewedSlugRef.current;
+    if (!slug) return;
+    const esc = CSS.escape(slug);
+    const target = el.querySelector<HTMLElement>(
+      `[data-cafe-id="${esc}"], [data-cafe-slug="${esc}"]`,
+    );
+    if (target) {
+      const offset = target.offsetTop - el.offsetTop;
+      el.scrollTop = offset;
+    }
+    lastViewedSlugRef.current = null;
+  }, []);
+  // 搜尋條件變動 → 結果集換了,記住的點擊目標作廢。
+  useEffect(() => {
+    lastViewedSlugRef.current = null;
+  }, [tagsKey, orKey, keyword, query, sortKey, openAt, radiusM]);
+
   // ─── 操作 handlers ───────────────────────────────
   const [activeMarkerId, setActiveMarkerId] = useState<string | null>(null);
   const effectiveActiveId = isDetailMode ? detailCafe?.id ?? null : activeMarkerId;
@@ -362,7 +453,7 @@ export default function MapPage() {
     !isDetailMode &&
     !isSearching &&
     (tab === "pocket" || tab === "profile" || (tab === "home" && searchMode === "idle"));
-  const drawerBottomPad = showTabBar ? "pb-[58px]" : "pb-0";
+  const drawerBottomPad = showTabBar ? "pb-[48px]" : "pb-0";
 
   const renderDrawerContent = () => {
     if (isDetailMode) {
@@ -418,7 +509,7 @@ export default function MapPage() {
         : `${total} 間 · 臺南`;
       return (
         <>
-          <header className="flex items-baseline justify-between px-5 pt-3 pb-2">
+          <header className="flex items-baseline justify-between px-5 pt-1.5 pb-2">
             <h2 className="text-[15px] font-semibold">{heading}</h2>
             <div className="flex items-center gap-1">
               <button
@@ -458,9 +549,13 @@ export default function MapPage() {
               找不到符合條件的咖啡店
             </p>
           ) : (
-            <ul className="flex-1 divide-y divide-base-content/10 overflow-y-auto">
+            <ul
+              ref={listRefCallback}
+              onScroll={handleListScroll}
+              className="flex-1 divide-y divide-base-content/10 overflow-y-auto"
+            >
               {searchResult.cafes.map((c) => (
-                <li key={c.id} data-cafe-id={c.id}>
+                <li key={c.id} data-cafe-id={c.id} data-cafe-slug={c.slug ?? undefined}>
                   <CafeListItem cafe={c} active={c.id === activeMarkerId} sortKey={sortKey} />
                 </li>
               ))}
@@ -534,18 +629,18 @@ export default function MapPage() {
         >
           <Drawer.Portal>
             <Drawer.Content
-              data-sheet-at-top={
-                typeof snap === "number" && snap === (snapPoints[snapPoints.length - 1] as number)
-                  ? "true"
-                  : "false"
-              }
+              data-sheet-at-bottom={atBottomSnap ? "true" : "false"}
+              onTouchStart={handleSheetTouchStart}
+              onTouchMove={handleSheetTouchMove}
+              onTouchEnd={handleSheetTouchEnd}
+              onTouchCancel={handleSheetTouchEnd}
               className={`fixed inset-x-0 bottom-0 z-20 flex h-full flex-col rounded-t-xl border-t border-base-content/10 bg-base-100 ${drawerBottomPad} shadow-2xl outline-none`}
             >
               <Drawer.Title className="sr-only">{drawerTitle}</Drawer.Title>
               <Drawer.Description className="sr-only">
                 {isDetailMode ? "向下拖曳可關閉,或點右上角的關閉按鈕" : "可上下拖曳調整面板高度"}
               </Drawer.Description>
-              <Drawer.Handle className="!mt-2 !mb-0 !h-1 !w-9 !bg-base-content/30" />
+              <Drawer.Handle className="!mt-1.5 !mb-0 !h-1 !w-9 !bg-base-content/30" />
 
               {renderDrawerContent()}
             </Drawer.Content>

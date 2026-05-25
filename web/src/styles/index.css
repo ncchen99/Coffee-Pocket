@@ -13,9 +13,13 @@
   [data-theme="coffee-roast"] { color-scheme: dark; }
 
   html, body, #root { height: 100%; }
+  html {
+    /* 阻止 Chrome / Android 下拉重新整理 (pull-to-refresh) */
+    overscroll-behavior: none;
+  }
   body {
     @apply font-sans antialiased bg-base-100 text-base-content;
-    overscroll-behavior-y: none;
+    overscroll-behavior: none;
   }
 
   /* 手機瀏覽器網址列會在捲動時自動隱藏 / 顯示,vh 在捲動瞬間會跳動。
@@ -165,17 +169,24 @@
 
 /* ─────────────────────────────────────
  * Bottom sheet 拖曳優先 — Google Maps 風格。
- * 當 sheet 不在最頂端 snap 時,做兩件事:
- *   1. 把內部的縱向捲動區關掉 (overflow-y: hidden),不讓使用者捲到一半。
- *   2. 把 touch-action 改為 pan-x,讓瀏覽器把所有垂直手勢交給 vaul 的 pointer events,
- *      而不是當成「沒動的捲動」吃掉。沒有這行,iOS Safari 會在拖到一半時把 touch 收回去
- *      當成 scroll,vaul 收不到完整的 pointermove,鬆手時就以為只拖了一點,
- *      於是 snap 回原本的高度 — 視覺上看起來就是「動一下又彈回去」。
- *   只鎖縱向,水平的 chip 列 (overflow-x-auto) 不受影響。
+ * 只在最低 snap (預設休息位置) 時鎖內部縱向捲動,讓使用者把整張 sheet 拖上來;
+ * 一旦離開最低 snap,就還原 overflow-y-auto + 預設 touch-action,讓內部可以自由捲動,
+ * 拖曳手勢由 vaul 在捲動邊界自動接手。水平 chip 列 (overflow-x-auto) 不受影響。
  * ────────────────────────────────── */
-[data-sheet-at-top="false"] .overflow-y-auto {
+[data-sheet-at-bottom="true"] .overflow-y-auto {
   overflow-y: hidden !important;
-  touch-action: pan-x !important;
+  touch-action: none !important;
+}
+
+/* Bottom sheet 內部 scrollbar 不佔版面 — 隱藏自訂 4px scrollbar,
+ * 維持左右對稱 padding;真機行動裝置仍會以系統 overlay 短暫顯示捲動位置。 */
+[data-vaul-drawer] *::-webkit-scrollbar {
+  width: 0 !important;
+  height: 0 !important;
+  background: transparent !important;
+}
+[data-vaul-drawer] * {
+  scrollbar-width: none !important;
 }
 
 /* 完全隱藏指定容器的 scrollbar — 用於水平 chip 列等不想出現滾動條的橫向捲動區 */

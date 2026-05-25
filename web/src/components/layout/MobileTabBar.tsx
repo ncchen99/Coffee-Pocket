@@ -31,7 +31,7 @@ export function MobileTabBar() {
             key={tab.to}
             to={tab.to}
             className={clsx(
-              "flex flex-1 flex-col items-center gap-0.5 py-2 text-[10px]",
+              "flex flex-1 flex-col items-center gap-0.5 pt-1 pb-0.5 text-[10px]",
               active ? "text-base-content" : "text-base-content/45",
             )}
           >
