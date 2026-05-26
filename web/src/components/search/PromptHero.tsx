@@ -69,6 +69,9 @@ interface PromptHeroProps {
   /** 目前的時間篩選；與「22:00 後」chip 雙向綁定。 */
   openAt?: string | null;
   onOpenAtChange?: (val: string | null) => void;
+  /** 距離篩選；與「3km 內」chip 雙向綁定。 */
+  radiusM?: number | null;
+  onRadiusMChange?: (val: number | null) => void;
   /**
    * 外部觸發清除提示文字。每次值改變（遞增計數或時間戳）時，
    * 清掉「找到 N 間店…」等 hint，避免切換標籤 / 場景後顯示舊的搜尋狀態。
@@ -87,6 +90,8 @@ export function PromptHero({
   compact = false,
   openAt,
   onOpenAtChange,
+  radiusM,
+  onRadiusMChange,
   resetHintTrigger,
   showInlineResults = false,
   onClearTagsOnFocus,
@@ -107,6 +112,7 @@ export function PromptHero({
   };
   const lateNightTarget = todayAt22();
   const isLateNightActive = openAt === lateNightTarget;
+  const isNear3kmActive = radiusM === 3000;
   const [loading, setLoading] = useState(false);
   const [hint, setHint] = useState<string | null>(null);
   const [lastSubmittedQuery, setLastSubmittedQuery] = useState("");
@@ -248,6 +254,19 @@ export function PromptHero({
                 </TagChip>
               );
             }
+            if (t.key === "near_3km") {
+              return (
+                <TagChip
+                  key={t.key}
+                  selected={isNear3kmActive}
+                  accent={t.accent && !isNear3kmActive}
+                  onClick={() => onRadiusMChange?.(isNear3kmActive ? null : 3000)}
+                  noShadow
+                >
+                  {isNear3kmActive ? t.label : `＋ ${t.label}`}
+                </TagChip>
+              );
+            }
             return (
               <TagChip
                 key={t.key}
@@ -370,6 +389,19 @@ export function PromptHero({
                 noShadow
               >
                 {isLateNightActive ? t.label : `＋ ${t.label}`}
+              </TagChip>
+            );
+          }
+          if (t.key === "near_3km") {
+            return (
+              <TagChip
+                key={t.key}
+                selected={isNear3kmActive}
+                accent={t.accent && !isNear3kmActive}
+                onClick={() => onRadiusMChange?.(isNear3kmActive ? null : 3000)}
+                noShadow
+              >
+                {isNear3kmActive ? t.label : `＋ ${t.label}`}
               </TagChip>
             );
           }

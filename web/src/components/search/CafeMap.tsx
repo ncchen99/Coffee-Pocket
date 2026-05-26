@@ -191,6 +191,12 @@ export function CafeMap({
   } | null>(null);
   const prevActiveIdRef = useRef<string | null | undefined>(null);
 
+  // 手動操作狀態與延遲 padding 套用
+  const isDraggingRef = useRef(false);
+  const isZoomingRef = useRef(false);
+  const isInteractingRef = useRef(false);
+  const pendingPaddingRef = useRef<mapboxgl.PaddingOptions | null>(null);
+
   const handleLocateClick = () => {
     if (userLocation) {
       mapRef.current?.flyTo({
@@ -254,13 +260,37 @@ export function CafeMap({
     // 拖曳或縮放地圖時也縮回 bottom sheet (僅限使用者手動操作，排除 flyTo/easeTo 等程式觸發)
     map.on("dragstart", (e: any) => {
       if (e.originalEvent) {
+        isDraggingRef.current = true;
+        isInteractingRef.current = true;
         onMapClickRef.current?.();
       }
     });
     map.on("zoomstart", (e: any) => {
       if (e.originalEvent) {
+        isZoomingRef.current = true;
+        isInteractingRef.current = true;
         onMapClickRef.current?.();
       }
+    });
+
+    const handleInteractionEnd = () => {
+      if (!isDraggingRef.current && !isZoomingRef.current) {
+        isInteractingRef.current = false;
+        if (pendingPaddingRef.current && mapRef.current) {
+          // 僅使用 setPadding 更新地圖內部邊距，不使用 easeTo 動畫，以防止地圖在手勢結束後發生相機偏移或 flyto 的視覺感
+          mapRef.current.setPadding(pendingPaddingRef.current);
+          pendingPaddingRef.current = null;
+        }
+      }
+    };
+
+    map.on("dragend", () => {
+      isDraggingRef.current = false;
+      handleInteractionEnd();
+    });
+    map.on("zoomend", () => {
+      isZoomingRef.current = false;
+      handleInteractionEnd();
     });
 
     // 中間欄開合會讓 container 寬度連續變化 —— ResizeObserver 每幀通知一次,
@@ -383,6 +413,8 @@ export function CafeMap({
     if (isFirstPaddingApplyRef.current) {
       map.setPadding(padding);
       isFirstPaddingApplyRef.current = false;
+    } else if (isInteractingRef.current) {
+      pendingPaddingRef.current = padding;
     } else {
       map.easeTo({ padding, duration: 480 });
     }
@@ -405,12 +437,14 @@ export function CafeMap({
     if (prev && !activeId && map && savedCameraRef.current) {
       const { center, zoom } = savedCameraRef.current;
       savedCameraRef.current = null;
-      map.flyTo({
-        center,
-        zoom,
-        duration: 600,
-        padding: { top: 0, right: 0, bottom: paddingBottom, left: paddingLeft },
-      });
+      if (!isInteractingRef.current) {
+        map.flyTo({
+          center,
+          zoom,
+          duration: 600,
+          padding: { top: 0, right: 0, bottom: paddingBottom, left: paddingLeft },
+        });
+      }
       return;
     }
 
@@ -423,6 +457,12 @@ export function CafeMap({
       const c = map.getCenter();
       savedCameraRef.current = { center: [c.lng, c.lat], zoom: map.getZoom() };
     }
+    
+    // 關鍵！如果使用者正在手動操作地圖，不要強行改變鏡頭 (flyTo / easeTo)，這會打斷使用者的拖曳/縮放手勢
+    if (isInteractingRef.current) {
+      return;
+    }
+
     // 詳細欄是 absolute overlay,地圖容器寬度不變、不會 resize/reproject,
     // 但 overlay 會遮住左側一段視覺寬度,所以 flyTo padding.left 帶 paddingLeft
     // 把選中咖啡廳對到「剩餘可見區域」的中心。手機則一律帶入 sheet 的 paddingBottom。
@@ -434,11 +474,13 @@ export function CafeMap({
       padding,
     });
     const t = window.setTimeout(() => {
-      map.easeTo({
-        center: [cafe.lng, cafe.lat],
-        duration: 250,
-        padding,
-      });
+      if (!isInteractingRef.current) {
+        map.easeTo({
+          center: [cafe.lng, cafe.lat],
+          duration: 250,
+          padding,
+        });
+      }
     }, 360);
     return () => window.clearTimeout(t);
   }, [activeId, cafes, paddingBottom, paddingLeft]);

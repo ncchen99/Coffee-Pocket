@@ -61,6 +61,7 @@ export function SearchSidebar({
   onSortChange,
   openAt,
   onOpenAtChange,
+  radiusM,
   onRadiusMChange,
   onKeywordChange,
 }: SearchSidebarProps) {
@@ -111,6 +112,8 @@ export function SearchSidebar({
             onToggle={handleToggle}
             openAt={openAt}
             onOpenAtChange={onOpenAtChange}
+            radiusM={radiusM}
+            onRadiusMChange={onRadiusMChange}
             resetHintTrigger={hintResetKey}
             onSubmit={(parsed, softTags, parsedOpenAt, distanceKm, kw) => {
               if (kw) {
