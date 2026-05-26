@@ -191,9 +191,9 @@ export default function DesktopProfilePage() {
               <button
                 type="button"
                 onClick={handleInstallClick}
-                className="flex w-full items-center gap-3 px-5 py-3 hover:bg-base-200/60 transition-colors text-primary font-medium text-left"
+                className="flex w-full items-center gap-3 px-5 py-3 hover:bg-base-200/60 transition-colors text-left"
               >
-                <HugeiconsIcon icon={Download01Icon} size={16} strokeWidth={1.5} className="text-primary animate-pulse" />
+                <HugeiconsIcon icon={Download01Icon} size={16} strokeWidth={1.5} className="text-base-content/65" />
                 <span className="text-sm">安裝 App</span>
               </button>
             </li>

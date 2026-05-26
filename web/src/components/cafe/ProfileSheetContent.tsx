@@ -162,13 +162,13 @@ export function ProfileSheetContent() {
             <button
               type="button"
               onClick={handleInstallClick}
-              className="flex w-full items-center gap-3 px-5 py-3 active:bg-base-200/60 text-primary font-medium"
+              className="flex w-full items-center gap-3 px-5 py-3 active:bg-base-200/60"
             >
               <HugeiconsIcon
                 icon={Download01Icon}
                 size={16}
                 strokeWidth={1.5}
-                className="text-primary animate-pulse"
+                className="text-base-content/65"
               />
               <span className="text-sm">安裝 App</span>
             </button>
