@@ -1,7 +1,5 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { HugeiconsIcon } from "@hugeicons/react";
-import { PlusSignIcon } from "@hugeicons/core-free-icons";
 import { Cap, CustomSelect, ConfirmModal } from "@/components/primitives";
 import { DesktopPageLayout } from "@/components/layout/DesktopPageLayout";
 import { useAuth } from "@/hooks/useAuth";
@@ -159,22 +157,6 @@ export default function DesktopSettingsPage() {
           </div>
         </section>
 
-        {/* 貢獻 */}
-        <section className="rounded-xl border border-base-content/10 p-5 bg-base-100/50">
-          <Cap>貢獻</Cap>
-          <div className="mt-4">
-            <SettingRow label="新增咖啡廳">
-              <button
-                type="button"
-                onClick={() => navigate("/add-cafe")}
-                className="btn btn-neutral btn-sm rounded-none font-medium px-4 h-8 min-h-8 text-xs gap-1.5"
-              >
-                <HugeiconsIcon icon={PlusSignIcon} size={14} strokeWidth={1.5} />
-                新增
-              </button>
-            </SettingRow>
-          </div>
-        </section>
 
         {/* 帳號 */}
         <section className="rounded-xl border border-base-content/10 p-5 bg-base-100/50">
