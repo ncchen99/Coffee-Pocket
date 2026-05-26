@@ -1,310 +1,195 @@
-# Coffee Pocket
+# ☕ Coffee Pocket — 咖啡口袋
 
-Coffee Pocket 目前的重點是整理臺南咖啡廳資料，先把不同來源匯入資料庫，再用 Google Places / Google Maps 補齊名稱、Place ID、評論與店家資訊。
+> 收藏你的台南咖啡店口袋名單。
 
-目前流程已改成「每個步驟分開跑」。舊版 `google_places.py` 會同時做 Places 查詢、抓少量評論、再丟 LLM 萃取；這條一站式流程現在先暫停使用，避免資料更新、評論爬取、LLM 處理混在一起。
+Coffee Pocket 是一款以**臺南咖啡廳**為主題的探索與收藏工具，幫助使用者依據「有沒有插座」「適不適合讀書」「有沒有限時」等實用標籤，快速找到符合需求的咖啡廳，並將喜歡的店家加入個人口袋名單。
 
-## 目前流程
+支援桌面與行動裝置，也可安裝為 PWA 使用。
 
-### 1. 取得資料與匯入
+---
 
-先把不同來源的咖啡廳資料放進 `cafes` / `reviews_raw`。
+## Demo
 
-1. 抓 Cafe Nomad 臺南資料：
+### 🖥 桌面版畫面
 
-   ```bash
-   uv run python -m coffee_pocket.agents.sources.cafenomad
-   ```
+| | |
+|:---:|:---:|
+| *首頁搜尋* | *咖啡廳詳細資訊* |
+| | |
 
-2. 匯入 Google 地圖清單，參考臺南清單腳本：
+### 📱 手機版畫面
 
-   ```bash
-   uv run python -m coffee_pocket.agents.sources.tainan_list --headful
-   uv run python -m coffee_pocket.agents.sources.tainan_list --from-json --write-db
-   ```
+| 首頁 | 搜尋結果 | 咖啡廳資訊 | 口袋名單 |
+|:---:|:---:|:---:|:---:|
+| | | | |
 
-   第一行會打開 Google Maps 清單並輸出 `data/tainan_list.json`。確認 JSON 內容後，再用第二行寫入資料庫。
+---
 
-3. 匯入 IG / 手動整理資料：
+## 專案初衷
 
-   目前手動清單放在 `insert_manual_cafes.py` 裡的 `CAFES`，資料來源可參考 `data/ig/greenyaya.314.txt`。
+在臺南找一間「有插座、不限時、適合工作」的咖啡廳，往往要翻很多評論才能確認。Coffee Pocket 的目標是把這些散落在各處的資訊結構化 —— 從多個來源抓取並彙整咖啡廳資料，透過 LLM 將使用者評論萃取為語意標籤，最終呈現在一個簡潔好用的介面上，讓找店不再需要反覆爬文。
 
-   ```bash
-   uv run python -m coffee_pocket.agents.sources.insert_manual_cafes
-   uv run python -m coffee_pocket.agents.sources.insert_manual_cafes --apply
-   ```
+---
 
-   第一行只預覽，第二行才寫入資料庫。
+## 技術架構
 
-### 2. 資料更新與清理
+```
+┌────────────────────────────────────────────────────────┐
+│                      Frontend (PWA)                    │
+│   React · TypeScript · Vite · Tailwind / daisyUI       │
+│   Mapbox GL · React Query · React Router · Vaul        │
+├────────────────────────────────────────────────────────┤
+│                      Backend / BaaS                    │
+│   Supabase (PostgreSQL + PostGIS + Auth + Edge Func.)  │
+│   FastAPI (新增咖啡廳 pipeline)                         │
+├────────────────────────────────────────────────────────┤
+│                  Data Pipeline (Python)                 │
+│   資料抓取 · Places API · LLM 語意萃取 · Semantic Layer │
+├────────────────────────────────────────────────────────┤
+│                      Deployment                        │
+│   Firebase Hosting (前端)  ·  Fly.io (API 服務)         │
+│   Cloudflare R2 (圖片儲存)                              │
+└────────────────────────────────────────────────────────┘
+```
 
-資料進資料庫後，再分開做 Place API 更新、重複檢查、刪除。
+### 使用技術一覽
 
-1. 使用 Google Places API 更新咖啡廳名稱與 Place ID：
+| 層級 | 技術 |
+| --- | --- |
+| **前端** | React 18, TypeScript, Vite, Tailwind CSS, daisyUI, Mapbox GL JS |
+| **UI 元件** | Hugeicons (icon), Vaul (mobile drawer), pinyin-pro (搜尋拼音匹配) |
+| **後端 / 資料庫** | Supabase (PostgreSQL + PostGIS + Auth), Edge Functions (Deno) |
+| **API 服務** | FastAPI, Uvicorn |
+| **資料處理** | Python 3.11+, Playwright (自動化), httpx, Pydantic |
+| **LLM 萃取** | OpenRouter / OpenAI API |
+| **部署** | Firebase Hosting (SPA), Fly.io (FastAPI), Cloudflare R2 (圖片) |
+| **套件管理** | npm (前端), uv (Python) |
 
-   ```bash
-   uv run python -m coffee_pocket.agents.prepare.recheck_place_ids
-   uv run python -m coffee_pocket.agents.prepare.recheck_place_ids --apply
-   ```
+---
 
-   如果只想處理剛匯入、還沒有 `google_place_id` 的店家：
+## 頁面功能說明
 
-   ```bash
-   uv run python -m coffee_pocket.agents.prepare.recheck_place_ids --only-missing-pid --apply
-   ```
+### 首頁（搜尋與地圖）
 
-2. 檢查是否有重複資料：
+首頁是整個應用的核心入口，結合**地圖**與**列表**兩種瀏覽方式：
 
-   ```bash
-   uv run python -m coffee_pocket.agents.prepare.dedupe_cafes
-   uv run python -m coffee_pocket.agents.prepare.dedupe_cafes --apply
-   ```
+- **自然語言搜尋**：在搜尋欄輸入如「有插座適合工作的咖啡廳」，系統會透過 Edge Function 解析語意並轉換為標籤篩選條件。
+- **標籤篩選**：直接點選標籤（插座、不限時、適合讀書⋯）快速過濾，支援 AND / OR 組合。
+- **情境推薦**：提供「讀書 K 書」「朋友聚會」等快速情境按鈕，一鍵套用對應標籤組合。
+- **地圖互動**：Mapbox 地圖標示所有符合條件的咖啡廳位置，點擊 marker 可直接檢視詳細資訊。
+- **距離與營業時間**：可依使用者位置排序，也能篩選「現在有營業」的店家。
+- **口袋名單**：登入後可將喜歡的咖啡廳加入個人口袋名單，隨時回顧。
 
-   這支腳本會先把重複資料標記成 `duplicate_of`，不是直接刪除。
+行動版採用 Apple Maps 風格的底部 sheet 介面，桌面版則是左側列表 + 中間詳細欄 + 右側地圖的三欄佈局。
 
-3. 刪除被標記為重複或找不到的資料：
+### 咖啡廳詳細資訊
 
-   ```bash
-   uv run python -m coffee_pocket.agents.prepare.cleanup_cafes
-   uv run python -m coffee_pocket.agents.prepare.cleanup_cafes --yes
-   ```
+點選任何一間咖啡廳後，可以看到：
 
-   第一行只預覽，第二行才刪除。
+- **基本資訊**：店名、地址、Google Maps 連結、評分。
+- **營業時間**：依星期顯示每日營業時段。
+- **語意標籤**：由評論萃取而來的結構化標籤，每個標籤附帶信心分數與證據來源數量，例如「插座多 — 12 則評論提及」。
+- **封面照片**：店家的代表圖片。
+- **社群互動**：登入使用者可以對標籤進行投票（贊同 / 不贊同），協助校正資訊正確性。
+- **收藏操作**：加入或移除口袋名單。
 
-### 3. 生成拼音與 slug
+---
 
-咖啡廳名稱與資訊都確定後，為新店家產生 `name_pinyin` 與 `slug`，方便前端搜尋與路由使用：
+## 快速開始
+
+### 前置需求
+
+- **Node.js** ≥ 18
+- **Python** ≥ 3.11 + [uv](https://docs.astral.sh/uv/)（僅資料處理 pipeline 需要）
+- **Supabase** 專案（含 PostgreSQL + PostGIS）
+- **Mapbox** Token（地圖功能）
+
+### 1. Clone 專案
 
 ```bash
-uv run python -m coffee_pocket.agents.prepare.generate_pinyin
-uv run python -m coffee_pocket.agents.prepare.generate_pinyin --apply
+git clone https://github.com/ncchen99/Coffee-Pocket.git
+cd Coffee-Pocket
 ```
 
-第一行只預覽，第二行才寫入資料庫。這一步必須等到**咖啡廳名稱更新完成**後再執行，否則會以舊名稱產生拼音。建議放在資料清理（Step 2）完成後跑，或是在資訊補充（Step 4）結束後補跑一次。
-
-### 4. 資訊補充
-
-最後再跑 Google Maps 爬蟲補齊評論、營業資訊、評分、照片等內容。
+### 2. 啟動前端
 
 ```bash
-uv run python -m coffee_pocket.agents.enrich.google_scraper --limit 5 --headful --update-cafe
+cd web
+npm install
+cp .env.example .env
+# 填入 Supabase 與 Mapbox 金鑰
+npm run dev
 ```
 
-常用模式：
+前端所需的環境變數（`web/.env`）：
 
 ```bash
-# 第一次使用前，先登入 Google，讓瀏覽器保存登入狀態
-uv run python -m coffee_pocket.agents.enrich.google_scraper --login
-
-# 只補 Place ID，不爬評論
-uv run python -m coffee_pocket.agents.enrich.google_scraper --resolve-only
-
-# 跳過還沒有 google_place_id 的店家，只爬已確認的店
-uv run python -m coffee_pocket.agents.enrich.google_scraper --no-missing --update-cafe
+VITE_SUPABASE_URL=          # Supabase 專案 URL
+VITE_SUPABASE_ANON_KEY=     # Supabase anon key
+VITE_MAPBOX_TOKEN=           # Mapbox access token
+VITE_ADD_CAFE_API_BASE=http://localhost:8000  # 新增咖啡廳 API
 ```
 
-爬蟲會把評論與店家資訊存到 `data/reviews/<google_place_id>.json`。加上 `--update-cafe` 時，也會把可用的 Google 店家資訊寫回 `cafes`。
+> 沒有 `VITE_MAPBOX_TOKEN` 時，地圖頁會 fallback 成純清單模式，不會崩潰。
 
-v2.0 變動：
+### 3. 啟動後端 API（選用）
 
-- 預設改抓 **「最相關」** (`--sort relevance`)，每店最多 **200 筆**評論（`MAX_REVIEWS_DEFAULT=200`）。
-- 想改回「最新」可加 `--sort newest`。
-
-### 4. 評論語意萃取（LLM）
-
-爬蟲拿到的 Google 評論、手動匯入的 Instagram 貼文都是原始文字，需要透過 LLM 抽出結構化標籤（是否有插座、是否適合讀書 / 討論 / 多人聊天、是否可訂位、限時規則⋯⋯）。這一步會把訊號寫進 `reviews_raw.extracted_signals`。
-
-目前支援的標籤定義在 [`specs/semantic_layer.yaml`](specs/semantic_layer.yaml)，prompt 與 schema 在 [`src/coffee_pocket/agents/process/google_places.py`](src/coffee_pocket/agents/process/google_places.py)。Cafe Nomad 來源不需要跑 LLM（它的欄位本身就是結構化的，由 `sources/cafenomad.py` 直接映射）。
-
-1. 處理 Google 評論（讀取 `data/reviews/*.json`）：
-
-   ```bash
-   # 只處理還沒抽過 signals 的評論
-   uv run python -m coffee_pocket.agents.process.google_extract
-
-   # 想先試少量資料：
-   uv run python -m coffee_pocket.agents.process.google_extract --limit 2
-
-   # prompt 或 schema 更新後，要重新抽全部評論：
-   uv run python -m coffee_pocket.agents.process.google_extract --reprocess
-
-   # 只想 upsert 評論，不跑 LLM：
-   uv run python -m coffee_pocket.agents.process.google_extract --no-llm
-   ```
-
-2. 處理 Instagram 貼文（讀取 `data/ig/*.txt`）：
-
-   ```bash
-   # 只抽還沒處理過的貼文
-   uv run python -m coffee_pocket.agents.sources.instagram_extract
-
-   # 先預覽匹配結果，不寫資料庫：
-   uv run python -m coffee_pocket.agents.sources.instagram_extract --dry-run
-
-   # 重新抽全部
-   uv run python -m coffee_pocket.agents.sources.instagram_extract --reprocess
-   ```
-
-跑這一步需要 `OPENAI_API_KEY`（或 `OPENROUTER_API_KEY`，視 `llm.py` 設定）。失敗的批次會寫到 `dead_letter` 表，方便事後追查。
-
-### 6. 標籤彙整（Semantic Layer）
-
-最後把多個來源（cafe_nomad 結構化欄位 + Google / IG 的 LLM signals）彙整成最終的 `cafe_tags` 與 `tag_evidence`：
+如需「新增咖啡廳」功能，需另外啟動 FastAPI 服務：
 
 ```bash
-# 全部咖啡廳
-uv run python -m coffee_pocket.agents.process.semantic
-
-# 只跑某一家驗證
-uv run python -m coffee_pocket.agents.process.semantic --cafe-id <cafe-uuid>
-
-# 先試少量
-uv run python -m coffee_pocket.agents.process.semantic --limit 5
+# 回到專案根目錄
+cp .env.example .env
+# 填入 Supabase、Google Places API Key 等
+uv sync
+uv run uvicorn services.api.main:app --reload --port 8000
 ```
 
-v2.0 標籤體系（2026-05 改版）：
+### 4. 資料庫
 
-- 覆蓋率類（互斥：`*_most` 為 True 時 `*_few` 不寫入）
-  - `socket_most` / `socket_few`
-  - `large_table_most` / `large_table_few`
-- 新增 boolean：`wifi_available`、`high_cp_value`、`scooter_parking_easy`、`car_parking_easy`、`has_resident_cat`、`has_resident_dog`
-- 既有 boolean：`reservable`、`outdoor_seating`
-- Score（0–100）：`study_friendly`、`discussion_friendly`、`group_chat_friendly`
-- Structured：`time_limit`（**只保留 status**：`unlimited` / `limited` / `conditional`，不再記錄 `duration_minutes`）
-- 廢棄（pipeline 不再寫入，DB 舊資料保留）：`socket_available`、`pet_friendly`
-
-彙整邏輯：
-
-- Boolean 標籤：需「**正向證據數 ≥ N** 且 **正向 / 該店 Google+IG 評論總數 ≥ R**」才成立。預設 N=2、R=15%；`has_resident_*` R=10%；`reservable`/`outdoor_seating` 仍是 1 筆即可。社群編輯永遠覆寫。
-- `high_cp_value`：採「正向佔比 ≥ 0.6」規則（一半一半 → False），需 ≥ 2 筆證據。
-- Score 標籤：正負訊號加總，clip 到 0–100。
-- Structured `time_limit`：依來源優先順序取 canonical value。
-- 已被 community 鎖定的標籤（`locked_by_community=true`）不會被自動覆蓋。
-
-注意：cafe_nomad 來源沒有「訂位」、「多人聊天」相關欄位，所以這兩個標籤只會在有 Google / IG 訊號的咖啡廳上產生。`noise_level` 三個來源都遵循同一方向（**5 = 最安靜，1 = 最吵**）。
-
-## `src` 腳本分類
-
-`src/coffee_pocket/agents` 已依階段拆成子資料夾：
-
-```text
-agents/
-  sources/      # Step 1：資料來源匯入
-  prepare/      # Step 2：Place ID 更新、重複檢查、清理
-  enrich/       # Step 3：Google Maps 爬蟲與資訊補充
-  process/      # 暫停中的 LLM / semantic 處理
-  maintenance/  # 一次性修復與稽核工具
-  shared/       # 跨階段共用工具
-```
-
-### 現行主流程
-
-| 階段 | 檔案 | 用途 | 狀態 |
-| --- | --- | --- | --- |
-| 1. 取得資料與匯入 | `src/coffee_pocket/agents/sources/cafenomad.py` | 抓 Cafe Nomad 臺南資料，寫入 `cafes` / `reviews_raw` | 使用中 |
-| 1. 取得資料與匯入 | `src/coffee_pocket/agents/sources/tainan_list.py` | 匯入 Google Maps 臺南清單 | 使用中 |
-| 1. 取得資料與匯入 | `src/coffee_pocket/agents/sources/insert_manual_cafes.py` | 匯入手動整理的 IG / 人工清單 | 使用中 |
-| 2. 資料更新與清理 | `src/coffee_pocket/agents/prepare/recheck_place_ids.py` | 用 Places API 更新名稱、Place ID，並標記可疑重複 | 使用中 |
-| 2. 資料更新與清理 | `src/coffee_pocket/agents/prepare/dedupe_cafes.py` | 互動式檢查重複店家，標記 `duplicate_of` | 使用中 |
-| 2. 資料更新與清理 | `src/coffee_pocket/agents/prepare/cleanup_cafes.py` | 刪除 `not_found` 與 `duplicate_of` 資料 | 使用中 |
-| 2. 資料更新與清理 | `src/coffee_pocket/agents/prepare/generate_pinyin.py` | 為新店家產生 `name_pinyin` 與 `slug` | 使用中 |
-| 3. 資訊補充 | `src/coffee_pocket/agents/enrich/google_scraper.py` | 爬 Google Maps 評論與店家資訊 | 使用中 |
-| 共用 | `src/coffee_pocket/agents/shared/places_lookup.py` | Places API 共用查詢工具 | 使用中，輔助模組 |
-| 共用 | `src/coffee_pocket/storage.py` | 上傳 Google 店家封面圖到 R2 | 使用中，輔助模組 |
-| 共用 | `src/coffee_pocket/config.py` / `db.py` | 環境變數與 Supabase 連線 | 使用中，基礎模組 |
-
-### LLM / Semantic 流程
-
-| 檔案 | 用途 | 狀態 |
-| --- | --- | --- |
-| `src/coffee_pocket/agents/process/google_extract.py` | 讀取 `data/reviews/*.json`，把評論寫入 `reviews_raw` 並跑 LLM 抽 signals | 使用中（Step 5） |
-| `src/coffee_pocket/agents/sources/instagram_extract.py` | 讀取 `data/ig/*.txt`，匹配店家後跑 LLM 抽 signals | 使用中（Step 5） |
-| `src/coffee_pocket/agents/process/semantic.py` | 彙整 `reviews_raw.extracted_signals` 成 `cafe_tags` / `tag_evidence` | 使用中（Step 6） |
-| `src/coffee_pocket/agents/process/google_places.py` | 共用 LLM schema / prompt（`Signal` model + `SYSTEM_PROMPT`），舊版一站式流程已停用 | 作為 schema / prompt 來源，被 `google_extract` 與 `instagram_extract` 共用 |
-| `src/coffee_pocket/llm.py` | LLM JSON helper | 使用中 |
-
-### 一次性修復或稽核工具
-
-這些檔案不是日常流程的一部分，先保留，避免之後需要追查資料修復歷史時找不到工具。
-
-| 檔案 | 用途 | 狀態 |
-| --- | --- | --- |
-| `src/coffee_pocket/agents/maintenance/audit_place_matches.py` | 稽核既有 `google_place_id` 是否疑似配錯店 | 必要時才跑 |
-| `src/coffee_pocket/agents/maintenance/restore_dedup_cafe_nomad.py` | 還原 dedupe 後遺失的 Cafe Nomad 資料 | 一次性修復 |
-| `src/coffee_pocket/agents/maintenance/restore_post_dedup.py` | 修復 dedupe 後被覆寫 / 被刪光的資料 | 一次性修復 |
-
-### 依賴關係
-
-- `sources/tainan_list.py` 會共用 `enrich/google_scraper.py` 裡的瀏覽器啟動工具。
-- `sources/insert_manual_cafes.py`、`prepare/recheck_place_ids.py`、`enrich/google_scraper.py`、`maintenance/audit_place_matches.py` 都依賴 `shared/places_lookup.py`。
-- `maintenance/restore_dedup_cafe_nomad.py` 依賴 `sources/cafenomad.py`。
-- `maintenance/restore_post_dedup.py` 依賴 `sources/cafenomad.py`、`shared/places_lookup.py`、`process/semantic.py`。
-- `sources/instagram_extract.py` 與 `process/google_extract.py` 仍引用 `process/google_places.py` 的 LLM schema / prompt；目前主流程暫停 LLM 時不要跑。
-
-## 建議保留與刪除
-
-保留：
-
-- 現行主流程腳本。
-- Places API 共用工具與 Supabase / R2 基礎模組。
-- 一次性修復腳本，因為它們記錄了資料修復邏輯，日後查問題可能用得到。
-
-暫時不要跑：
-
-- `agents/process/google_places.py`（一站式舊流程，仍保留 schema / prompt 給其他 process 腳本共用）
-
-可以直接清掉：
-
-- `__pycache__/`
-- `*.pyc`
-- 本機臨時 log，但 `data/audit/*.log` 若需要追查歷史可先保留。
-
-## 環境設定
-
-需要的環境變數可參考 `.env.example`：
+資料庫 schema 與 migration 檔案位於 `supabase/` 資料夾，使用 Supabase CLI 管理：
 
 ```bash
-SUPABASE_URL=
-SUPABASE_SERVICE_ROLE_KEY=
-SUPABASE_ANON_KEY=
-GOOGLE_PLACES_API_KEY=
-OPENROUTER_API_KEY=
-OPENROUTER_MODEL=
+npx supabase db push
 ```
 
-- `GOOGLE_PLACES_API_KEY`：`agents/prepare/recheck_place_ids.py` 與 `agents/enrich/google_scraper.py` 的 Place ID 補齊會用到。
-- `OPENAI_API_KEY` / `OPENROUTER_API_KEY`：Step 5（`google_extract` / `instagram_extract`）跑 LLM 才需要；只跑 Step 1–4 可以不填。
+---
 
-## 檢查方式
+## 專案結構
 
-目前專案沒有獨立的測試資料夾；整理腳本分類後，先用模組匯入檢查確認所有新路徑與依賴都能載入：
-
-```bash
-uv run python - <<'PY'
-import importlib
-
-modules = [
-    "coffee_pocket.agents.sources.cafenomad",
-    "coffee_pocket.agents.sources.tainan_list",
-    "coffee_pocket.agents.sources.insert_manual_cafes",
-    "coffee_pocket.agents.prepare.recheck_place_ids",
-    "coffee_pocket.agents.prepare.dedupe_cafes",
-    "coffee_pocket.agents.prepare.cleanup_cafes",
-    "coffee_pocket.agents.prepare.generate_pinyin",
-    "coffee_pocket.agents.enrich.google_scraper",
-    "coffee_pocket.agents.shared.places_lookup",
-    "coffee_pocket.agents.process.google_places",
-    "coffee_pocket.agents.process.google_extract",
-    "coffee_pocket.agents.process.semantic",
-    "coffee_pocket.agents.sources.instagram_extract",
-    "coffee_pocket.agents.maintenance.audit_place_matches",
-    "coffee_pocket.agents.maintenance.restore_dedup_cafe_nomad",
-    "coffee_pocket.agents.maintenance.restore_post_dedup",
-]
-
-for name in modules:
-    importlib.import_module(name)
-
-print("ok")
-PY
 ```
+Coffee-Pocket/
+├── web/                  # 前端 (React + Vite + Tailwind)
+│   ├── src/
+│   │   ├── components/   # UI 元件 (cafe, search, layout, primitives)
+│   │   ├── pages/        # 頁面 (MapPage, LoginPage, SettingsPage …)
+│   │   ├── hooks/        # React hooks
+│   │   ├── lib/          # 工具函式 (API, filter, format)
+│   │   ├── context/      # React Context (user location …)
+│   │   └── types/        # TypeScript 型別定義
+│   └── public/           # 靜態資源 (favicon, manifest)
+├── services/api/         # FastAPI 後端服務 (新增咖啡廳 pipeline)
+├── supabase/             # Supabase config, migrations, edge functions
+│   └── functions/        # Edge Functions (smart-search, parse-prompt …)
+├── src/                  # Python 資料處理 pipeline
+│   └── coffee_pocket/
+│       └── agents/       # 資料抓取、清理、LLM 萃取、語意彙整
+├── specs/                # 標籤定義 (semantic_layer.yaml) 與需求文件
+├── docs/                 # 文件
+└── data/                 # 本地資料快取 (reviews, ig posts …)
+```
+
+---
+
+## 資料處理
+
+咖啡廳資料從多個來源匯入（Cafe Nomad、Google 地圖清單、Instagram 貼文、使用者手動新增等），經過 Place ID 比對、去重、LLM 語意萃取等步驟，最終產出結構化的標籤資料。
+
+我們透過 Google Places API 取得店家基本資訊，並從公開來源蒐集評論進行語意分析。這些評論並不會直接顯示在平台上，而是經過 LLM 萃取後轉化為結構化標籤（如「有插座」「適合讀書」），屬於合理使用範圍。
+
+> 📖 資料處理 pipeline 的詳細操作步驟請參閱 [docs/data-pipeline.md](docs/data-pipeline.md)。
+
+---
+
+## License
+
+[MIT](LICENSE) © 念誠
