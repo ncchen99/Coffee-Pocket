@@ -120,7 +120,7 @@ export function PromptHero({
   // 即時本地搜尋：算當下 query 在 200 筆全量裡有幾筆符合，
   // 用於 (1) 在輸入時顯示「找到 N 間」提示；(2) Enter 時判斷要不要打 AI。
   const allCafes = useAllCafes();
-  const { location } = useUserLocation();
+  const { location, requestLocation } = useUserLocation();
   const liveMatchCount = (() => {
     const q = query.trim();
     if (!q) return 0;
@@ -163,7 +163,7 @@ export function PromptHero({
     if (!q) {
       // 沒輸入文字：把當下已勾選的 tag / openAt 當作搜尋條件提交。
       setLastSubmittedQuery("");
-      onSubmit(Array.from(selected), [], openAt ?? null, null, null);
+      onSubmit(Array.from(selected), [], openAt ?? null, radiusM != null ? radiusM / 1000 : null, null);
       return;
     }
 
@@ -172,7 +172,7 @@ export function PromptHero({
     if (labelKey) {
       setHint(`已套用標籤「${q}」`);
       setLastSubmittedQuery(q);
-      onSubmit([labelKey], [], null, null, null);
+      onSubmit([labelKey], [], null, radiusM != null ? radiusM / 1000 : null, null);
       return;
     }
 
@@ -181,7 +181,7 @@ export function PromptHero({
     if (liveMatchCount > 0) {
       setHint(`找到 ${liveMatchCount} 間店名 / 地址含「${q}」`);
       setLastSubmittedQuery(q);
-      onSubmit([], [], null, null, q);
+      onSubmit([], [], null, radiusM != null ? radiusM / 1000 : null, q);
       return;
     }
 
@@ -205,12 +205,12 @@ export function PromptHero({
         parsed.tags,
         parsed.soft_tags,
         parsed.open_at,
-        parsed.distance_km,
+        parsed.distance_km ?? (radiusM != null ? radiusM / 1000 : null),
         null,
       );
     } catch (e) {
       setHint("搜尋失敗,請稍後再試");
-      onSubmit([], [], null, null, null);
+      onSubmit([], [], null, radiusM != null ? radiusM / 1000 : null, null);
     } finally {
       setLoading(false);
     }
@@ -260,7 +260,12 @@ export function PromptHero({
                   key={t.key}
                   selected={isNear3kmActive}
                   accent={t.accent && !isNear3kmActive}
-                  onClick={() => onRadiusMChange?.(isNear3kmActive ? null : 3000)}
+                  onClick={() => {
+                    if (!location) {
+                      requestLocation();
+                    }
+                    onRadiusMChange?.(isNear3kmActive ? null : 3000);
+                  }}
                   noShadow
                 >
                   {isNear3kmActive ? t.label : `＋ ${t.label}`}
@@ -398,7 +403,12 @@ export function PromptHero({
                 key={t.key}
                 selected={isNear3kmActive}
                 accent={t.accent && !isNear3kmActive}
-                onClick={() => onRadiusMChange?.(isNear3kmActive ? null : 3000)}
+                onClick={() => {
+                  if (!location) {
+                    requestLocation();
+                  }
+                  onRadiusMChange?.(isNear3kmActive ? null : 3000);
+                }}
                 noShadow
               >
                 {isNear3kmActive ? t.label : `＋ ${t.label}`}
