@@ -26,7 +26,7 @@ import { useSearchSelection } from "@/hooks/useSearchSelection";
 import { useAllCafes, useCafeDetail } from "@/hooks/useCafes";
 import { useCafeActions } from "@/hooks/useCafeActions";
 import { searchCafesLocal, type LocalSortKey } from "@/lib/cafeFilter";
-import { usePocketItems, usePockets } from "@/hooks/usePockets";
+import { usePocketItems, usePockets, useAllPocketsItems } from "@/hooks/usePockets";
 import { useUserLocation } from "@/context/UserLocationContext";
 import { haversineKm } from "@/lib/format";
 
@@ -377,20 +377,36 @@ export default function MapPage() {
       setActivePocketId(pockets[0].id);
     }
   }, [pockets, activePocketId]);
-  const pocketItemsQuery = usePocketItems(tab !== "home" ? activePocketId : null);
-  const pocketCafes = useMemo(
-    () =>
-      (pocketItemsQuery.data ?? [])
-        .map((item) => item.cafe)
-        .filter((c): c is NonNullable<typeof c> => !!c)
-        .map((c) =>
-          userLocation
-            ? { ...c, distance_km: haversineKm(userLocation, { lng: c.lng, lat: c.lat }) }
-            : c,
-        )
-        .sort((a, b) => (userLocation ? a.distance_km - b.distance_km : 0)),
-    [pocketItemsQuery.data, userLocation],
-  );
+  const pocketIds = useMemo(() => pockets?.map((p) => p.id), [pockets]);
+  const allPocketItemsQuery = useAllPocketsItems(pocketIds, tab === "profile");
+  const pocketItemsQuery = usePocketItems(tab === "pocket" ? activePocketId : null);
+
+  const pocketCafes = useMemo(() => {
+    let items: any[] = [];
+    if (tab === "pocket") {
+      items = pocketItemsQuery.data ?? [];
+    } else if (tab === "profile") {
+      // Deduplicate cafes by ID
+      const seen = new Set<string>();
+      const allItems = allPocketItemsQuery.data ?? [];
+      for (const item of allItems) {
+        if (item.cafe && !seen.has(item.cafe.id)) {
+          seen.add(item.cafe.id);
+          items.push(item);
+        }
+      }
+    }
+
+    return items
+      .map((item) => item.cafe)
+      .filter((c): c is NonNullable<typeof c> => !!c)
+      .map((c) =>
+        userLocation
+          ? { ...c, distance_km: haversineKm(userLocation, { lng: c.lng, lat: c.lat }) }
+          : c,
+      )
+      .sort((a, b) => (userLocation ? a.distance_km - b.distance_km : 0));
+  }, [tab, pocketItemsQuery.data, allPocketItemsQuery.data, userLocation]);
   const detailSourceSearch = useMemo(() => {
     if (tab === "home") return "";
     const search = new URLSearchParams();
@@ -747,7 +763,13 @@ export default function MapPage() {
             activeId={effectiveActiveId}
             userLocation={userLocation}
             paddingBottom={sheetPaddingPx}
-            fitToCafesKey={tab !== "home" ? `tab:${tab}:${activePocketId ?? ""}` : null}
+            fitToCafesKey={
+              tab === "pocket"
+                ? `pocket:${activePocketId ?? ""}`
+                : tab === "profile"
+                ? `profile:${pocketCafes.length}`
+                : null
+            }
             onMarkerClick={handleMarkerClick}
             onMapClick={handleMapClick}
             hideZoomButtons

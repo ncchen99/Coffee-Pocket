@@ -22,6 +22,19 @@ export function usePocketItems(pocketId: string | null) {
   });
 }
 
+export function useAllPocketsItems(pocketIds: string[] | undefined, enabled: boolean = true) {
+  return useQuery({
+    queryKey: ["all-pocket-items", pocketIds],
+    queryFn: async () => {
+      if (!pocketIds || pocketIds.length === 0) return [];
+      const results = await Promise.all(pocketIds.map((id) => api.fetchPocketItems(id)));
+      return results.flat();
+    },
+    enabled: enabled && !!pocketIds && pocketIds.length > 0,
+  });
+}
+
+
 export function useCreatePocket() {
   const qc = useQueryClient();
   return useMutation({

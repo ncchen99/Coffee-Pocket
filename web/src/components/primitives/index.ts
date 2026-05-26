@@ -9,4 +9,5 @@ export { InputModal } from "./InputModal";
 export { PocketPickerModal } from "./PocketPickerModal";
 export { ReportModal } from "./ReportModal";
 export { StarRating } from "./StarRating";
+export { PwaInstallModal } from "./PwaInstallModal";
 

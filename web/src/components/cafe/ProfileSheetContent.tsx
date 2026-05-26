@@ -1,10 +1,11 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Settings01Icon, Mail01Icon, Logout01Icon, PlusSignIcon } from "@hugeicons/core-free-icons";
-import { Cap, ConfirmModal } from "@/components/primitives";
+import { Settings01Icon, Mail01Icon, Logout01Icon, PlusSignIcon, Download01Icon } from "@hugeicons/core-free-icons";
+import { Cap, ConfirmModal, PwaInstallModal } from "@/components/primitives";
 import { useAuth } from "@/hooks/useAuth";
 import { useUserStats, useContributions } from "@/hooks/useProfile";
+import { usePwaInstall } from "@/hooks/usePwaInstall";
 
 function relativeTime(iso: string): string {
   const now = Date.now();
@@ -26,11 +27,22 @@ function relativeTime(iso: string): string {
 export function ProfileSheetContent() {
   const { user, loading: authLoading, signOut } = useAuth();
   const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
+  const [isInstallModalOpen, setIsInstallModalOpen] = useState(false);
+  const { isInstallable, isStandalone, install } = usePwaInstall();
+
   const { data: stats } = useUserStats(user?.id ?? null);
   const { data: contributions = [], isLoading: contributionsLoading } = useContributions(
     user?.id ?? null,
     10,
   );
+
+  const handleInstallClick = async () => {
+    if (isInstallable) {
+      await install();
+    } else {
+      setIsInstallModalOpen(true);
+    }
+  };
 
   if (authLoading) {
     return (
@@ -145,6 +157,23 @@ export function ProfileSheetContent() {
       </section>
 
       <ul className="divide-y divide-base-content/10 border-b border-base-content/10">
+        {!isStandalone && (
+          <li>
+            <button
+              type="button"
+              onClick={handleInstallClick}
+              className="flex w-full items-center gap-3 px-5 py-3 active:bg-base-200/60 text-primary font-medium"
+            >
+              <HugeiconsIcon
+                icon={Download01Icon}
+                size={16}
+                strokeWidth={1.5}
+                className="text-primary animate-pulse"
+              />
+              <span className="text-sm">安裝 App</span>
+            </button>
+          </li>
+        )}
         <li>
           <Link
             to="/add-cafe"
@@ -211,6 +240,11 @@ export function ProfileSheetContent() {
         title="確認登出"
         message="您確定要登出您的咖啡口袋帳號嗎？登出後將無法同步您的收藏與口袋名單。"
         confirmText="確認登出"
+      />
+
+      <PwaInstallModal
+        isOpen={isInstallModalOpen}
+        onClose={() => setIsInstallModalOpen(false)}
       />
     </div>
   );

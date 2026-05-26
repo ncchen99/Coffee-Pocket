@@ -251,6 +251,18 @@ export function CafeMap({
     // 點地圖空白處(marker 的 click 不會冒泡到 map,Mapbox 也有原生過濾)→ 通知父層
     map.on("click", () => onMapClickRef.current?.());
 
+    // 拖曳或縮放地圖時也縮回 bottom sheet (僅限使用者手動操作，排除 flyTo/easeTo 等程式觸發)
+    map.on("dragstart", (e: any) => {
+      if (e.originalEvent) {
+        onMapClickRef.current?.();
+      }
+    });
+    map.on("zoomstart", (e: any) => {
+      if (e.originalEvent) {
+        onMapClickRef.current?.();
+      }
+    });
+
     // 中間欄開合會讓 container 寬度連續變化 —— ResizeObserver 每幀通知一次,
     // map.resize() 重算 canvas + reproject,動畫過程不會出現黑邊或閃動。
     const ro = new ResizeObserver(() => map.resize());
@@ -309,19 +321,19 @@ export function CafeMap({
     // 抑制 user location 首次取得時的 auto fly-to,避免和 fitBounds 互相覆寫。
     hasFlownToUserRef.current = true;
     const padding = {
-      top: 40,
-      right: 40,
-      bottom: Math.max(paddingBottom, 40),
-      left: Math.max(paddingLeft, 40),
+      top: 80,
+      right: 80,
+      bottom: Math.max(paddingBottom, 80),
+      left: Math.max(paddingLeft, 80),
     };
     if (cafes.length === 1) {
       const only = cafes[0];
-      map.flyTo({ center: [only.lng, only.lat], zoom: 15, duration: 800, padding });
+      map.flyTo({ center: [only.lng, only.lat], zoom: 14.25, duration: 800, padding });
       return;
     }
     const bounds = new mapboxgl.LngLatBounds();
     cafes.forEach((c) => bounds.extend([c.lng, c.lat]));
-    map.fitBounds(bounds, { padding, duration: 800, maxZoom: 15 });
+    map.fitBounds(bounds, { padding, duration: 800, maxZoom: 14.25 });
   }, [fitToCafesKey, cafes, paddingBottom, paddingLeft]);
 
   // user location marker
