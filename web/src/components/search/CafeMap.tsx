@@ -195,6 +195,7 @@ export function CafeMap({
   const isDraggingRef = useRef(false);
   const isZoomingRef = useRef(false);
   const isInteractingRef = useRef(false);
+  const userInteractionPannedRef = useRef(false);
   const pendingPaddingRef = useRef<mapboxgl.PaddingOptions | null>(null);
 
   const handleLocateClick = () => {
@@ -262,6 +263,7 @@ export function CafeMap({
       if (e.originalEvent) {
         isDraggingRef.current = true;
         isInteractingRef.current = true;
+        userInteractionPannedRef.current = true;
         onMapClickRef.current?.();
       }
     });
@@ -269,6 +271,7 @@ export function CafeMap({
       if (e.originalEvent) {
         isZoomingRef.current = true;
         isInteractingRef.current = true;
+        userInteractionPannedRef.current = true;
         onMapClickRef.current?.();
       }
     });
@@ -277,8 +280,33 @@ export function CafeMap({
       if (!isDraggingRef.current && !isZoomingRef.current) {
         isInteractingRef.current = false;
         if (pendingPaddingRef.current && mapRef.current) {
-          // 僅使用 setPadding 更新地圖內部邊距，不使用 easeTo 動畫，以防止地圖在手勢結束後發生相機偏移或 flyto 的視覺感
-          mapRef.current.setPadding(pendingPaddingRef.current);
+          const map = mapRef.current;
+          const container = map.getContainer();
+          const width = container.clientWidth;
+          const height = container.clientHeight;
+
+          // 1. 取得變更 padding 前，螢幕中心點的地理座標
+          const ptOld = map.unproject([width / 2, height / 2]);
+
+          // 2. 套用新邊距
+          const newPadding = pendingPaddingRef.current;
+          map.setPadding(newPadding);
+
+          // 3. 取得變更 padding 後，該地理座標在新畫面上的螢幕位置
+          const screenPosNew = map.project(ptOld);
+
+          // 4. 計算位移量，並換算成新的地圖中心點
+          const dx = screenPosNew.x - width / 2;
+          const dy = screenPosNew.y - height / 2;
+
+          const pxNew = (width + (newPadding.left || 0) - (newPadding.right || 0)) / 2;
+          const pyNew = (height + (newPadding.top || 0) - (newPadding.bottom || 0)) / 2;
+
+          const targetCenter = map.unproject([pxNew + dx, pyNew + dy]);
+
+          // 5. 瞬間移動到新的中心點
+          map.jumpTo({ center: targetCenter });
+
           pendingPaddingRef.current = null;
         }
       }
@@ -433,6 +461,11 @@ export function CafeMap({
     const prev = prevActiveIdRef.current;
     prevActiveIdRef.current = activeId ?? null;
 
+    const activeIdChanged = activeId !== prev;
+    if (activeIdChanged) {
+      userInteractionPannedRef.current = false;
+    }
+
     // activeId 由有變無 → 還原到進入詳細頁前的鏡頭。
     if (prev && !activeId && map && savedCameraRef.current) {
       const { center, zoom } = savedCameraRef.current;
@@ -460,6 +493,12 @@ export function CafeMap({
     
     // 關鍵！如果使用者正在手動操作地圖，不要強行改變鏡頭 (flyTo / easeTo)，這會打斷使用者的拖曳/縮放手勢
     if (isInteractingRef.current) {
+      return;
+    }
+
+    // 如果使用者剛剛手動拖動或縮放了地圖，且並非點選新咖啡店，則在收合 padding 時不要飛回原本的點
+    if (userInteractionPannedRef.current) {
+      userInteractionPannedRef.current = false;
       return;
     }
 
