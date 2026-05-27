@@ -110,6 +110,38 @@ v2.0 變動：
 - 預設改抓 **「最相關」** (`--sort relevance`)，每店最多 **200 筆**評論（`MAX_REVIEWS_DEFAULT=200`）。
 - 想改回「最新」可加 `--sort newest`。
 
+#### 4.1 補齊圖庫（gallery）
+
+`google_scraper` 只會把第一張封面圖寫進 `cafes.cover_image_url`。若要前端詳細頁的橫向圖庫，要另外跑 `google_photos_scraper`，它會點開照片頁的「全部」tab，從上往下抓 15 張：
+
+- 第 1 張 → `cafes.cover_image_url`（覆蓋原本的封面，確保跟圖庫第一張一致）
+- 第 2–15 張 → `cafes.photos`（jsonb 陣列，每筆 `{"url": ..., "source": "r2", "kind": "all"}`）
+
+所有圖會以 WebP 上傳到 R2，key 為 `cafes/<place_id>.webp`（cover）與 `cafes/<place_id>/<1..14>.webp`（gallery）。重跑時同 key 直接覆寫，不會留孤兒檔。
+
+```bash
+# 跑一間驗證（不寫資料庫、只印抓到的 URL）
+uv run python -m coffee_pocket.agents.enrich.google_photos_scraper --cafe-id <uuid> --dry-run --headful
+
+# 真的寫回去
+uv run python -m coffee_pocket.agents.enrich.google_photos_scraper --cafe-id <uuid>
+
+# 跑「整個資料庫還沒抓過圖庫」的店(預設只挑 photos 內還沒有 kind="all" 的列)
+uv run python -m coffee_pocket.agents.enrich.google_photos_scraper
+
+# 批次:跑 limit N 家
+uv run python -m coffee_pocket.agents.enrich.google_photos_scraper --limit 5
+
+# 已經有圖庫的店也重新抓一次
+uv run python -m coffee_pocket.agents.enrich.google_photos_scraper --rescrape --limit 10
+
+# 不用查資料庫,直接用 place_id 或 Google Maps URL 試（會強制 dry-run）
+uv run python -m coffee_pocket.agents.enrich.google_photos_scraper --place-id <place_id>
+uv run python -m coffee_pocket.agents.enrich.google_photos_scraper --url "https://maps.google.com/?cid=..."
+```
+
+腳本與 `google_scraper` 共用同一個 Playwright persistent profile，所以登入狀態是共享的；如果還沒登入，先用 `google_scraper --login` 跑一次。失敗（找不到照片按鈕、tab DOM 變動等）只會 log 警告並跳過，不會擋住其他店；後端 worker 也把這步設為非阻塞，photos 沒進來不影響評論／標籤的後續處理。
+
 ### 4. 評論語意萃取（LLM）
 
 爬蟲拿到的 Google 評論、手動匯入的 Instagram 貼文都是原始文字，需要透過 LLM 抽出結構化標籤（是否有插座、是否適合讀書 / 討論 / 多人聊天、是否可訂位、限時規則⋯⋯）。這一步會把訊號寫進 `reviews_raw.extracted_signals`。
@@ -209,8 +241,9 @@ agents/
 | 2. 資料更新與清理 | `src/coffee_pocket/agents/prepare/cleanup_cafes.py` | 刪除 `not_found` 與 `duplicate_of` 資料 | 使用中 |
 | 2. 資料更新與清理 | `src/coffee_pocket/agents/prepare/generate_pinyin.py` | 為新店家產生 `name_pinyin` 與 `slug` | 使用中 |
 | 3. 資訊補充 | `src/coffee_pocket/agents/enrich/google_scraper.py` | 補齊評論與店家資訊 | 使用中 |
+| 3. 資訊補充 | `src/coffee_pocket/agents/enrich/google_photos_scraper.py` | 從「全部」抓 15 張照片，寫回 `cover_image_url` + `photos[14]` | 使用中 |
 | 共用 | `src/coffee_pocket/agents/shared/places_lookup.py` | Places API 共用查詢工具 | 使用中，輔助模組 |
-| 共用 | `src/coffee_pocket/storage.py` | 上傳 Google 店家封面圖到 R2 | 使用中，輔助模組 |
+| 共用 | `src/coffee_pocket/storage.py` | 上傳店家封面與圖庫照片到 R2（WebP） | 使用中，輔助模組 |
 | 共用 | `src/coffee_pocket/config.py` / `db.py` | 環境變數與 Supabase 連線 | 使用中，基礎模組 |
 
 ### LLM / Semantic 流程
@@ -292,6 +325,7 @@ modules = [
     "coffee_pocket.agents.prepare.cleanup_cafes",
     "coffee_pocket.agents.prepare.generate_pinyin",
     "coffee_pocket.agents.enrich.google_scraper",
+    "coffee_pocket.agents.enrich.google_photos_scraper",
     "coffee_pocket.agents.shared.places_lookup",
     "coffee_pocket.agents.process.google_places",
     "coffee_pocket.agents.process.google_extract",

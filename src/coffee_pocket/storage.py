@@ -70,28 +70,25 @@ def _to_webp(raw: bytes) -> bytes:
     return buf.getvalue()
 
 
-def upload_cafe_cover(place_id: str, image_url: str) -> str | None:
-    """Download, compress, upload, return the public R2 URL.
-
-    Returns None if the source URL fails to fetch or decode. Re-runs overwrite
-    the existing object (idempotent on place_id).
-    """
+def _upload_to_r2(key: str, image_url: str, log_label: str) -> str | None:
+    """Shared download → WebP → R2 PUT helper. Returns the public URL or None."""
     if not image_url:
         return None
 
-    # Auto-upgrade googleusercontent URLs to high resolution
-    if "googleusercontent.com" in image_url and "=" in image_url:
-        base = image_url.split("=")[0]
-        image_url = f"{base}=s1600"
+    # Auto-upgrade googleusercontent URLs to high resolution. The photos
+    # scraper stores base URLs without a size suffix; we always re-append
+    # `=s1600` so downloads come back full-size.
+    if "googleusercontent.com" in image_url:
+        base_url = image_url.split("=", 1)[0]
+        image_url = f"{base_url}=s1600"
 
     try:
         raw = _fetch_image(image_url)
         webp = _to_webp(raw)
     except Exception as exc:  # noqa: BLE001
-        logger.warning("cover image fetch/encode failed for %s: %s", place_id, exc)
+        logger.warning("image fetch/encode failed for %s: %s", log_label, exc)
         return None
 
-    key = f"cafes/{place_id}.webp"
     try:
         _s3().put_object(
             Bucket=settings.r2_bucket,
@@ -101,8 +98,22 @@ def upload_cafe_cover(place_id: str, image_url: str) -> str | None:
             CacheControl="public, max-age=31536000, immutable",
         )
     except Exception as exc:  # noqa: BLE001
-        logger.exception("R2 upload failed for %s: %s", place_id, exc)
+        logger.exception("R2 upload failed for %s: %s", log_label, exc)
         return None
 
     base = settings.r2_public_base.rstrip("/")
     return f"{base}/{key}" if base else key
+
+
+def upload_cafe_cover(place_id: str, image_url: str) -> str | None:
+    """Cover photo — single canonical object at cafes/<place_id>.webp."""
+    return _upload_to_r2(f"cafes/{place_id}.webp", image_url, place_id)
+
+
+def upload_cafe_photo(place_id: str, index: int, image_url: str) -> str | None:
+    """Gallery photo — cafes/<place_id>/<index>.webp.
+
+    Indexed so re-runs deterministically overwrite each slot. Used by the
+    photos scraper to populate the 9-item ``cafes.photos`` list.
+    """
+    return _upload_to_r2(f"cafes/{place_id}/{index}.webp", image_url, f"{place_id}#{index}")

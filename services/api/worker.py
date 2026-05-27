@@ -91,6 +91,17 @@ async def _run_pipeline_async(cafe_id: str, place_id: str | None, job_id: str) -
     if not await _run_stage("scrape", scrape_argv):
         return
 
+    # Stage 2.5 — gallery photos (10 total: 7 from 全部, 3 from 氛圍).
+    # Reuses the same Playwright profile as the scraper. Failures here don't
+    # block downstream stages — cover_image_url was already populated by the
+    # scrape stage as a fallback.
+    photos_argv = [
+        "uv", "run", "python", "-m",
+        "coffee_pocket.agents.enrich.google_photos_scraper",
+        "--cafe-id", cafe_id,
+    ]
+    await _run_stage("photos", photos_argv)
+
     # Stage 3 — LLM extract for the freshly scraped reviews JSON.
     # google_extract walks data/reviews/*.json by default; we narrow to the
     # single file if we know the place_id.
@@ -232,6 +243,16 @@ async def run_pipeline_stream(cafe_id: str, place_id: str | None, job_id: str):
     if not scrape_success:
         yield {"type": "pipeline_failed", "error_stage": "scrape"}
         return
+
+    # Stage 2.5 — gallery photos. Non-blocking: we emit events but don't bail
+    # out of the pipeline if it fails.
+    photos_argv = [
+        "uv", "run", "python", "-m",
+        "coffee_pocket.agents.enrich.google_photos_scraper",
+        "--cafe-id", cafe_id,
+    ]
+    async for event in _run_stage_stream("photos", photos_argv):
+        yield event
 
     # Stage 3 — LLM extract
     extract_argv = [

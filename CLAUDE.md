@@ -48,6 +48,7 @@ PY
 | 2. Prepare | `agents/prepare/dedupe_cafes.py` | Marks `duplicate_of`, not hard-delete |
 | 2. Prepare | `agents/prepare/cleanup_cafes.py` | Deletes marked records (add `--yes`) |
 | 3. Enrich | `agents/enrich/google_scraper.py` | Playwright scraper; saves to `data/reviews/<place_id>.json` |
+| 3. Enrich | `agents/enrich/google_photos_scraper.py` | Playwright; clicks cover → photos page, sweeps「全部」for 15 photos → R2 → `cafes.cover_image_url` + `cafes.photos[14]` |
 | 4. LLM | `agents/process/google_extract.py` | Reads `data/reviews/*.json` → `reviews_raw.extracted_signals` |
 | 4. LLM | `agents/sources/instagram_extract.py` | Reads `data/ig/*.txt` → signals |
 | 5. Tags | `agents/process/semantic.py` | Merges signals into `cafe_tags` / `tag_evidence` |

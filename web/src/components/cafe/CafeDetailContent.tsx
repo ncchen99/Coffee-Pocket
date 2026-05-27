@@ -12,6 +12,8 @@ import {
   Add01Icon,
   GlobeIcon,
   Cancel01Icon,
+  ArrowLeft02Icon,
+  ArrowRight02Icon,
 } from "@hugeicons/core-free-icons";
 import { Cap, Placeholder, StarRating, TagBadge } from "@/components/primitives";
 import { TagConfidenceRow } from "@/components/cafe/TagConfidenceRow";
@@ -121,10 +123,20 @@ export function CafeDetailContent({ cafe, isDesktop, actions, coverPlacement = "
       : { href: cafe.google_url }
     : null;
 
-  const cover = cafe.cover_url ? (
-    <div className="aspect-[16/9] w-full overflow-hidden bg-base-200">
-      <img src={cafe.cover_url} alt="" className="h-full w-full object-cover" />
-    </div>
+  // 把封面與其他照片合併成一條可橫向捲動的相簿。封面放第一張,後面接 photos。
+  const allPhotos = useMemo(() => {
+    const list: string[] = [];
+    if (cafe.cover_url) list.push(cafe.cover_url);
+    if (cafe.photos) {
+      for (const p of cafe.photos) {
+        if (p && p !== cafe.cover_url) list.push(p);
+      }
+    }
+    return list;
+  }, [cafe.cover_url, cafe.photos]);
+
+  const cover = allPhotos.length > 0 ? (
+    <PhotoGallery photos={allPhotos} isDesktop={isDesktop} />
   ) : (
     <Placeholder ratio="16/9" label="hero" />
   );
@@ -203,7 +215,9 @@ export function CafeDetailContent({ cafe, isDesktop, actions, coverPlacement = "
 
   return (
     <>
-      {coverPlacement === "top" && cover}
+      {coverPlacement === "top" && allPhotos.length > 0 && (
+        <div className="px-0">{cover}</div>
+      )}
 
       {/* === 1. 咖啡廳資訊 ===
           手機 sheet:把 pt 降到 2,因為上方已有 handle 指示器佔位,留太多 padding 反而鬆散。
@@ -219,7 +233,7 @@ export function CafeDetailContent({ cafe, isDesktop, actions, coverPlacement = "
                 aria-label="關閉"
                 className="btn btn-ghost btn-sm btn-square -mt-1 -mr-1 shrink-0 text-base-content/65 hover:text-base-content"
               >
-                <HugeiconsIcon icon={Cancel01Icon} size={18} strokeWidth={1.5} />
+                <HugeiconsIcon icon={Cancel01Icon} size={14} strokeWidth={1.5} />
               </button>
             )}
           </div>
@@ -418,6 +432,132 @@ export function CafeDetailContent({ cafe, isDesktop, actions, coverPlacement = "
         existingTags={cafe.tags.map((t) => t.key)}
       />
     </>
+  );
+}
+
+/**
+ * 圖片畫廊 — 像手機版 Google Maps:所有照片等高、水平接在一起,
+ * 用 overflow-x-auto 處理觸控板/觸控手勢;桌面在 hover 時把滾輪 deltaY
+ * 轉成水平捲動,並在還有未顯示內容的那一側畫一道漸層提示。
+ */
+function PhotoGallery({ photos, isDesktop }: { photos: string[]; isDesktop: boolean }) {
+  const scrollerRef = useRef<HTMLDivElement | null>(null);
+  // 紀錄左右是否還能再捲,用來決定桌面版箭頭按鈕的顯隱。
+  const [edges, setEdges] = useState({ atStart: true, atEnd: false });
+
+  const recomputeEdges = () => {
+    const el = scrollerRef.current;
+    if (!el) return;
+    const maxScroll = el.scrollWidth - el.clientWidth;
+    const atStart = el.scrollLeft <= 1;
+    const atEnd = maxScroll <= 1 || el.scrollLeft >= maxScroll - 1;
+    setEdges((prev) =>
+      prev.atStart === atStart && prev.atEnd === atEnd ? prev : { atStart, atEnd }
+    );
+  };
+
+  useEffect(() => {
+    recomputeEdges();
+    const ro = new ResizeObserver(recomputeEdges);
+    if (scrollerRef.current) ro.observe(scrollerRef.current);
+    return () => ro.disconnect();
+  }, [photos.length]);
+
+  useEffect(() => {
+    setEdges({ atStart: true, atEnd: false });
+  }, [photos]);
+
+  // 桌面:把垂直滾輪轉成水平捲動。React 的 onWheel 在 React 17+ 是 passive
+  // listener,呼叫 preventDefault 會被瀏覽器忽略並印警告,所以用原生
+  // addEventListener 加上 { passive: false } 來綁。
+  useEffect(() => {
+    if (!isDesktop) return;
+    const el = scrollerRef.current;
+    if (!el) return;
+    const onWheel = (e: WheelEvent) => {
+      const { deltaX, deltaY } = e;
+      if (Math.abs(deltaY) <= Math.abs(deltaX)) return;
+      const maxScroll = el.scrollWidth - el.clientWidth;
+      const goingRight = deltaY > 0;
+      const canScroll = goingRight ? el.scrollLeft < maxScroll - 1 : el.scrollLeft > 1;
+      if (!canScroll) return;
+      e.preventDefault();
+      el.scrollLeft += deltaY;
+    };
+    el.addEventListener("wheel", onWheel, { passive: false });
+    return () => el.removeEventListener("wheel", onWheel);
+  }, [isDesktop]);
+
+  // 以「圖片中心對齊容器中心」為基準捲動:先找出目前最接近正中央的圖片,
+  // 點擊後改為將下一張(或上一張)置中。若已到最前/最後沒辦法置中,
+  // scrollTo 會被瀏覽器自動 clamp 到邊界,維持自然的邊緣行為。
+  const scrollByPage = (direction: 1 | -1) => {
+    const el = scrollerRef.current;
+    if (!el) return;
+    const imgs = Array.from(el.querySelectorAll("img")) as HTMLImageElement[];
+    if (imgs.length === 0) return;
+    const viewportCenter = el.scrollLeft + el.clientWidth / 2;
+    // 找目前最接近中央的圖片 index
+    let currentIdx = 0;
+    let minDist = Infinity;
+    imgs.forEach((img, i) => {
+      const center = img.offsetLeft + img.offsetWidth / 2;
+      const dist = Math.abs(center - viewportCenter);
+      if (dist < minDist) {
+        minDist = dist;
+        currentIdx = i;
+      }
+    });
+    const targetIdx = Math.max(0, Math.min(imgs.length - 1, currentIdx + direction));
+    const targetImg = imgs[targetIdx];
+    const targetCenter = targetImg.offsetLeft + targetImg.offsetWidth / 2;
+    el.scrollTo({ left: targetCenter - el.clientWidth / 2, behavior: "smooth" });
+  };
+
+  return (
+    <div className="relative group">
+      <div
+        ref={scrollerRef}
+        onScroll={recomputeEdges}
+        className="flex gap-2 overflow-x-auto h-48 sm:h-56 md:h-64 scroll-smooth [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+      >
+        {photos.map((src, i) => (
+          <img
+            key={i}
+            src={src}
+            alt=""
+            loading={i === 0 ? undefined : "lazy"}
+            draggable={false}
+            onLoad={recomputeEdges}
+            className="h-full w-auto shrink-0 object-cover bg-base-200 select-none"
+          />
+        ))}
+      </div>
+      {isDesktop && (
+        <>
+          <button
+            type="button"
+            aria-label="Previous photo"
+            onClick={() => scrollByPage(-1)}
+            className={`absolute left-2 top-1/2 -translate-y-1/2 z-10 grid place-items-center h-7 w-7 rounded-full bg-base-100/90 text-base-content shadow-md backdrop-blur-sm transition-opacity duration-200 hover:bg-base-100 ${
+              edges.atStart ? "opacity-0 pointer-events-none" : "opacity-100"
+            }`}
+          >
+            <HugeiconsIcon icon={ArrowLeft02Icon} size={14} />
+          </button>
+          <button
+            type="button"
+            aria-label="Next photo"
+            onClick={() => scrollByPage(1)}
+            className={`absolute right-2 top-1/2 -translate-y-1/2 z-10 grid place-items-center h-7 w-7 rounded-full bg-base-100/90 text-base-content shadow-md backdrop-blur-sm transition-opacity duration-200 hover:bg-base-100 ${
+              edges.atEnd ? "opacity-0 pointer-events-none" : "opacity-100"
+            }`}
+          >
+            <HugeiconsIcon icon={ArrowRight02Icon} size={14} />
+          </button>
+        </>
+      )}
+    </div>
   );
 }
 
