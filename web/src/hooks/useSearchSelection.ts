@@ -14,6 +14,8 @@ export function useSearchSelection(initial?: string[], initialRadiusM?: number |
   const [radiusM, setRadiusM] = useState<number | null>(initialRadiusM ?? null);
   /** 關鍵字搜尋（店名 / 地址）。null 或空字串表示未啟用。 */
   const [keyword, setKeyword] = useState<string | null>(initialKeyword ?? null);
+  /** 透過 AI 情境搜尋送出後保留的原始輸入文字，供 results 模式顯示「使用者輸入內容」。 */
+  const [submittedPrompt, setSubmittedPrompt] = useState<string | null>(null);
 
   const toggle = useCallback((key: string) => {
     // 任何手動 chip 互動都視為脫離場景模式，並清掉關鍵字 + 輸入框
@@ -22,6 +24,7 @@ export function useSearchSelection(initial?: string[], initialRadiusM?: number |
     setOrSelected([]);
     setKeyword(null);
     setQuery("");
+    setSubmittedPrompt(null);
     setSelected((prev) => {
       const next = new Set(prev);
       next.has(key) ? next.delete(key) : next.add(key);
@@ -47,6 +50,7 @@ export function useSearchSelection(initial?: string[], initialRadiusM?: number |
       setOpenAt(s.resolveOpenAt ? s.resolveOpenAt() : null);
       setKeyword(null);
       setQuery("");
+      setSubmittedPrompt(null);
     },
     [],
   );
@@ -67,5 +71,7 @@ export function useSearchSelection(initial?: string[], initialRadiusM?: number |
     setRadiusM,
     keyword,
     setKeyword,
+    submittedPrompt,
+    setSubmittedPrompt,
   };
 }

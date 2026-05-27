@@ -9,11 +9,7 @@ import {
   UserIcon,
 } from "@hugeicons/core-free-icons";
 import { FilterChipBar, type ChipOption } from "@/components/search/FilterChipBar";
-import { parsePrompt } from "@/lib/api";
-import { TAG_LABEL_TO_KEY, TAG_KEY_TO_LABEL } from "@/data/filterTags";
-import { searchCafesLocal } from "@/lib/cafeFilter";
-import { useAllCafes } from "@/hooks/useCafes";
-import { useUserLocation } from "@/context/UserLocationContext";
+import { TAG_KEY_TO_LABEL } from "@/data/filterTags";
 import { SCENARIO_BY_KEY } from "@/components/search/ScenarioGrid";
 
 export type SearchMode = "idle" | "searching" | "results";
@@ -28,16 +24,6 @@ const ALL_MAP_CHIPS: ChipOption[] = [
   { key: "wifi", label: "有 Wi-Fi" },
 ];
 
-function matchTagLabelKey(q: string): string | null {
-  const trimmed = q.replace(/\s+/g, "");
-  if (TAG_LABEL_TO_KEY[trimmed]) return TAG_LABEL_TO_KEY[trimmed];
-  const lower = trimmed.toLowerCase();
-  for (const [label, key] of Object.entries(TAG_LABEL_TO_KEY)) {
-    if (label.toLowerCase() === lower) return key;
-  }
-  return null;
-}
-
 interface Props {
   mode: SearchMode;
   query: string;
@@ -48,18 +34,13 @@ interface Props {
   /** 退出 searching → 回 idle 或 results；results→idle 全清。 */
   onBack: () => void;
   onClearAll: () => void;
-  /** AI / keyword 解析後觸發 — 父層更新 tags / openAt / keyword 並切到 results 模式。 */
-  onSubmit: (
-    parsedTags: string[],
-    softTags: string[],
-    openAt: string | null,
-    distanceKm: number | null,
-    keyword: string | null,
-  ) => void;
+  /** Enter / 表單送出 — 父層執行 tag-label / keyword / AI 解析並切到 results 模式。 */
+  onSearchSubmit: () => void | Promise<void>;
   loading?: boolean;
-  setLoading?: (b: boolean) => void;
   keyword?: string | null;
   scenario?: string | null;
+  /** AI 情境搜尋後保留的原始輸入文字，供 results 模式顯示「使用者輸入內容」。 */
+  submittedPrompt?: string | null;
 }
 
 /**
@@ -78,16 +59,14 @@ export function MapSearchOverlay({
   onFocusSearch,
   onBack,
   onClearAll,
-  onSubmit,
+  onSearchSubmit,
   loading,
-  setLoading,
   keyword,
   scenario,
+  submittedPrompt,
 }: Props) {
   const navigate = useNavigate();
   const inputRef = useRef<HTMLInputElement>(null);
-  const allCafes = useAllCafes();
-  const { location } = useUserLocation();
 
   // 自適應螢幕寬度量測
   const [screenWidth, setScreenWidth] = useState(() =>
@@ -109,6 +88,7 @@ export function MapSearchOverlay({
   const displayQueryText = (() => {
     if (keyword) return keyword;
     if (scenario && SCENARIO_BY_KEY[scenario]) return SCENARIO_BY_KEY[scenario].title;
+    if (submittedPrompt) return submittedPrompt;
     if (selected && selected.size > 0) {
       const labels = Array.from(selected)
         .map((key) => {
@@ -132,37 +112,6 @@ export function MapSearchOverlay({
       inputRef.current?.blur();
     }
   }, [mode]);
-
-  const handleSubmit = async () => {
-    const q = query.trim();
-    if (!q) {
-      onSubmit(Array.from(selected), [], null, null, null);
-      return;
-    }
-    const labelKey = matchTagLabelKey(q);
-    if (labelKey) {
-      onSubmit([labelKey], [], null, null, null);
-      return;
-    }
-    const localMatch = searchCafesLocal(allCafes.data, {
-      userLng: location?.lng ?? null,
-      userLat: location?.lat ?? null,
-      q,
-    }).length;
-    if (localMatch > 0) {
-      onSubmit([], [], null, null, q);
-      return;
-    }
-    setLoading?.(true);
-    try {
-      const parsed = await parsePrompt(q);
-      onSubmit(parsed.tags, parsed.soft_tags, parsed.open_at, parsed.distance_km, null);
-    } catch (_e) {
-      onSubmit([], [], null, null, null);
-    } finally {
-      setLoading?.(false);
-    }
-  };
 
   const leftSlot = (() => {
     if (mode === "searching") {
@@ -222,7 +171,7 @@ export function MapSearchOverlay({
       <form
         onSubmit={(e) => {
           e.preventDefault();
-          void handleSubmit();
+          void onSearchSubmit();
         }}
         onClick={(e) => {
           // 如果點擊了清除按鈕，不要觸發 focus

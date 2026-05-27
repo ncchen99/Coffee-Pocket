@@ -26,6 +26,8 @@ import { useSearchSelection } from "@/hooks/useSearchSelection";
 import { useAllCafes, useCafeDetail } from "@/hooks/useCafes";
 import { useCafeActions } from "@/hooks/useCafeActions";
 import { searchCafesLocal, type LocalSortKey } from "@/lib/cafeFilter";
+import { parsePrompt } from "@/lib/api";
+import { TAG_LABEL_TO_KEY } from "@/data/filterTags";
 import { usePocketItems, usePockets, useAllPocketsItems } from "@/hooks/usePockets";
 import { useUserLocation } from "@/context/UserLocationContext";
 import { haversineKm } from "@/lib/format";
@@ -122,11 +124,17 @@ export default function MapPage() {
     setRadiusM,
     keyword,
     setKeyword,
+    submittedPrompt,
+    setSubmittedPrompt,
   } = useSearchSelection(initialTags, initialRadiusM, initialKeyword);
+  const [searchLoading, setSearchLoading] = useState(false);
+  /** AI 解析後仍找不到任何標籤 — 停留在 searching 模式並顯示「找不到符合的咖啡廳」。 */
+  const [searchExhausted, setSearchExhausted] = useState(false);
 
   // searchMode 衍生
   const hasActiveSearch =
     selected.size > 0 ||
+    orSelected.length > 0 ||
     !!keyword ||
     !!query.trim() ||
     !!scenario ||
@@ -543,6 +551,60 @@ export default function MapPage() {
     setIsSearching(false);
   };
 
+  // 觸發搜尋:Enter 鍵 / "使用情境搜尋" CTA 都會走這條路徑。
+  // 流程:tag label 直接命中 → 本地關鍵字命中 → 最後才送 AI 解析(loading)。
+  const runSearchSubmit = useCallback(async () => {
+    const q = query.trim();
+    if (!q) {
+      handleSubmitSearch(Array.from(selected), [], null, null, null);
+      return;
+    }
+    const trimmed = q.replace(/\s+/g, "");
+    let labelKey: string | null = TAG_LABEL_TO_KEY[trimmed] ?? null;
+    if (!labelKey) {
+      const lower = trimmed.toLowerCase();
+      for (const [label, key] of Object.entries(TAG_LABEL_TO_KEY)) {
+        if (label.toLowerCase() === lower) {
+          labelKey = key;
+          break;
+        }
+      }
+    }
+    if (labelKey) {
+      setSubmittedPrompt(null);
+      handleSubmitSearch([labelKey], [], null, null, null);
+      return;
+    }
+    const localMatch = searchCafesLocal(allCafes.data, {
+      userLng: userLocation?.lng ?? null,
+      userLat: userLocation?.lat ?? null,
+      q,
+    }).length;
+    if (localMatch > 0) {
+      setSubmittedPrompt(null);
+      handleSubmitSearch([], [], null, null, q);
+      return;
+    }
+    setSearchLoading(true);
+    setSearchExhausted(false);
+    try {
+      const parsed = await parsePrompt(q);
+      const hasAnyTag = parsed.tags.length > 0 || parsed.soft_tags.length > 0;
+      if (!hasAnyTag) {
+        // LLM 也找不到符合的標籤 — 停在 searching 模式顯示「找不到」訊息
+        setSearchExhausted(true);
+        return;
+      }
+      setSubmittedPrompt(q);
+      handleSubmitSearch(parsed.tags, parsed.soft_tags, parsed.open_at, parsed.distance_km, null);
+    } catch (_e) {
+      setSearchExhausted(true);
+    } finally {
+      setSearchLoading(false);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [query, selected, allCafes.data, userLocation?.lng, userLocation?.lat]);
+
   const handleOverlayBack = () => {
     if (isSearching) {
       setIsSearching(false);
@@ -557,6 +619,9 @@ export default function MapPage() {
     setRadiusM(null);
     setKeyword(null);
     setQuery("");
+    setSubmittedPrompt(null);
+    setSearchLoading(false);
+    setSearchExhausted(false);
     setIsSearching(false);
   };
 
@@ -782,7 +847,10 @@ export default function MapPage() {
           <MapSearchOverlay
             mode={searchMode}
             query={query}
-            onQueryChange={setQuery}
+            onQueryChange={(q) => {
+              setQuery(q);
+              if (searchExhausted) setSearchExhausted(false);
+            }}
             selected={selected}
             onToggleTag={toggle}
             onFocusSearch={() => {
@@ -793,9 +861,11 @@ export default function MapPage() {
             }}
             onBack={handleOverlayBack}
             onClearAll={handleOverlayClear}
-            onSubmit={handleSubmitSearch}
+            onSearchSubmit={runSearchSubmit}
+            loading={searchLoading}
             keyword={keyword}
             scenario={scenario}
+            submittedPrompt={submittedPrompt}
           />
         )}
 
@@ -851,9 +921,13 @@ export default function MapPage() {
               scenarioKey={scenario}
               onPickScenario={(s: Scenario) => {
                 pickScenario(s);
+                setSearchExhausted(false);
                 setIsSearching(false);
               }}
               onApply={() => setIsSearching(false)}
+              onPromptSearch={runSearchSubmit}
+              loading={searchLoading}
+              exhausted={searchExhausted}
               query={query}
               cafes={searchResult.cafes}
               sortKey={sortKey}
