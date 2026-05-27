@@ -87,12 +87,12 @@ NO_PROGRESS_LIMIT = 6  # consecutive scrolls with no new cards → stop
 # Human-pace timing knobs (milliseconds). Real users don't scroll on a metronome,
 # so every wait below picks a uniform random value in [min, max]. Keep these
 # generous — we'd rather take an hour than get the account flagged.
-SCROLL_PAUSE_MS = (2200, 4200)           # between feed scrolls
-AFTER_NAV_MS = (3000, 5500)              # after opening a place URL
-AFTER_TAB_CLICK_MS = (1500, 3000)        # after clicking 評論 tab
-AFTER_SORT_MS = (2000, 4000)             # after picking 最相關 / 最新
-BETWEEN_CAFES_MS = (20_000, 30_000)      # idle gap between cafes — shorter as requested
-MICRO_PAUSE_MS = (200, 700)              # tiny think-time between sub-actions
+SCROLL_PAUSE_MS = (500, 1000)            # between feed scrolls
+AFTER_NAV_MS = (1000, 2000)              # after opening a place URL
+AFTER_TAB_CLICK_MS = (500, 1000)         # after clicking 評論 tab
+AFTER_SORT_MS = (500, 1000)              # after picking 最相關 / 最新
+BETWEEN_CAFES_MS = (1000, 2000)          # idle gap between cafes — shorter as requested
+MICRO_PAUSE_MS = (50, 150)               # tiny think-time between sub-actions
 
 
 def _sleep(page: Page, span: tuple[int, int]) -> None:
@@ -597,7 +597,7 @@ def scrape_one(
                 _scroll_reviews(page, random.uniform(0.45, 0.85))
                 _sleep(page, SCROLL_PAUSE_MS)
                 if random.random() < 0.15:
-                    _sleep(page, (4000, 8000))
+                    _sleep(page, (500, 1000))
         except Exception as exc:
             logger.warning("  Failed to extract reviews for %s: %s. Continuing with metadata only.", cafe["name"], exc)
             stop_reason = "reviews_failed"
