@@ -542,7 +542,7 @@ function PhotoGallery({
   const handleGestureMove = (
     clientX: number,
     clientY: number,
-    e: React.TouchEvent | React.PointerEvent
+    e: React.TouchEvent
   ) => {
     if (!gestureRef.current) return;
     const dx = clientX - gestureRef.current.startX;
@@ -659,10 +659,6 @@ function PhotoGallery({
         onTouchMove={(e) => handleGestureMove(e.touches[0].clientX, e.touches[0].clientY, e)}
         onTouchEnd={handleGestureEnd}
         onTouchCancel={handleGestureEnd}
-        onPointerDown={(e) => handleGestureStart(e.clientX, e.clientY)}
-        onPointerMove={(e) => handleGestureMove(e.clientX, e.clientY, e)}
-        onPointerUp={handleGestureEnd}
-        onPointerCancel={handleGestureEnd}
         style={{ touchAction: isSheetExpanded ? "pan-x pan-y" : "pan-x" }}
         className="flex gap-2 overflow-x-auto h-48 sm:h-56 md:h-64 scroll-smooth [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
       >
