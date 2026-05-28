@@ -499,10 +499,10 @@ function PhotoGallery({
           gestureRef.current.direction = "vertical";
         }
       }
-    }
-
-    // 水平滑動時阻斷事件冒泡，防止底層 Bottom Sheet 被拖動或收縮
-    if (gestureRef.current.direction === "horizontal") {
+      // 在方向判定出來之前，一律阻斷冒泡，避免底層 Bottom Sheet 搶先捕捉並產生微小位移
+      e.stopPropagation();
+    } else if (gestureRef.current.direction === "horizontal") {
+      // 水平滑動時阻斷事件冒泡，防止底層 Bottom Sheet 被拖動或收縮
       e.stopPropagation();
     }
   };
