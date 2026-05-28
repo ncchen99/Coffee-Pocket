@@ -705,6 +705,9 @@ export default function MapPage() {
     setSearchLoading(false);
     setSearchExhausted(false);
     setIsSearching(false);
+    if (isDetailMode) {
+      handleDetailBack();
+    }
   };
 
   const handleDetailBack = () => {
