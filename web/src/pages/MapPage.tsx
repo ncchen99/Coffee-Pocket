@@ -871,7 +871,7 @@ export default function MapPage() {
             <ul
               ref={searchListRefCallback}
               onScroll={handleSearchListScroll}
-              className="flex-1 divide-y divide-base-content/10 overflow-y-auto pb-[30vh]"
+              className="flex-1 divide-y divide-base-content/10 overflow-y-auto overscroll-none pb-[30vh]"
             >
               {searchResult.cafes.map((c) => (
                 <li key={c.id} data-cafe-id={c.id} data-cafe-slug={c.slug ?? undefined}>

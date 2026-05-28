@@ -103,7 +103,7 @@ export function PocketSheetContent({
         )}
       </div>
 
-      <div ref={listRef} onScroll={onScroll} className="flex-1 overflow-y-auto pb-[max(20vh,140px)]">
+      <div ref={listRef} onScroll={onScroll} className="flex-1 overflow-y-auto overscroll-none pb-[max(20vh,140px)]">
         {!pocketsLoading && (pockets?.length ?? 0) === 0 ? (
           <div className="flex flex-col items-center justify-center py-12 text-center">
             <p className="text-base-content/55">還沒有口袋名單</p>

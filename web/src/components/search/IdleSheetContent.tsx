@@ -39,7 +39,7 @@ export function IdleSheetContent({ cafes, isLoading, isError, listRef, onScroll 
         <ul
           ref={listRef}
           onScroll={onScroll}
-          className="flex-1 divide-y divide-base-content/10 overflow-y-auto pb-[30vh]"
+          className="flex-1 divide-y divide-base-content/10 overflow-y-auto overscroll-none pb-[30vh]"
         >
           {cafes.map((c) => (
             <li key={c.id} data-cafe-id={c.id} data-cafe-slug={c.slug ?? undefined}>

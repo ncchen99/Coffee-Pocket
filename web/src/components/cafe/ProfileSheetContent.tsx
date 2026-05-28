@@ -77,7 +77,7 @@ export function ProfileSheetContent() {
   const totalContributions = (stats?.edits_count ?? 0) + (stats?.votes_count ?? 0);
 
   return (
-    <div className="flex flex-col flex-1 overflow-y-auto pb-[max(20vh,140px)]">
+    <div className="flex flex-col flex-1 overflow-y-auto overscroll-none pb-[max(20vh,140px)]">
       <section className="border-b border-base-content/10 px-5 py-4">
         <div className="flex items-center gap-3">
           {avatarUrl ? (
