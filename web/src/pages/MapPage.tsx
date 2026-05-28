@@ -1005,7 +1005,7 @@ export default function MapPage() {
                   return;
                 }
                 const target = e.target as HTMLElement;
-                if (target.closest("button, a, input, select, textarea, [role='button']")) {
+                if (target.closest("button, a, input, select, textarea, [role='button'], [data-no-sheet-expand]")) {
                   return;
                 }
                 const maxSnap = snapPoints[snapPoints.length - 1];

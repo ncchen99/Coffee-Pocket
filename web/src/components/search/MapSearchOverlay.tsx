@@ -190,7 +190,7 @@ export function MapSearchOverlay({
             }
             setTimeout(() => {
               onFocusSearch();
-            }, 0);
+            }, 150);
           }
         }}
         className={`pointer-events-auto flex items-center gap-1 rounded-full border border-base-content/10 bg-base-100 px-2 py-1.5 transition-shadow duration-200 ${
@@ -208,7 +208,16 @@ export function MapSearchOverlay({
                 onQueryChange(e.target.value);
               }
             }}
-            onFocus={mode !== "results" ? onFocusSearch : undefined}
+            onFocus={
+              mode !== "results"
+                ? () => {
+                    // iOS Safari:focus 事件中同步呼叫 navigate / setState 會搶在
+                    // 鍵盤喚起前重渲染元件,導致 input 失焦。延到下一個 tick 讓
+                    // focus 事件先把鍵盤帶起來。
+                    setTimeout(() => onFocusSearch(), 150);
+                  }
+                : undefined
+            }
             placeholder={mode === "idle" ? "搜尋咖啡廳或情境" : mode === "results" ? "" : "輸入店名 / 情境"}
             className={`flex-1 bg-transparent text-sm focus:outline-none min-w-0 ${
               mode === "results" ? "font-medium text-base-content cursor-pointer select-none" : ""

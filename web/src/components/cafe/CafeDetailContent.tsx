@@ -597,6 +597,7 @@ function PhotoGallery({
     <div className="relative group">
       <div
         ref={scrollerRef}
+        data-no-sheet-expand=""
         onScroll={recomputeEdges}
         onTouchStart={(e) => handleGestureStart(e.touches[0].clientX, e.touches[0].clientY)}
         onTouchMove={(e) => handleGestureMove(e.touches[0].clientX, e.touches[0].clientY, e)}
