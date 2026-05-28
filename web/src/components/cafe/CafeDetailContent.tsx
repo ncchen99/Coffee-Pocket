@@ -477,6 +477,10 @@ function PhotoGallery({
       startY: clientY,
       direction: null,
     };
+    // 預設先擋住 vaul,等到判定為「陡直垂直」才放行。
+    // 必須在 pointerdown 階段就掛上,因為 vaul 在第一次 shouldDrag 回 true 後會把
+    // isAllowedToDrag 鎖成 true,後續再加屬性也擋不住已經開始的拖曳。
+    scrollerRef.current?.setAttribute("data-vaul-no-drag", "");
   };
 
   const handleGestureMove = (
@@ -499,12 +503,11 @@ function PhotoGallery({
         const VERTICAL_SLOPE_THRESHOLD = 2;
         if (absY > absX * VERTICAL_SLOPE_THRESHOLD) {
           gestureRef.current.direction = "vertical";
+          // 判定為陡直垂直,移除預設掛上的 data-vaul-no-drag,放行 vaul 接手拖曳 sheet。
+          scrollerRef.current?.removeAttribute("data-vaul-no-drag");
         } else {
           gestureRef.current.direction = "horizontal";
-          // 鎖定為水平後,把 scroller 標成 data-vaul-no-drag,讓 vaul 在後續
-          // pointermove 中放棄追蹤,避免斜滑動時 Bottom Sheet 跟著上下抖動。
-          // vaul 用原生事件監聽,React 的 stopPropagation 擋不住,必須改用屬性。
-          scrollerRef.current?.setAttribute("data-vaul-no-drag", "");
+          // 水平方向維持 data-vaul-no-drag(touchstart 已掛上),vaul 不會啟動 sheet 拖曳。
         }
       }
       // 在方向判定出來之前，一律阻斷冒泡，避免底層 Bottom Sheet 搶先捕捉並產生微小位移

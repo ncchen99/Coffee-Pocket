@@ -168,7 +168,7 @@ export function MapSearchOverlay({
   })();
 
   return (
-    <div className="pointer-events-none absolute inset-x-2 top-3 z-40 flex flex-col gap-2">
+    <div id="map-search-overlay" className="pointer-events-none absolute inset-x-2 top-3 z-40 flex flex-col gap-2">
       <form
         onSubmit={(e) => {
           e.preventDefault();
@@ -182,11 +182,9 @@ export function MapSearchOverlay({
           // 整條搜尋列都是 tap target
           if (mode === "idle" || mode === "results") {
             onFocusSearch();
-            if (mode === "idle") {
-              inputRef.current?.focus();
-              setTimeout(() => {
-                inputRef.current?.focus();
-              }, 20);
+            if (inputRef.current) {
+              inputRef.current.readOnly = false;
+              inputRef.current.focus();
             }
           }
         }}
@@ -196,22 +194,23 @@ export function MapSearchOverlay({
       >
         {leftSlot}
         <div className="flex flex-1 items-center gap-1.5 pl-0 pr-1 min-w-0">
-          {mode === "results" ? (
-            <div className="flex-1 text-sm text-base-content font-medium py-1 truncate cursor-pointer select-none">
-              {displayQueryText}
-            </div>
-          ) : (
-            <input
-              ref={inputRef}
-              type="text"
-              value={query}
-              onChange={(e) => onQueryChange(e.target.value)}
-              onFocus={onFocusSearch}
-              placeholder={mode === "idle" ? "搜尋咖啡廳或情境" : "輸入店名 / 情境"}
-              className="flex-1 bg-transparent text-sm focus:outline-none min-w-0"
-              disabled={loading}
-            />
-          )}
+          <input
+            ref={inputRef}
+            type="text"
+            value={mode === "results" ? displayQueryText : query}
+            onChange={(e) => {
+              if (mode !== "results") {
+                onQueryChange(e.target.value);
+              }
+            }}
+            onFocus={mode !== "results" ? onFocusSearch : undefined}
+            placeholder={mode === "idle" ? "搜尋咖啡廳或情境" : mode === "results" ? "" : "輸入店名 / 情境"}
+            className={`flex-1 bg-transparent text-sm focus:outline-none min-w-0 ${
+              mode === "results" ? "font-medium text-base-content cursor-pointer select-none" : ""
+            }`}
+            disabled={loading}
+            readOnly={mode === "results"}
+          />
           {loading && (
             <HugeiconsIcon
               icon={Loading03Icon}
