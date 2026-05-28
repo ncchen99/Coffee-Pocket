@@ -80,7 +80,7 @@ export const mockCafeDetail = (id: string): CafeDetail | null => {
       { key: "time_limit", label: "不限時", confidence: 0.92, evidence_count: 8 },
       { key: "socket_most", label: "多有插座", confidence: 0.88, evidence_count: 6 },
       { key: "study_friendly", label: "適合讀書辦公", confidence: 0.74, evidence_count: 4 },
-      { key: "discussion_friendly", label: "可討論", confidence: 0.42, evidence_count: 2 },
+      { key: "discussion_friendly", label: "適合聊天", confidence: 0.42, evidence_count: 2 },
       { key: "reservable", label: "可訂位", confidence: 0.65, evidence_count: 3 },
     ],
     ai_summary: "偏安靜,很多人在工作。下午容易客滿,深夜時段較為悠閒。",

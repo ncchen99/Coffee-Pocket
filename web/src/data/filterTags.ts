@@ -30,7 +30,7 @@ export const FILTER_TAG_GROUPS: TagGroup[] = [
   {
     label: "社交",
     tags: [
-      { key: "chat", label: "適合討論" },
+      { key: "chat", label: "適合聊天" },
       { key: "reserve", label: "可訂位" },
       { key: "group", label: "適合多人" },
     ],
