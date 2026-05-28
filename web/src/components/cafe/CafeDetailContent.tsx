@@ -493,14 +493,18 @@ function PhotoGallery({
       const absX = Math.abs(dx);
       const absY = Math.abs(dy);
       if (absX > 5 || absY > 5) {
-        if (absX > absY) {
+        // 仿 Google Maps:垂直判定門檻拉高,只有「明顯陡直」才算垂直,
+        // 否則一律當水平。這樣在 iPad 等大螢幕上,使用者手指自然斜滑時
+        // 不會頻繁誤判成垂直,避免 Bottom Sheet 隨手指抖動。
+        const VERTICAL_SLOPE_THRESHOLD = 2;
+        if (absY > absX * VERTICAL_SLOPE_THRESHOLD) {
+          gestureRef.current.direction = "vertical";
+        } else {
           gestureRef.current.direction = "horizontal";
           // 鎖定為水平後,把 scroller 標成 data-vaul-no-drag,讓 vaul 在後續
           // pointermove 中放棄追蹤,避免斜滑動時 Bottom Sheet 跟著上下抖動。
           // vaul 用原生事件監聽,React 的 stopPropagation 擋不住,必須改用屬性。
           scrollerRef.current?.setAttribute("data-vaul-no-drag", "");
-        } else {
-          gestureRef.current.direction = "vertical";
         }
       }
       // 在方向判定出來之前，一律阻斷冒泡，避免底層 Bottom Sheet 搶先捕捉並產生微小位移
