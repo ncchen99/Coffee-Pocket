@@ -495,6 +495,10 @@ function PhotoGallery({
       if (absX > 5 || absY > 5) {
         if (absX > absY) {
           gestureRef.current.direction = "horizontal";
+          // 鎖定為水平後,把 scroller 標成 data-vaul-no-drag,讓 vaul 在後續
+          // pointermove 中放棄追蹤,避免斜滑動時 Bottom Sheet 跟著上下抖動。
+          // vaul 用原生事件監聽,React 的 stopPropagation 擋不住,必須改用屬性。
+          scrollerRef.current?.setAttribute("data-vaul-no-drag", "");
         } else {
           gestureRef.current.direction = "vertical";
         }
@@ -509,6 +513,8 @@ function PhotoGallery({
 
   const handleGestureEnd = () => {
     gestureRef.current = null;
+    // 解除水平鎖定時加上的屬性,讓下一輪手勢可重新判定方向
+    scrollerRef.current?.removeAttribute("data-vaul-no-drag");
   };
 
   const recomputeEdges = () => {
