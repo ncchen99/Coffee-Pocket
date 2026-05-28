@@ -574,7 +574,7 @@ function PhotoGallery({ photos, isDesktop }: { photos: string[]; isDesktop: bool
         onPointerMove={(e) => handleGestureMove(e.clientX, e.clientY, e)}
         onPointerUp={handleGestureEnd}
         onPointerCancel={handleGestureEnd}
-        style={{ touchAction: "pan-x pan-y" }}
+        style={{ touchAction: "pan-x" }}
         className="flex gap-2 overflow-x-auto h-48 sm:h-56 md:h-64 scroll-smooth [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
       >
         {photos.map((src, i) => (
