@@ -445,6 +445,53 @@ function PhotoGallery({ photos, isDesktop }: { photos: string[]; isDesktop: bool
   // 紀錄左右是否還能再捲,用來決定桌面版箭頭按鈕的顯隱。
   const [edges, setEdges] = useState({ atStart: true, atEnd: false });
 
+  // 用於記錄和鎖定手勢方向的 Ref，避免在 touchmove 時觸發 React 重繪以提昇效能
+  const gestureRef = useRef<{
+    startX: number;
+    startY: number;
+    direction: "horizontal" | "vertical" | null;
+  } | null>(null);
+
+  const handleGestureStart = (clientX: number, clientY: number) => {
+    gestureRef.current = {
+      startX: clientX,
+      startY: clientY,
+      direction: null,
+    };
+  };
+
+  const handleGestureMove = (
+    clientX: number,
+    clientY: number,
+    e: React.TouchEvent | React.PointerEvent
+  ) => {
+    if (!gestureRef.current) return;
+    const dx = clientX - gestureRef.current.startX;
+    const dy = clientY - gestureRef.current.startY;
+
+    // 當滑動距離大於 5px 時鎖定方向
+    if (gestureRef.current.direction === null) {
+      const absX = Math.abs(dx);
+      const absY = Math.abs(dy);
+      if (absX > 5 || absY > 5) {
+        if (absX > absY) {
+          gestureRef.current.direction = "horizontal";
+        } else {
+          gestureRef.current.direction = "vertical";
+        }
+      }
+    }
+
+    // 水平滑動時阻斷事件冒泡，防止底層 Bottom Sheet 被拖動或收縮
+    if (gestureRef.current.direction === "horizontal") {
+      e.stopPropagation();
+    }
+  };
+
+  const handleGestureEnd = () => {
+    gestureRef.current = null;
+  };
+
   const recomputeEdges = () => {
     const el = scrollerRef.current;
     if (!el) return;
@@ -519,6 +566,15 @@ function PhotoGallery({ photos, isDesktop }: { photos: string[]; isDesktop: bool
       <div
         ref={scrollerRef}
         onScroll={recomputeEdges}
+        onTouchStart={(e) => handleGestureStart(e.touches[0].clientX, e.touches[0].clientY)}
+        onTouchMove={(e) => handleGestureMove(e.touches[0].clientX, e.touches[0].clientY, e)}
+        onTouchEnd={handleGestureEnd}
+        onTouchCancel={handleGestureEnd}
+        onPointerDown={(e) => handleGestureStart(e.clientX, e.clientY)}
+        onPointerMove={(e) => handleGestureMove(e.clientX, e.clientY, e)}
+        onPointerUp={handleGestureEnd}
+        onPointerCancel={handleGestureEnd}
+        style={{ touchAction: "pan-x pan-y" }}
         className="flex gap-2 overflow-x-auto h-48 sm:h-56 md:h-64 scroll-smooth [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
       >
         {photos.map((src, i) => (
