@@ -623,6 +623,10 @@ export default function MapPage() {
       setQuery("");
     }
     setIsSearching(false);
+    // 從 detail + searching 路徑送出搜尋時,需要先離開 detail 才看得到搜尋結果。
+    if (isDetailMode) {
+      navigate("/", { replace: true });
+    }
   };
 
   // 觸發搜尋:Enter 鍵 / "使用情境搜尋" CTA 都會走這條路徑。
@@ -939,10 +943,10 @@ export default function MapPage() {
             selected={selected}
             onToggleTag={toggle}
             onFocusSearch={() => {
-              if (isDetailMode) {
-                navigate("/");
-              }
-              // 如果有現成的搜尋條件，填入 query 供使用者編輯，避免點擊進去被清空
+              // 進入 searching 時不主動 navigate 離開 detail — 搜尋層 (z-30) 會直接
+              // 覆蓋 detail sheet (z-20),延後到使用者真正送出搜尋或選 scenario 時
+              // 再切回 "/"。同步觸發 navigate 會在 iOS Safari 喚起鍵盤前丟出大量
+              // 重渲染,造成 input 失焦、鍵盤打不開。
               if (keyword) {
                 setQuery(keyword);
               } else if (submittedPrompt) {
@@ -1011,7 +1015,7 @@ export default function MapPage() {
         {/* Searching 全屏 overlay — 蓋住 drawer,只露浮動搜尋框。
             點 scenarios / 套用後關閉。z 介於 search overlay (z-40) 與 drawer (z-20) 之間,
             但需要遮住 drawer,所以用 z-30,並從搜尋框下方開始(top padding ≈ search 高度)。 */}
-        {isSearching && tab === "home" && !isDetailMode && (
+        {isSearching && tab === "home" && (
           <div className="absolute inset-0 z-30 flex flex-col bg-base-100 pt-[100px]">
             <SearchingSheetContent
               selected={selected}
@@ -1020,8 +1024,12 @@ export default function MapPage() {
                 pickScenario(s);
                 setSearchExhausted(false);
                 setIsSearching(false);
+                if (isDetailMode) navigate("/", { replace: true });
               }}
-              onApply={() => setIsSearching(false)}
+              onApply={() => {
+                setIsSearching(false);
+                if (isDetailMode) navigate("/", { replace: true });
+              }}
               onPromptSearch={runSearchSubmit}
               loading={searchLoading}
               exhausted={searchExhausted}
