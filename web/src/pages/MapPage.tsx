@@ -250,24 +250,6 @@ export default function MapPage() {
     if (initialOpenAt) setOpenAt(initialOpenAt);
   }, [initialOpenAt, setOpenAt]);
 
-  // 阻斷 Vaul drawer 的 focus trap,讓 MapSearchOverlay 內的 input 能正常 focus 打字
-  useEffect(() => {
-    const handleFocus = (e: FocusEvent) => {
-      const target = e.target as HTMLElement | null;
-      // 如果焦點是在搜尋列（#map-search-overlay）內的元素，阻斷事件傳遞以防止 Vaul 的 focus trap 搶走焦點
-      if (target && target.closest("#map-search-overlay")) {
-        e.stopImmediatePropagation();
-      }
-    };
-    // 永遠在 MapPage 阻斷，避免 focus 被 Vaul 搶走導致 iOS Safari 上點擊搜尋框需要點兩次
-    document.addEventListener("focusin", handleFocus, true);
-    document.addEventListener("focusout", handleFocus, true);
-    return () => {
-      document.removeEventListener("focusin", handleFocus, true);
-      document.removeEventListener("focusout", handleFocus, true);
-    };
-  }, []);
-
   // 解決 Vaul 非模態下強制設定 aria-hidden 的 Bug
   useEffect(() => {
     const rootEl = document.getElementById("root");

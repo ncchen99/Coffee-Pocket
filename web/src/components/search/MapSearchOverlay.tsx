@@ -101,10 +101,10 @@ export function MapSearchOverlay({
     return "已套用篩選";
   })();
 
-  // 結束 searching 時 blur(進入 searching 不主動 focus — iOS Safari 需在
-  // 使用者手勢的同步路徑內 focus,且讓 input 永遠 editable 由原生 tap 帶起鍵盤)
+  // 結束 searching 時(被父層從外部關閉,例如點 scenario / Apply)主動 blur,
+  // 收掉手機鍵盤。進入 searching 不主動 focus — 鍵盤是原生 tap 帶起來的。
   useEffect(() => {
-    if (mode !== "searching") {
+    if (mode !== "searching" && document.activeElement === inputRef.current) {
       inputRef.current?.blur();
     }
   }, [mode]);
@@ -180,10 +180,17 @@ export function MapSearchOverlay({
             type="text"
             value={query}
             onChange={(e) => onQueryChange(e.target.value)}
+            onPointerDown={() => {
+              // iOS Safari 必須在原生 focus 事件抵達前完成 React state 切換,否則
+              // 隨後伴隨 focus 而來的重新渲染會打斷虛擬鍵盤喚起。pointerdown 在
+              // touchstart/focus 之前同步觸發,讓 mode 變更與 input focus 在同一個
+              // 使用者手勢內完成。
+              if (mode !== "searching") {
+                onFocusSearch();
+              }
+            }}
             onFocus={() => {
-              // iOS Safari:input 永遠 editable,原生 tap 即可帶起鍵盤。
-              // focus 事件在使用者手勢路徑內同步呼叫 onFocusSearch,
-              // React 會把 state 變更批次成單次 re-render,鍵盤動畫不會中斷。
+              // 鍵盤 Tab 導航等非 pointer 路徑的 fallback。
               if (mode !== "searching") {
                 onFocusSearch();
               }
