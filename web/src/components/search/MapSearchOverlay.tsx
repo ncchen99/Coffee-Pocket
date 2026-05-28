@@ -101,15 +101,10 @@ export function MapSearchOverlay({
     return "已套用篩選";
   })();
 
-  // searching 模式自動 focus,結束 searching 時 blur
+  // 結束 searching 時 blur(進入 searching 不主動 focus — iOS Safari 需在
+  // 使用者手勢的同步路徑內 focus,且讓 input 永遠 editable 由原生 tap 帶起鍵盤)
   useEffect(() => {
-    if (mode === "searching") {
-      inputRef.current?.focus();
-      const t = setTimeout(() => {
-        inputRef.current?.focus();
-      }, 20);
-      return () => clearTimeout(t);
-    } else {
+    if (mode !== "searching") {
       inputRef.current?.blur();
     }
   }, [mode]);
@@ -174,57 +169,34 @@ export function MapSearchOverlay({
           e.preventDefault();
           void onSearchSubmit();
         }}
-        onClick={(e) => {
-          // 如果點擊了清除按鈕，不要觸發 focus
-          if ((e.target as HTMLElement).closest('[aria-label="清除"]')) {
-            return;
-          }
-          // 整條搜尋列都是 tap target
-          if (mode === "idle" || mode === "results") {
-            // iOS Safari 要求 input.focus() 必須在使用者手勢的同步路徑內完成。
-            // 先解鎖 readOnly 並 focus,再把可能觸發路由切換 / re-render 的
-            // onFocusSearch 推到下一個 tick,避免 vaul 或 Radix 在過程中搶回焦點。
-            if (inputRef.current) {
-              inputRef.current.readOnly = false;
-              inputRef.current.focus();
-            }
-            setTimeout(() => {
-              onFocusSearch();
-            }, 150);
-          }
-        }}
         className={`pointer-events-auto flex items-center gap-1 rounded-full border border-base-content/10 bg-base-100 px-2 py-1.5 transition-shadow duration-200 ${
           mode === "searching" ? "" : "shadow-lg"
         }`}
       >
         {leftSlot}
-        <div className="flex flex-1 items-center gap-1.5 pl-0 pr-1 min-w-0">
+        <div className="relative flex flex-1 items-center gap-1.5 pl-0 pr-1 min-w-0">
           <input
             ref={inputRef}
             type="text"
-            value={mode === "results" ? displayQueryText : query}
-            onChange={(e) => {
-              if (mode !== "results") {
-                onQueryChange(e.target.value);
+            value={query}
+            onChange={(e) => onQueryChange(e.target.value)}
+            onFocus={() => {
+              // iOS Safari:input 永遠 editable,原生 tap 即可帶起鍵盤。
+              // focus 事件在使用者手勢路徑內同步呼叫 onFocusSearch,
+              // React 會把 state 變更批次成單次 re-render,鍵盤動畫不會中斷。
+              if (mode !== "searching") {
+                onFocusSearch();
               }
             }}
-            onFocus={
-              mode !== "results"
-                ? () => {
-                    // iOS Safari:focus 事件中同步呼叫 navigate / setState 會搶在
-                    // 鍵盤喚起前重渲染元件,導致 input 失焦。延到下一個 tick 讓
-                    // focus 事件先把鍵盤帶起來。
-                    setTimeout(() => onFocusSearch(), 150);
-                  }
-                : undefined
-            }
-            placeholder={mode === "idle" ? "搜尋咖啡廳或情境" : mode === "results" ? "" : "輸入店名 / 情境"}
-            className={`flex-1 bg-transparent text-sm focus:outline-none min-w-0 ${
-              mode === "results" ? "font-medium text-base-content cursor-pointer select-none" : ""
-            }`}
+            placeholder={mode === "idle" ? "搜尋咖啡廳或情境" : "輸入店名 / 情境"}
+            className="flex-1 bg-transparent text-sm focus:outline-none min-w-0"
             disabled={loading}
-            readOnly={mode === "results"}
           />
+          {mode === "results" && (
+            <div className="pointer-events-none absolute inset-0 flex items-center bg-base-100 text-sm font-medium text-base-content">
+              <span className="truncate">{displayQueryText}</span>
+            </div>
+          )}
           {loading && (
             <HugeiconsIcon
               icon={Loading03Icon}
