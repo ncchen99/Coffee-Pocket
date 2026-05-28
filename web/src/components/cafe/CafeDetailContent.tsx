@@ -533,6 +533,10 @@ function PhotoGallery({
       startY: clientY,
       direction: null,
     };
+    // 預設先擋住 vaul,等到判定為「陡直垂直」才放行。
+    // 必須在 pointerdown 階段就掛上,因為 vaul 在第一次 shouldDrag 回 true 後會把
+    // isAllowedToDrag 鎖成 true,後續再加屬性也擋不住已經開始的拖曳。
+    scrollerRef.current?.setAttribute("data-vaul-no-drag", "");
   };
 
   const handleGestureMove = (
@@ -555,8 +559,11 @@ function PhotoGallery({
         const VERTICAL_SLOPE_THRESHOLD = 3.5;
         if (absY > absX * VERTICAL_SLOPE_THRESHOLD) {
           gestureRef.current.direction = "vertical";
+          // 判定為陡直垂直,移除預設掛上的 data-vaul-no-drag,放行 vaul 接手拖曳 sheet。
+          scrollerRef.current?.removeAttribute("data-vaul-no-drag");
         } else {
           gestureRef.current.direction = "horizontal";
+          // 水平方向維持 data-vaul-no-drag(touchstart 已掛上),vaul 不會啟動 sheet 拖曳。
         }
       }
       // 在方向判定出來之前，一律阻斷冒泡，避免底層 Bottom Sheet 搶先捕捉並產生微小位移
@@ -569,6 +576,8 @@ function PhotoGallery({
 
   const handleGestureEnd = () => {
     gestureRef.current = null;
+    // 解除水平鎖定時加上的屬性,讓下一輪手勢可重新判定方向
+    scrollerRef.current?.removeAttribute("data-vaul-no-drag");
   };
 
   const recomputeEdges = () => {
@@ -645,7 +654,6 @@ function PhotoGallery({
       <div
         ref={scrollerRef}
         data-no-sheet-expand=""
-        data-vaul-no-drag=""
         onScroll={recomputeEdges}
         onTouchStart={(e) => handleGestureStart(e.touches[0].clientX, e.touches[0].clientY)}
         onTouchMove={(e) => handleGestureMove(e.touches[0].clientX, e.touches[0].clientY, e)}
