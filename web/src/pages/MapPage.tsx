@@ -303,8 +303,12 @@ export default function MapPage() {
     if (!root) return;
     const apply = () => {
       root.querySelectorAll<HTMLElement>(".overflow-y-auto").forEach((el) => {
-        if (!isAtMaxSnap) el.removeAttribute("data-vaul-no-drag");
-        else el.setAttribute("data-vaul-no-drag", "");
+        if (!isAtMaxSnap) {
+          el.removeAttribute("data-vaul-no-drag");
+          el.scrollTop = 0; // 強制重置滾動位置，防止亞像素慣性殘留鎖死 Vaul 原生拖曳
+        } else {
+          el.setAttribute("data-vaul-no-drag", "");
+        }
       });
     };
     apply();
@@ -349,18 +353,50 @@ export default function MapPage() {
   const handleSheetTouchEnd = (e: React.TouchEvent) => {
     const dy = touchDragDeltaYRef.current;
     const sheetEl = e.currentTarget as HTMLElement;
+    const scroller = touchDragScrollerRef.current;
 
     if (isAtMaxSnap && dy > 0) {
       // 復原手勢的 CSS 樣式覆蓋，交還給 Vaul 內建動畫引擎
       sheetEl.style.transition = "";
       sheetEl.style.transform = "";
 
-      // 如果下拉位移超過 80px，則自動縮回至前一個 snap 點（50% 高度）
+      // 如果下拉位移超過 80px，計算與之最接近的 snap point，允許一路拖曳到最低點
       if (dy > 80) {
-        const maxSnap = snapPoints[snapPoints.length - 1];
-        const idx = snapPoints.indexOf(maxSnap);
-        if (idx > 0) {
-          setSnap(snapPoints[idx - 1]);
+        const finalY = touchDragInitialYRef.current + dy;
+        let closestSnap = snapPoints[0];
+        let minDistance = Infinity;
+
+        snapPoints.forEach((point) => {
+          let numericPoint = 0;
+          if (typeof point === "number") {
+            numericPoint = point;
+          } else if (typeof point === "string") {
+            if (point.endsWith("%")) {
+              numericPoint = parseFloat(point) / 100;
+            } else {
+              const px = parseFloat(point);
+              if (!isNaN(px) && vh > 0) {
+                numericPoint = px / vh;
+              }
+            }
+          }
+
+          if (numericPoint > 0) {
+            const offset = vh * (1 - numericPoint);
+            const distance = Math.abs(finalY - offset);
+            if (distance < minDistance) {
+              minDistance = distance;
+              closestSnap = point;
+            }
+          }
+        });
+
+        // 確保計算出的 snap point 不是最高點（即確認有向下拖拽），然後設定 snap
+        if (closestSnap !== snapPoints[snapPoints.length - 1]) {
+          setSnap(closestSnap);
+          if (scroller) {
+            scroller.scrollTop = 0; // 強置重置，防止亞像素殘留
+          }
         }
       }
     }
