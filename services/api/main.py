@@ -43,46 +43,7 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name
 
 app = FastAPI(title="Coffee Pocket add-cafe service", version="0.1.0")
 
-# Self-ping mechanism to prevent Fly.io auto-sleep during background pipeline runs
-active_jobs: set[str] = set()
-self_ping_task: asyncio.Task | None = None
-self_ping_lock = asyncio.Lock()
 
-
-async def self_ping_loop(base_url: str) -> None:
-    logger.info("[self-ping] loop started with base_url: %s", base_url)
-    ping_url = f"{base_url.rstrip('/')}/health"
-    
-    # Use AsyncClient to make periodic pings
-    async with httpx.AsyncClient(timeout=10.0) as client:
-        while active_jobs:
-            try:
-                logger.info("[self-ping] Pinging ourselves at %s (active jobs: %d)...", ping_url, len(active_jobs))
-                r = await client.get(ping_url)
-                logger.info("[self-ping] Ping status: %d", r.status_code)
-            except Exception as e:
-                logger.warning("[self-ping] Ping failed: %s", e)
-            
-            # Wait for 20 seconds before the next ping
-            await asyncio.sleep(20)
-            
-    logger.info("[self-ping] loop stopped because there are no active jobs.")
-
-
-async def register_job(job_id: str, base_url: str) -> None:
-    active_jobs.add(job_id)
-    global self_ping_task
-    async with self_ping_lock:
-        if self_ping_task is None or self_ping_task.done():
-            self_ping_task = asyncio.create_task(self_ping_loop(base_url))
-            logger.info("[self-ping] Registered job %s and started loop.", job_id)
-        else:
-            logger.info("[self-ping] Registered job %s. Loop already running.", job_id)
-
-
-async def deregister_job(job_id: str) -> None:
-    active_jobs.discard(job_id)
-    logger.info("[self-ping] Deregistered job %s (remaining active jobs: %d).", job_id, len(active_jobs))
 
 
 # CORS — 從 settings.cors_allowed_origins 讀(comma-separated)。空值時 fallback
@@ -299,11 +260,8 @@ async def submit_cafe(req: SubmitCafeRequest, request: Request):
         logger.info("cafe already exists: %s (%s)", cafe_id, name)
 
     job_id = uuid4().hex
-    base_url = str(request.base_url)
 
     async def event_generator():
-        if not already_existed:
-            await register_job(job_id, base_url)
         try:
             if already_existed:
                 yield f"data: {json.dumps({'type': 'already_exists', 'cafe_id': cafe_id})}\n\n"
@@ -314,9 +272,6 @@ async def submit_cafe(req: SubmitCafeRequest, request: Request):
         except Exception as exc:
             logger.exception("Error in event_generator for job=%s cafe=%s", job_id, cafe_id)
             yield f"data: {json.dumps({'type': 'pipeline_error', 'message': str(exc)})}\n\n"
-        finally:
-            if not already_existed:
-                await deregister_job(job_id)
 
     # SSE headers
     sse_headers = {
