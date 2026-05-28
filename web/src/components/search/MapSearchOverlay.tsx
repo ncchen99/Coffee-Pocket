@@ -180,27 +180,16 @@ export function MapSearchOverlay({
             type="text"
             value={query}
             onChange={(e) => onQueryChange(e.target.value)}
-            onPointerDown={() => {
-              // iOS Safari 對於 tap → focus → 鍵盤的時序非常敏感:
-              // React 18 把 setState 排成 microtask,執行完 microtask 才會處理瀏覽器的
-              // focus 事件;若 microtask 引起的重新渲染太重(例如 detail mode 下整顆
-              // CafeDetailContent 連同照片相簿),iOS 會在還沒收到 focus 前就放棄喚起
-              // 鍵盤。把 state 變更丟到下一個 task(setTimeout(0))之後執行,讓 focus
-              // 事件先抵達 → 鍵盤馬上彈出 → 之後再做重渲染。
-              if (mode !== "searching") {
-                setTimeout(onFocusSearch, 0);
-              }
-            }}
             onFocus={() => {
-              // 鍵盤 Tab 導航等非 pointer 路徑的 fallback;此時不需要 defer,
-              // focus 已經由 Tab 完成,直接同步切換 state 即可。
+              // 由 native tap → focus 觸發。不主動 .focus(),也不 defer:
+              // 讓瀏覽器自己把 caret 放進來、把鍵盤帶起來,React state 變更只是視覺切換。
               if (mode !== "searching") {
                 onFocusSearch();
               }
             }}
             placeholder={mode === "idle" ? "搜尋咖啡廳或情境" : "輸入店名 / 情境"}
             className="flex-1 bg-transparent text-sm focus:outline-none min-w-0"
-            disabled={loading}
+            readOnly={loading}
           />
           {mode === "results" && (
             <div className="pointer-events-none absolute inset-0 flex items-center bg-base-100 text-sm font-medium text-base-content">
