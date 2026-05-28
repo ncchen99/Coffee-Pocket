@@ -772,7 +772,7 @@ export default function MapPage() {
           <div
             ref={sheetScrollRef}
             onScroll={(e) => setIsDetailScrolled(e.currentTarget.scrollTop > 0)}
-            className="flex-1 overflow-y-auto overscroll-contain pb-[max(20vh,140px)]"
+            className="flex-1 overflow-y-auto overscroll-none pb-[max(20vh,140px)]"
           >
             {detailQuery.isLoading ? (
               <div className="space-y-3 p-5">
