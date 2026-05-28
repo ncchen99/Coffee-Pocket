@@ -26,7 +26,11 @@ export function UserLocationProvider({ children }: { children: React.ReactNode }
   });
   const [isLoading, setIsLoading] = useState(false);
 
-  const requestLocation = (onSuccess?: (coords: Coords) => void, onError?: () => void) => {
+  const requestLocation = (
+    onSuccess?: (coords: Coords) => void,
+    onError?: () => void,
+    isUserTriggered = true
+  ) => {
     setIsLoading(true);
     if (!navigator.geolocation) {
       setPermissionStatus("denied");
@@ -36,13 +40,16 @@ export function UserLocationProvider({ children }: { children: React.ReactNode }
       return;
     }
 
-    const startLocate = (highAccuracy: boolean, isFallback: boolean) => {
+    const startLocate = (highAccuracy: boolean, isFallback: boolean, triggeredByUser: boolean) => {
       // 針對 iOS / WebKit 進行最佳化的定位參數
       const options: PositionOptions = {
         enableHighAccuracy: highAccuracy,
-        // 如果是高精度，給予較寬鬆的 15 秒以防 iOS 彈出權限提示時使用者考慮太久導致 timeout
-        timeout: highAccuracy ? 15000 : 10000,
-        // 高精度時允許使用 10 秒內的快取位置以加速回應，低精度 fallback 時允許 5 分鐘快取
+        // 如果是首次提示 (prompt) 且是使用者點擊觸發，給予更寬鬆的 30 秒以防 iOS 彈出權限提示時使用者考慮或操作太久
+        // 如果不是首次提示，高精度給予 15 秒，低精度 fallback 給予 10 秒
+        timeout: triggeredByUser && permissionStatus === "prompt"
+          ? 30000
+          : (highAccuracy ? 15000 : 10000),
+        // 允許使用快取位置以加速回應：高精度時允許使用 10 秒內的快取位置，低精度 fallback 時允許 5 分鐘快取
         maximumAge: highAccuracy ? 10000 : 300000,
       };
 
@@ -60,17 +67,24 @@ export function UserLocationProvider({ children }: { children: React.ReactNode }
         },
         (error) => {
           console.warn(
-            `Geolocation error (highAccuracy=${highAccuracy}, isFallback=${isFallback}):`,
+            `Geolocation error (highAccuracy=${highAccuracy}, isFallback=${isFallback}, triggeredByUser=${triggeredByUser}):`,
             error.code,
             error.message
           );
 
-          // 只有當使用者明確拒絕權限 (error.code === 1: PERMISSION_DENIED) 時，
+          // 只有當使用者在「使用者手動點擊觸發」的流程中，明確拒絕權限 (error.code === 1: PERMISSION_DENIED) 時，
           // 才在 localStorage 與 state 記為 "denied"。
-          // 如果是暫時性的訊號問題或 timeout，不應強行阻斷使用者未來的定位嘗試。
+          // 如果是網頁載入時的自動定位被 iOS/Safari 阻擋，或因為 timeout，不應強行把權限狀態改寫為 denied，
+          // 以免阻斷使用者未來的定位嘗試。
           if (error.code === 1) {
-            setPermissionStatus("denied");
-            localStorage.setItem(PERMISSION_KEY, "denied");
+            if (triggeredByUser) {
+              setPermissionStatus("denied");
+              localStorage.setItem(PERMISSION_KEY, "denied");
+            } else {
+              // 自動觸發被阻擋時，不要強行寫死 denied，而是保持原本狀態（若原先為 prompt 或 granted 就維持原樣）
+              // 也不要將 permissionStatus 改為 denied，這樣未來使用者點選定位按鈕時仍可觸發提示
+              setPermissionStatus((prev) => (prev === "denied" ? "denied" : "prompt"));
+            }
             setLocation(null);
             setIsLoading(false);
             onError?.();
@@ -81,7 +95,7 @@ export function UserLocationProvider({ children }: { children: React.ReactNode }
           // 則自動降級為低精度 (Wi-Fi / 基地台定位) 再次嘗試，這在室內或 GPS 訊號不佳時極易成功。
           if (highAccuracy && !isFallback) {
             console.log("High accuracy location failed. Retrying with enableHighAccuracy: false...");
-            startLocate(false, true);
+            startLocate(false, true, triggeredByUser);
           } else {
             // 所有嘗試皆失敗 (或者已經是 fallback)
             // 保持原本的 permissionStatus (若先前為 prompt 就維持 prompt)，不強行寫死 denied
@@ -95,16 +109,18 @@ export function UserLocationProvider({ children }: { children: React.ReactNode }
     };
 
     // 啟動首次定位（高精度模式）
-    startLocate(true, false);
+    startLocate(true, false, isUserTriggered);
   };
 
-  // On mount, if the user is already onboarded:
-  // Automatically trigger location request (covers refreshing/getting coordinates on reload,
-  // and repeated prompt request if previously skipped/denied).
+  // On mount:
+  // 只有在已完成 onboarding 且先前「明確獲得同意」(granted) 的情況下，才在 mount 時自動請求定位。
+  // 這能完美避免在 iOS Safari 上因為頁面載入時沒有 user gesture 而被瀏覽器阻擋，
+  // 進而觸發錯誤回呼並誤將狀態寫成 denied 的 Bug。
   useEffect(() => {
     const onboarded = localStorage.getItem(ONBOARDED_KEY) === "1";
-    if (onboarded) {
-      requestLocation();
+    const savedPermission = localStorage.getItem(PERMISSION_KEY);
+    if (onboarded && savedPermission === "granted") {
+      requestLocation(undefined, undefined, false);
     }
   }, []);
 

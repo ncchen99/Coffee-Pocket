@@ -181,11 +181,16 @@ export function MapSearchOverlay({
           }
           // 整條搜尋列都是 tap target
           if (mode === "idle" || mode === "results") {
-            onFocusSearch();
+            // iOS Safari 要求 input.focus() 必須在使用者手勢的同步路徑內完成。
+            // 先解鎖 readOnly 並 focus,再把可能觸發路由切換 / re-render 的
+            // onFocusSearch 推到下一個 tick,避免 vaul 或 Radix 在過程中搶回焦點。
             if (inputRef.current) {
               inputRef.current.readOnly = false;
               inputRef.current.focus();
             }
+            setTimeout(() => {
+              onFocusSearch();
+            }, 0);
           }
         }}
         className={`pointer-events-auto flex items-center gap-1 rounded-full border border-base-content/10 bg-base-100 px-2 py-1.5 transition-shadow duration-200 ${

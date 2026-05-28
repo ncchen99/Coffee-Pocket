@@ -500,7 +500,7 @@ function PhotoGallery({
         // 仿 Google Maps:垂直判定門檻拉高,只有「明顯陡直」才算垂直,
         // 否則一律當水平。這樣在 iPad 等大螢幕上,使用者手指自然斜滑時
         // 不會頻繁誤判成垂直,避免 Bottom Sheet 隨手指抖動。
-        const VERTICAL_SLOPE_THRESHOLD = 2;
+        const VERTICAL_SLOPE_THRESHOLD = 3.5;
         if (absY > absX * VERTICAL_SLOPE_THRESHOLD) {
           gestureRef.current.direction = "vertical";
           // 判定為陡直垂直,移除預設掛上的 data-vaul-no-drag,放行 vaul 接手拖曳 sheet。
