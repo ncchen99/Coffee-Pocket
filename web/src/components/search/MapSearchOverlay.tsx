@@ -178,20 +178,25 @@ export function MapSearchOverlay({
           <input
             ref={inputRef}
             type="text"
-            value={mode === "results" ? displayQueryText : query}
+            // value 必須維持穩定 — iOS Safari 已知 bug:在 focus 後馬上改 value
+            // (即使是同步的 React re-render)會把 input 立刻 blur,且之後同一個
+            // input 元素無法再被 tap focus,直到整頁重新整理。所以無論在哪個 mode,
+            // 都只綁定 query;results 模式的「摘要文字」不從 input value 顯示。
+            value={query}
             onChange={(e) => onQueryChange(e.target.value)}
             onFocus={() => {
-              // 由 native tap → focus 觸發。不主動 .focus(),也不 defer:
-              // 讓瀏覽器自己把 caret 放進來、把鍵盤帶起來,React state 變更只是視覺切換。
               if (mode !== "searching") {
                 onFocusSearch();
               }
             }}
-            placeholder={mode === "idle" ? "搜尋咖啡廳或情境" : "輸入店名 / 情境"}
-            className={`flex-1 bg-transparent text-sm focus:outline-none min-w-0 ${
-              mode === "results" ? "font-medium" : ""
-            }`}
-            readOnly={mode === "results" || loading}
+            placeholder={
+              mode === "idle"
+                ? "搜尋咖啡廳或情境"
+                : mode === "results"
+                  ? displayQueryText
+                  : "輸入店名 / 情境"
+            }
+            className="flex-1 bg-transparent text-sm focus:outline-none min-w-0"
           />
           {loading && (
             <HugeiconsIcon
