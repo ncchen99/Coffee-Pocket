@@ -64,7 +64,7 @@ export default function OnboardingPage() {
   const isLast = step === STEPS.length - 1;
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-base-100 px-6">
+    <div className="flex min-h-full flex-col items-center justify-center bg-base-100 px-6">
       <button
         type="button"
         onClick={finish}

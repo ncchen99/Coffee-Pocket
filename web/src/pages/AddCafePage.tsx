@@ -86,7 +86,7 @@ export default function AddCafePage() {
   };
 
   return (
-    <div className="flex h-screen flex-col bg-base-100">
+    <div className="flex h-full flex-col bg-base-100">
       {isDesktop && <Topbar variant="desktop" />}
 
       {/* Mobile header — 桌面有 Topbar 就不再多一條。 */}
