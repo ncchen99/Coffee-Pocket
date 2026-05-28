@@ -178,7 +178,7 @@ export function MapSearchOverlay({
           <input
             ref={inputRef}
             type="text"
-            value={query}
+            value={mode === "results" ? displayQueryText : query}
             onChange={(e) => onQueryChange(e.target.value)}
             onFocus={() => {
               // 由 native tap → focus 觸發。不主動 .focus(),也不 defer:
@@ -188,14 +188,11 @@ export function MapSearchOverlay({
               }
             }}
             placeholder={mode === "idle" ? "搜尋咖啡廳或情境" : "輸入店名 / 情境"}
-            className="flex-1 bg-transparent text-sm focus:outline-none min-w-0"
-            readOnly={loading}
+            className={`flex-1 bg-transparent text-sm focus:outline-none min-w-0 ${
+              mode === "results" ? "font-medium" : ""
+            }`}
+            readOnly={mode === "results" || loading}
           />
-          {mode === "results" && (
-            <div className="pointer-events-none absolute inset-0 flex items-center bg-base-100 text-sm font-medium text-base-content">
-              <span className="truncate">{displayQueryText}</span>
-            </div>
-          )}
           {loading && (
             <HugeiconsIcon
               icon={Loading03Icon}
