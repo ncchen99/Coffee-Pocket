@@ -40,21 +40,112 @@ export function UserLocationProvider({ children }: { children: React.ReactNode }
       return;
     }
 
+    // 1. 檢查是否處於非安全上下文 (HTTP 且非 localhost)
+    // iOS Safari 預設阻擋非安全上下文 (HTTP) 下的定位請求，且會靜默失敗 (不彈窗、不觸發 callback)
+    const isNonSecureContext =
+      typeof window !== "undefined" &&
+      window.location.protocol === "http:" &&
+      window.location.hostname !== "localhost" &&
+      window.location.hostname !== "127.0.0.1";
+
+    if (isNonSecureContext && isUserTriggered) {
+      console.warn(
+        "Geolocation blocked: Insecure HTTP remote context. iOS/WebKit will silently block geolocation without prompting."
+      );
+      alert(
+        "【定位失敗提示】\n偵測到目前為非安全的 HTTP 連線（非 https 且非 localhost）。\n\niOS 裝置在此環境下會直接阻擋定位請求且不會顯示任何提示。請在測試時改用 HTTPS 連線，或直接使用「手動指定」功能。"
+      );
+      setPermissionStatus("denied");
+      localStorage.setItem(PERMISSION_KEY, "denied");
+      setIsLoading(false);
+      onError?.();
+      return;
+    }
+
     const startLocate = (highAccuracy: boolean, isFallback: boolean, triggeredByUser: boolean) => {
+      let isResolved = false;
+
       // 針對 iOS / WebKit 進行最佳化的定位參數
+      const apiTimeout = triggeredByUser && permissionStatus === "prompt"
+        ? 30000
+        : (highAccuracy ? 15000 : 10000);
+
       const options: PositionOptions = {
         enableHighAccuracy: highAccuracy,
         // 如果是首次提示 (prompt) 且是使用者點擊觸發，給予更寬鬆的 30 秒以防 iOS 彈出權限提示時使用者考慮或操作太久
         // 如果不是首次提示，高精度給予 15 秒，低精度 fallback 給予 10 秒
-        timeout: triggeredByUser && permissionStatus === "prompt"
-          ? 30000
-          : (highAccuracy ? 15000 : 10000),
+        timeout: apiTimeout,
         // 允許使用快取位置以加速回應：高精度時允許使用 10 秒內的快取位置，低精度 fallback 時允許 5 分鐘快取
         maximumAge: highAccuracy ? 10000 : 300000,
       };
 
+      // JS 層級的安全計時器，比 API 超時多給 1.5 秒
+      // 防範 WebKit 靜默不回報 (不執行 success 也無 error) 導致 loading 永久卡死的 Bug
+      const safetyTimer = setTimeout(() => {
+        if (isResolved) return;
+        isResolved = true;
+        console.warn(
+          `Geolocation safety timeout triggered (highAccuracy=${highAccuracy}, isFallback=${isFallback})`
+        );
+        handleError({
+          code: 3, // TIMEOUT
+          message: "WebKit Geolocation Silent Timeout (Safety protection triggered)",
+        } as GeolocationPositionError);
+      }, apiTimeout + 1500);
+
+      const handleError = (error: GeolocationPositionError) => {
+        if (isResolved) return;
+        isResolved = true;
+        clearTimeout(safetyTimer);
+
+        console.warn(
+          `Geolocation error (highAccuracy=${highAccuracy}, isFallback=${isFallback}, triggeredByUser=${triggeredByUser}):`,
+          error.code,
+          error.message
+        );
+
+        // 只有當使用者在「使用者手動點擊觸發」的流程中，明確拒絕權限 (error.code === 1: PERMISSION_DENIED) 時，
+        // 才在 localStorage 與 state 記為 "denied"。
+        if (error.code === 1) {
+          if (triggeredByUser) {
+            setPermissionStatus("denied");
+            localStorage.setItem(PERMISSION_KEY, "denied");
+            
+            // 使用者點選定位且被系統/瀏覽器明確拒絕時，彈出友善提示指引如何開啟權限
+            alert(
+              "【定位權限遭拒】\n目前位置權限已被拒絕。\n\n請至您裝置的「設定」>「隱私權與安全性」>「定位服務」，確保已開啟定位功能。並在瀏覽器設定中允許此網頁讀取位置，以使用附近搜尋與導航功能。"
+            );
+          } else {
+            // 自動觸發被阻擋時，不要強行寫死 denied，而是保持原本狀態（若原先為 prompt 或 granted 就維持原樣）
+            // 也不要將 permissionStatus 改為 denied，這樣未來使用者點選定位按鈕時仍可觸發提示
+            setPermissionStatus((prev) => (prev === "denied" ? "denied" : "prompt"));
+          }
+          setLocation(null);
+          setIsLoading(false);
+          onError?.();
+          return;
+        }
+
+        // 如果是高精度請求失敗 (timeout 或 position unavailable)，且尚未嘗試 fallback，
+        // 則自動降級為低精度 (Wi-Fi / 基地台定位) 再次嘗試，這在室內或 GPS 訊號不佳時極易成功。
+        if (highAccuracy && !isFallback) {
+          console.log("High accuracy location failed. Retrying with enableHighAccuracy: false...");
+          startLocate(false, true, triggeredByUser);
+        } else {
+          // 所有嘗試皆失敗 (或者已經是 fallback)
+          // 保持原本的 permissionStatus (若先前為 prompt 就維持 prompt)，不強行寫死 denied
+          setLocation(null);
+          setIsLoading(false);
+          onError?.();
+        }
+      };
+
       navigator.geolocation.getCurrentPosition(
         (position) => {
+          if (isResolved) return;
+          isResolved = true;
+          clearTimeout(safetyTimer);
+
           const coords = {
             lng: position.coords.longitude,
             lat: position.coords.latitude,
@@ -66,43 +157,7 @@ export function UserLocationProvider({ children }: { children: React.ReactNode }
           onSuccess?.(coords);
         },
         (error) => {
-          console.warn(
-            `Geolocation error (highAccuracy=${highAccuracy}, isFallback=${isFallback}, triggeredByUser=${triggeredByUser}):`,
-            error.code,
-            error.message
-          );
-
-          // 只有當使用者在「使用者手動點擊觸發」的流程中，明確拒絕權限 (error.code === 1: PERMISSION_DENIED) 時，
-          // 才在 localStorage 與 state 記為 "denied"。
-          // 如果是網頁載入時的自動定位被 iOS/Safari 阻擋，或因為 timeout，不應強行把權限狀態改寫為 denied，
-          // 以免阻斷使用者未來的定位嘗試。
-          if (error.code === 1) {
-            if (triggeredByUser) {
-              setPermissionStatus("denied");
-              localStorage.setItem(PERMISSION_KEY, "denied");
-            } else {
-              // 自動觸發被阻擋時，不要強行寫死 denied，而是保持原本狀態（若原先為 prompt 或 granted 就維持原樣）
-              // 也不要將 permissionStatus 改為 denied，這樣未來使用者點選定位按鈕時仍可觸發提示
-              setPermissionStatus((prev) => (prev === "denied" ? "denied" : "prompt"));
-            }
-            setLocation(null);
-            setIsLoading(false);
-            onError?.();
-            return;
-          }
-
-          // 如果是高精度請求失敗 (timeout 或 position unavailable)，且尚未嘗試 fallback，
-          // 則自動降級為低精度 (Wi-Fi / 基地台定位) 再次嘗試，這在室內或 GPS 訊號不佳時極易成功。
-          if (highAccuracy && !isFallback) {
-            console.log("High accuracy location failed. Retrying with enableHighAccuracy: false...");
-            startLocate(false, true, triggeredByUser);
-          } else {
-            // 所有嘗試皆失敗 (或者已經是 fallback)
-            // 保持原本的 permissionStatus (若先前為 prompt 就維持 prompt)，不強行寫死 denied
-            setLocation(null);
-            setIsLoading(false);
-            onError?.();
-          }
+          handleError(error);
         },
         options
       );
