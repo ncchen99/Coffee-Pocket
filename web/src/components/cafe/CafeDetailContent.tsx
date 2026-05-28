@@ -495,15 +495,8 @@ function PhotoGallery({
       if (absX > 5 || absY > 5) {
         if (absX > absY) {
           gestureRef.current.direction = "horizontal";
-          if (scrollerRef.current) {
-            scrollerRef.current.style.touchAction = "pan-x";
-          }
         } else {
           gestureRef.current.direction = "vertical";
-          if (scrollerRef.current) {
-            scrollerRef.current.style.overflowX = "hidden";
-            scrollerRef.current.style.touchAction = "pan-y";
-          }
         }
       }
     }
@@ -516,10 +509,6 @@ function PhotoGallery({
 
   const handleGestureEnd = () => {
     gestureRef.current = null;
-    if (scrollerRef.current) {
-      scrollerRef.current.style.overflowX = "";
-      scrollerRef.current.style.touchAction = "";
-    }
   };
 
   const recomputeEdges = () => {
