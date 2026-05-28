@@ -188,7 +188,7 @@
  * ────────────────────────────────── */
 [data-sheet-at-bottom="true"] .overflow-y-auto {
   overflow-y: hidden !important;
-  touch-action: none !important;
+  touch-action: pan-y !important;
 }
 
 /* Bottom sheet 內部 scrollbar 不佔版面 — 隱藏自訂 4px scrollbar,

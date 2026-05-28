@@ -326,11 +326,14 @@ export default function MapPage() {
   const touchDragScrollerRef = useRef<HTMLElement | null>(null);
   const touchDragDeltaYRef = useRef<number>(0);
   const touchDragInitialYRef = useRef<number>(0);
+  const isDraggingRef = useRef<boolean>(false);
+
   const handleSheetTouchStart = (e: React.TouchEvent) => {
     const target = e.target as HTMLElement;
     touchDragScrollerRef.current = target.closest<HTMLElement>(".overflow-y-auto");
     touchDragYRef.current = e.touches[0].clientY;
     touchDragDeltaYRef.current = 0;
+    isDraggingRef.current = false;
 
     // 紀錄手勢開始時，面板的初始 translateY 位移（避免拖曳瞬間發生跳躍）
     const sheetEl = e.currentTarget as HTMLElement;
@@ -341,6 +344,10 @@ export default function MapPage() {
     const scroller = touchDragScrollerRef.current;
     if (startY == null) return;
     const dy = e.touches[0].clientY - startY;
+
+    if (Math.abs(dy) > 5) {
+      isDraggingRef.current = true;
+    }
 
     // 如果沒有 scroller（例如觸碰 Header/Handle），視同已在最頂端 scrollTop = 0
     const isAtTop = !scroller || scroller.scrollTop <= 0;
@@ -993,6 +1000,10 @@ export default function MapPage() {
               onTouchEnd={handleSheetTouchEnd}
               onTouchCancel={handleSheetTouchEnd}
               onClick={(e) => {
+                if (isDraggingRef.current) {
+                  isDraggingRef.current = false;
+                  return;
+                }
                 const target = e.target as HTMLElement;
                 if (target.closest("button, a, input, select, textarea, [role='button']")) {
                   return;
