@@ -41,10 +41,21 @@ interface CafeDetailContentProps {
    * 也能用按鈕回到上一頁;桌面/不需要關閉按鈕時不傳。
    */
   onClose?: () => void;
+  /**
+   * 底部 sheet 是否已經展開至最大高度，用來動態決定相簿區域是否能原生縱向滑動/捲動
+   */
+  isSheetExpanded?: boolean;
 }
 
 /** 詳細頁主體 — 桌面中間欄與手機 main 共用。 */
-export function CafeDetailContent({ cafe, isDesktop, actions, coverPlacement = "top", onClose }: CafeDetailContentProps) {
+export function CafeDetailContent({
+  cafe,
+  isDesktop,
+  actions,
+  coverPlacement = "top",
+  onClose,
+  isSheetExpanded = false,
+}: CafeDetailContentProps) {
   const { user } = useAuth();
   const [isAddTagOpen, setIsAddTagOpen] = useState(false);
   const { data: userVotes } = useUserVotesForCafe(user ? cafe.id : null);
@@ -136,7 +147,7 @@ export function CafeDetailContent({ cafe, isDesktop, actions, coverPlacement = "
   }, [cafe.cover_url, cafe.photos]);
 
   const cover = allPhotos.length > 0 ? (
-    <PhotoGallery photos={allPhotos} isDesktop={isDesktop} />
+    <PhotoGallery photos={allPhotos} isDesktop={isDesktop} isSheetExpanded={isSheetExpanded} />
   ) : (
     <Placeholder ratio="16/9" label="hero" />
   );
@@ -440,7 +451,15 @@ export function CafeDetailContent({ cafe, isDesktop, actions, coverPlacement = "
  * 用 overflow-x-auto 處理觸控板/觸控手勢;桌面在 hover 時把滾輪 deltaY
  * 轉成水平捲動,並在還有未顯示內容的那一側畫一道漸層提示。
  */
-function PhotoGallery({ photos, isDesktop }: { photos: string[]; isDesktop: boolean }) {
+function PhotoGallery({
+  photos,
+  isDesktop,
+  isSheetExpanded = false,
+}: {
+  photos: string[];
+  isDesktop: boolean;
+  isSheetExpanded?: boolean;
+}) {
   const scrollerRef = useRef<HTMLDivElement | null>(null);
   // 紀錄左右是否還能再捲,用來決定桌面版箭頭按鈕的顯隱。
   const [edges, setEdges] = useState({ atStart: true, atEnd: false });
@@ -574,7 +593,7 @@ function PhotoGallery({ photos, isDesktop }: { photos: string[]; isDesktop: bool
         onPointerMove={(e) => handleGestureMove(e.clientX, e.clientY, e)}
         onPointerUp={handleGestureEnd}
         onPointerCancel={handleGestureEnd}
-        style={{ touchAction: "pan-x" }}
+        style={{ touchAction: isSheetExpanded ? "pan-x pan-y" : "pan-x" }}
         className="flex gap-2 overflow-x-auto h-48 sm:h-56 md:h-64 scroll-smooth [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
       >
         {photos.map((src, i) => (

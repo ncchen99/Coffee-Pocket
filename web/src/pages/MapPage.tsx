@@ -68,6 +68,20 @@ function pathToTab(pathname: string): MobileTab {
   return "home";
 }
 
+const getTranslateY = (element: HTMLElement): number => {
+  const style = window.getComputedStyle(element);
+  const transform = style.transform || style.webkitTransform;
+  if (!transform || transform === "none") return 0;
+  
+  let mat = transform.match(/^matrix3d\((.+)\)$/);
+  if (mat) {
+    return parseFloat(mat[1].split(', ')[13]);
+  }
+  
+  mat = transform.match(/^matrix\((.+)\)$/);
+  return mat ? parseFloat(mat[1].split(', ')[5]) : 0;
+};
+
 /**
  * 手機端的單一 shell:Map 永不卸載,MapSearchOverlay 浮動於上(僅 home tab),
  * 底部 vaul Drawer 依 (tab, isDetail) 切換內容,searching 模式則覆蓋一層全屏 overlay。
@@ -302,28 +316,59 @@ export default function MapPage() {
 
   const touchDragYRef = useRef<number | null>(null);
   const touchDragScrollerRef = useRef<HTMLElement | null>(null);
+  const touchDragDeltaYRef = useRef<number>(0);
+  const touchDragInitialYRef = useRef<number>(0);
   const handleSheetTouchStart = (e: React.TouchEvent) => {
     const target = e.target as HTMLElement;
     touchDragScrollerRef.current = target.closest<HTMLElement>(".overflow-y-auto");
     touchDragYRef.current = e.touches[0].clientY;
+    touchDragDeltaYRef.current = 0;
+
+    // 紀錄手勢開始時，面板的初始 translateY 位移（避免拖曳瞬間發生跳躍）
+    const sheetEl = e.currentTarget as HTMLElement;
+    touchDragInitialYRef.current = getTranslateY(sheetEl);
   };
   const handleSheetTouchMove = (e: React.TouchEvent) => {
     const startY = touchDragYRef.current;
     const scroller = touchDragScrollerRef.current;
-    if (startY == null || !scroller) return;
+    if (startY == null) return;
     const dy = e.touches[0].clientY - startY;
-    if (isAtMaxSnap && scroller.scrollTop <= 0 && dy > 32 && typeof snap === "number") {
-      const idx = snapPoints.indexOf(snap);
-      if (idx > 0) {
-        setSnap(snapPoints[idx - 1]);
-        touchDragYRef.current = null;
-        touchDragScrollerRef.current = null;
-      }
+
+    // 如果沒有 scroller（例如觸碰 Header/Handle），視同已在最頂端 scrollTop = 0
+    const isAtTop = !scroller || scroller.scrollTop <= 0;
+
+    if (isAtMaxSnap && isAtTop && dy > 0) {
+      touchDragDeltaYRef.current = dy;
+      const sheetEl = e.currentTarget as HTMLElement;
+      // 以初始位移為基準，疊加手指下拉的位移 (dy)，實現完美的無縫跟手物理拖曳感
+      const newY = touchDragInitialYRef.current + dy;
+      sheetEl.style.transform = `translate3d(0px, ${newY}px, 0px)`;
+      sheetEl.style.transition = "none";
     }
   };
-  const handleSheetTouchEnd = () => {
+  const handleSheetTouchEnd = (e: React.TouchEvent) => {
+    const dy = touchDragDeltaYRef.current;
+    const sheetEl = e.currentTarget as HTMLElement;
+
+    if (isAtMaxSnap && dy > 0) {
+      // 復原手勢的 CSS 樣式覆蓋，交還給 Vaul 內建動畫引擎
+      sheetEl.style.transition = "";
+      sheetEl.style.transform = "";
+
+      // 如果下拉位移超過 80px，則自動縮回至前一個 snap 點（50% 高度）
+      if (dy > 80) {
+        const maxSnap = snapPoints[snapPoints.length - 1];
+        const idx = snapPoints.indexOf(maxSnap);
+        if (idx > 0) {
+          setSnap(snapPoints[idx - 1]);
+        }
+      }
+    }
+
     touchDragYRef.current = null;
     touchDragScrollerRef.current = null;
+    touchDragDeltaYRef.current = 0;
+    touchDragInitialYRef.current = 0;
   };
 
   // ─── 資料 ────────────────────────────────────────
@@ -702,6 +747,7 @@ export default function MapPage() {
                 actions={actions}
                 coverPlacement="mid"
                 onClose={handleDetailBack}
+                isSheetExpanded={isAtMaxSnap}
               />
             ) : (
               <div className="flex h-full items-center justify-center p-6">
