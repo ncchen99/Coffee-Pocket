@@ -36,6 +36,10 @@ export default function AddCafePage() {
   // 提交中的 place_id —— 防止連點重複送出。
   const [submittingId, setSubmittingId] = useState<string | null>(null);
 
+  // 本次工作階段已成功推薦的 place_id —— 用來在清單上標「已推薦」並擋掉重複點擊。
+  // 不持久化:重新整理頁面就重置,後端的 unique index 才是真正的去重來源。
+  const [recommendedIds, setRecommendedIds] = useState<Set<string>>(() => new Set());
+
   const handleSearch = async () => {
     const q = query.trim();
     if (!q || isSearching) return;
@@ -54,15 +58,7 @@ export default function AddCafePage() {
 
   const handleSubmit = async (place: PlaceSearchResult) => {
     if (submittingId) return;
-    if (place.already_exists) {
-      globalProgress.update({
-        progress: null,
-        success: `「${place.name}」已存在於資料庫中！`,
-        error: null,
-      });
-      navigate(-1);
-      return;
-    }
+    if (place.already_exists || recommendedIds.has(place.place_id)) return;
 
     setSubmittingId(place.place_id);
     globalProgress.update({ progress: "送出推薦中...", success: null, error: null });
@@ -76,13 +72,18 @@ export default function AddCafePage() {
           : `已收到「${place.name}」的推薦，感謝您的貢獻！`,
         error: null,
       });
-      navigate(-1);
+      setRecommendedIds((prev) => {
+        const next = new Set(prev);
+        next.add(place.place_id);
+        return next;
+      });
     } catch (e) {
       globalProgress.update({
         progress: null,
         success: null,
         error: e instanceof Error ? e.message : "送出失敗，請稍後再試",
       });
+    } finally {
       setSubmittingId(null);
     }
   };
@@ -202,50 +203,58 @@ export default function AddCafePage() {
 
           {results && results.length > 0 && (
             <ul className="divide-y divide-base-content/10">
-              {results.map((r) => (
-                <li key={r.place_id}>
-                  <button
-                    type="button"
-                    disabled={!!submittingId || r.already_exists}
-                    onClick={() => void handleSubmit(r)}
-                    className="flex w-full items-start gap-3 px-2 py-3 text-left transition-colors hover:bg-base-200 disabled:opacity-60 disabled:hover:bg-transparent"
-                  >
-                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-base-200 text-base-content/55">
-                      <HugeiconsIcon
-                        icon={Location01Icon}
-                        size={18}
-                        strokeWidth={1.5}
-                      />
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-semibold">{r.name}</p>
-                      {r.address && (
-                        <p className="mt-0.5 truncate text-xs text-base-content/55">
-                          {r.address}
-                        </p>
-                      )}
-                      {r.already_exists && (
-                        <p className="mt-1 text-[11px] text-base-content/50">
-                          已在資料庫中
-                        </p>
-                      )}
-                    </div>
-                    {submittingId === r.place_id ? (
-                      <HugeiconsIcon
-                        icon={Loading03Icon}
-                        size={16}
-                        className="mt-1 shrink-0 animate-spin text-base-content/55"
-                      />
-                    ) : r.already_exists ? (
-                      <HugeiconsIcon
-                        icon={CheckmarkCircle02Icon}
-                        size={16}
-                        className="mt-1 shrink-0 text-success"
-                      />
-                    ) : null}
-                  </button>
-                </li>
-              ))}
+              {results.map((r) => {
+                const isRecommended = recommendedIds.has(r.place_id);
+                const isDone = r.already_exists || isRecommended;
+                return (
+                  <li key={r.place_id}>
+                    <button
+                      type="button"
+                      disabled={!!submittingId || isDone}
+                      onClick={() => void handleSubmit(r)}
+                      className="flex w-full items-start gap-3 px-2 py-3 text-left transition-colors hover:bg-base-200 disabled:opacity-60 disabled:hover:bg-transparent"
+                    >
+                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-base-200 text-base-content/55">
+                        <HugeiconsIcon
+                          icon={Location01Icon}
+                          size={18}
+                          strokeWidth={1.5}
+                        />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm font-semibold">{r.name}</p>
+                        {r.address && (
+                          <p className="mt-0.5 truncate text-xs text-base-content/55">
+                            {r.address}
+                          </p>
+                        )}
+                        {r.already_exists ? (
+                          <p className="mt-1 text-[11px] text-base-content/50">
+                            已在資料庫中
+                          </p>
+                        ) : isRecommended ? (
+                          <p className="mt-1 text-[11px] text-success">
+                            已成功推薦，感謝您的貢獻！
+                          </p>
+                        ) : null}
+                      </div>
+                      {submittingId === r.place_id ? (
+                        <HugeiconsIcon
+                          icon={Loading03Icon}
+                          size={16}
+                          className="mt-1 shrink-0 animate-spin text-base-content/55"
+                        />
+                      ) : isDone ? (
+                        <HugeiconsIcon
+                          icon={CheckmarkCircle02Icon}
+                          size={16}
+                          className="mt-1 shrink-0 text-success"
+                        />
+                      ) : null}
+                    </button>
+                  </li>
+                );
+              })}
             </ul>
           )}
         </div>
