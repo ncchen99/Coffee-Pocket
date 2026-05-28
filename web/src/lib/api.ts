@@ -119,17 +119,8 @@ export async function parsePrompt(query: string): Promise<ParsedPrompt> {
 }
 
 // ===========================================================================
-// Add Cafe — Place search + submission (proxied through our FastAPI service)
+// Add Cafe — Place search (Supabase Edge Function) + recommendation insert
 // ===========================================================================
-
-/**
- * Endpoint base for our self-hosted Python service.
- * Set `VITE_ADD_CAFE_API_BASE` in `.env` to e.g. `https://api.coffeepocket.tw`.
- * Defaults to `http://localhost:8000` for local dev.
- */
-const ADD_CAFE_API_BASE =
-  (import.meta.env.VITE_ADD_CAFE_API_BASE as string | undefined)?.replace(/\/$/, "") ||
-  "http://localhost:8000";
 
 export interface PlaceSearchResult {
   place_id: string;
@@ -142,83 +133,57 @@ export interface PlaceSearchResult {
   already_exists: boolean;
 }
 
+/**
+ * 用 `search-places` Edge Function 找店家。原本是打自架 FastAPI,改成 Edge
+ * Function 後 VM 就完全不用開。Function 內部會呼叫 Google Places + 查 cafes 表。
+ */
 export async function searchPlaces(query: string): Promise<PlaceSearchResult[]> {
   const q = query.trim();
   if (!q) return [];
-  const res = await fetch(`${ADD_CAFE_API_BASE}/places/search`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ query: q }),
+  const { data, error } = await supabase.functions.invoke("search-places", {
+    body: { query: q },
   });
-  if (!res.ok) throw new Error(`places search failed: ${res.status}`);
-  const data = await res.json();
-  return (data.results ?? []) as PlaceSearchResult[];
+  if (error) throw error;
+  return (data?.results ?? []) as PlaceSearchResult[];
 }
 
-export async function submitCafe(placeId: string): Promise<{ job_id: string }> {
-  const res = await fetch(`${ADD_CAFE_API_BASE}/cafes`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ place_id: placeId }),
+/**
+ * 把使用者選到的店家寫進 `cafe_recommendations`。
+ *
+ * 為什麼不直接觸發 pipeline:
+ *   pipeline 跑一次要花幾分鐘 + Playwright + LLM 費用,任何登入使用者都能觸發
+ *   會被濫用。改成「使用者只是推薦」,後續由站長跑 `import_recommendations`
+ *   腳本批次匯入。
+ *
+ * 已存在判斷:呼叫端在 `searchPlaces` 已拿到 `already_exists`,不再重打 DB。
+ * 重複推薦同店家(同使用者)會踩 unique index,以 `recommend_existed=true` 回傳。
+ */
+export type RecommendResult =
+  | { ok: true; recommend_existed: false }
+  | { ok: true; recommend_existed: true };
+
+export async function recommendCafe(place: PlaceSearchResult): Promise<RecommendResult> {
+  const { data: userData } = await supabase.auth.getUser();
+  const userId = userData.user?.id ?? null;
+
+  const { error } = await supabase.from("cafe_recommendations").insert({
+    google_place_id: place.place_id,
+    name: place.name,
+    address: place.address,
+    lng: place.lng,
+    lat: place.lat,
+    google_maps_url: place.google_maps_url,
+    recommended_by: userId,
   });
-  if (!res.ok) throw new Error(`submit cafe failed: ${res.status}`);
-  return res.json();
-}
 
-export async function submitCafeStream(
-  placeId: string,
-  onEvent: (event: any) => void
-): Promise<void> {
-  const res = await fetch(`${ADD_CAFE_API_BASE}/cafes`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ place_id: placeId }),
-  });
-  if (!res.ok) throw new Error(`新增失敗 (HTTP ${res.status})`);
-
-  const reader = res.body?.getReader();
-  if (!reader) throw new Error("瀏覽器不支援讀取串流");
-
-  const decoder = new TextDecoder();
-  let buffer = "";
-
-  try {
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-
-      buffer += decoder.decode(value, { stream: true });
-      const lines = buffer.split("\n");
-      buffer = lines.pop() || "";
-
-      for (const line of lines) {
-        const trimmed = line.trim();
-        if (!trimmed) continue;
-        if (trimmed.startsWith("data: ")) {
-          try {
-            const dataStr = trimmed.slice(6);
-            const data = JSON.parse(dataStr);
-            onEvent(data);
-          } catch (e) {
-            console.error("Failed to parse SSE event data:", trimmed, e);
-          }
-        }
-      }
+  if (error) {
+    // 23505 = unique_violation → 已經推薦過(同使用者 + 同店家)。
+    if ((error as any).code === "23505") {
+      return { ok: true, recommend_existed: true };
     }
-
-    if (buffer && buffer.trim().startsWith("data: ")) {
-      try {
-        const dataStr = buffer.trim().slice(6);
-        const data = JSON.parse(dataStr);
-        onEvent(data);
-      } catch (e) {
-        console.error("Failed to parse final SSE event data:", buffer, e);
-      }
-    }
-  } catch (err) {
-    console.error("Error reading SSE stream:", err);
-    throw err;
+    throw error;
   }
+  return { ok: true, recommend_existed: false };
 }
 
 // ===========================================================================

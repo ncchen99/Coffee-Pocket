@@ -10,13 +10,16 @@ import {
 } from "@hugeicons/core-free-icons";
 import { Topbar } from "@/components/layout/Topbar";
 import { useIsDesktop } from "@/components/layout/Responsive";
-import { searchPlaces, submitCafeStream, type PlaceSearchResult, globalProgress } from "@/lib/api";
+import { searchPlaces, recommendCafe, type PlaceSearchResult, globalProgress } from "@/lib/api";
 
 /**
- * 「新增咖啡廳」全螢幕頁。
+ * 「推薦咖啡廳」全螢幕頁。
  *
  * 流程:使用者輸入店名 → 按 Enter → 後端呼叫 Google Places API → 顯示候選清單
- *      → 點某筆 → 後端 fire-and-forget pipeline → toast「正在新增」→ 返回上一頁。
+ *      → 點某筆 → 寫入 `cafe_recommendations` → toast「已加入推薦」→ 返回上一頁。
+ *
+ * 不再直接觸發 pipeline:任何登入者都能觸發 Playwright + LLM(每次幾分鐘 + 費用)
+ * 太容易被濫用,改成只記錄推薦,後續由站長跑 import_recommendations 批次匯入。
  *
  * 不做 real-time search — Places API 每次呼叫都要錢。
  */
@@ -30,25 +33,8 @@ export default function AddCafePage() {
   const [isSearching, setIsSearching] = useState(false);
   const [searchError, setSearchError] = useState<string | null>(null);
 
-  // 提交中的 place_id —— 防止連點重複觸發後端任務。
+  // 提交中的 place_id —— 防止連點重複送出。
   const [submittingId, setSubmittingId] = useState<string | null>(null);
-
-  const mapEventToMessage = (event: any): string => {
-    switch (event.stage) {
-      case "pinyin":
-        return "建立網址與拼音索引...";
-      case "scrape":
-        return "正在取得 Google 評論...";
-      case "extract":
-        return "AI 正在擷取店家特色...";
-      case "semantic":
-        return "正在整合語意標籤...";
-      case "ai_summary":
-        return "AI 正在產生智能摘要...";
-      default:
-        return "正在分析店家資訊...";
-    }
-  };
 
   const handleSearch = async () => {
     const q = query.trim();
@@ -68,54 +54,37 @@ export default function AddCafePage() {
 
   const handleSubmit = async (place: PlaceSearchResult) => {
     if (submittingId) return;
+    if (place.already_exists) {
+      globalProgress.update({
+        progress: null,
+        success: `「${place.name}」已存在於資料庫中！`,
+        error: null,
+      });
+      navigate(-1);
+      return;
+    }
+
     setSubmittingId(place.place_id);
+    globalProgress.update({ progress: "送出推薦中...", success: null, error: null });
 
-    // Initialize global progress
-    globalProgress.update({
-      progress: "開始新增店家...",
-      success: null,
-      error: null,
-    });
-
-    // Run stream analysis in the background
-    submitCafeStream(place.place_id, (event) => {
-      if (event.type === "already_exists") {
-        globalProgress.update({
-          progress: null,
-          success: `「${place.name}」已存在於資料庫中！`,
-          error: null,
-        });
-        return;
-      }
-
-      if (event.type === "pipeline_start") {
-        globalProgress.update({ progress: "準備分析資料..." });
-      } else if (event.type === "stage_start") {
-        globalProgress.update({ progress: mapEventToMessage(event) });
-      } else if (event.type === "pipeline_done") {
-        globalProgress.update({
-          progress: null,
-          success: `「${place.name}」分析完成！已成功加入地圖。`,
-          error: null,
-        });
-      } else if (event.type === "pipeline_failed" || event.type === "pipeline_error") {
-        const errMsg = event.message || "店家分析失敗，請稍後再試";
-        globalProgress.update({
-          progress: null,
-          success: null,
-          error: errMsg,
-        });
-      }
-    }).catch((e) => {
+    try {
+      const r = await recommendCafe(place);
+      globalProgress.update({
+        progress: null,
+        success: r.recommend_existed
+          ? `已經推薦過「${place.name}」了，感謝！`
+          : `已收到「${place.name}」的推薦，感謝您的貢獻！`,
+        error: null,
+      });
+      navigate(-1);
+    } catch (e) {
       globalProgress.update({
         progress: null,
         success: null,
         error: e instanceof Error ? e.message : "送出失敗，請稍後再試",
       });
-    });
-
-    // Navigate back immediately so the user can continue their operations!
-    navigate(-1);
+      setSubmittingId(null);
+    }
   };
 
   const handleBack = () => {
@@ -142,7 +111,7 @@ export default function AddCafePage() {
           >
             <HugeiconsIcon icon={ArrowLeft02Icon} size={18} strokeWidth={1.5} />
           </button>
-          <h1 className="flex-1 text-base font-semibold">新增咖啡廳</h1>
+          <h1 className="flex-1 text-base font-semibold">推薦咖啡廳</h1>
           {submittingId && (
             <HugeiconsIcon icon={Loading03Icon} size={16} className="animate-spin text-base-content/55 mr-2" />
           )}
@@ -161,7 +130,7 @@ export default function AddCafePage() {
             >
               <HugeiconsIcon icon={ArrowLeft02Icon} size={18} strokeWidth={1.5} />
             </button>
-            <h1 className="text-lg font-bold">新增咖啡廳</h1>
+            <h1 className="text-lg font-bold">推薦咖啡廳</h1>
             {submittingId && (
               <HugeiconsIcon icon={Loading03Icon} size={16} className="animate-spin text-base-content/55 ml-1" />
             )}
@@ -169,7 +138,7 @@ export default function AddCafePage() {
         )}
 
         <p className="pb-3 text-xs text-base-content/55">
-          輸入店名後按 Enter，會用 Google 地圖搜尋；找到後點選即可加入。
+          輸入店名後按 Enter 用 Google 地圖搜尋；找到後點選即可推薦，站方會盡快處理。
         </p>
 
         {/* 搜尋列 — 與 PromptHero (桌面搜尋欄) 的 join 樣式對齊。 */}
