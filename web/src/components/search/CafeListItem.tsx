@@ -1,4 +1,5 @@
-import { Link, useLocation } from "react-router-dom";
+import { useRef } from "react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useIsDesktop } from "@/components/layout/Responsive";
 import { Placeholder, TagBadge } from "@/components/primitives";
 import type { CafeCard } from "@/types/cafe";
@@ -16,6 +17,7 @@ interface CafeListItemProps {
   /** 主排序欄位 — 影響右上角顯示距離或評分。預設 smart（顯示距離）。 */
   sortKey?: "smart" | "distance" | "rating";
   onHover?: (id: string | null) => void;
+  onClick?: () => void;
 }
 
 /** 列表項 — 桌面 (lg) / 手機 (sm/md) 共用。 */
@@ -25,9 +27,41 @@ export function CafeListItem({
   size = "md",
   sortKey = "smart",
   onHover,
+  onClick,
 }: CafeListItemProps) {
   const isDesktop = useIsDesktop();
   const locationObj = useLocation();
+  const navigate = useNavigate();
+  const touchStartRef = useRef<{ x: number; y: number; time: number } | null>(null);
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    const touch = e.touches[0];
+    touchStartRef.current = {
+      x: touch.clientX,
+      y: touch.clientY,
+      time: Date.now(),
+    };
+  };
+
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    if (!touchStartRef.current) return;
+    const touch = e.changedTouches[0];
+    const dx = touch.clientX - touchStartRef.current.x;
+    const dy = touch.clientY - touchStartRef.current.y;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    const elapsed = Date.now() - touchStartRef.current.time;
+
+    // A real tap has very little movement and is quick (within 300ms)
+    if (dist < 10 && elapsed < 300) {
+      e.preventDefault();
+      onClick?.();
+      const targetPath = isDesktop && active ? "/" : `/cafe/${cafe.slug ?? cafe.id}`;
+      const dest = `${targetPath}${locationObj.search}`;
+      navigate(dest);
+    }
+    touchStartRef.current = null;
+  };
+
   // 在 render 時即時計算營業狀態 —— 避免 React Query 把 fetch 當下的時間點固化,
   // 過了打烊時間後列表仍顯示「營業中」、與詳細頁不一致。
   const liveStatus = cafe.business_hours
@@ -51,6 +85,9 @@ export function CafeListItem({
       }}
       onMouseEnter={() => onHover?.(cafe.id)}
       onMouseLeave={() => onHover?.(null)}
+      onTouchStart={handleTouchStart}
+      onTouchEnd={handleTouchEnd}
+      onClick={() => onClick?.()}
       className={clsx(
         "flex gap-3 px-4 py-3 transition-colors hover:bg-base-200",
         active && "bg-base-200",

@@ -1030,6 +1030,9 @@ export default function MapPage() {
                 setIsSearching(false);
                 if (isDetailMode) navigate("/", { replace: true });
               }}
+              onClickCafe={() => {
+                setIsSearching(false);
+              }}
               onPromptSearch={runSearchSubmit}
               loading={searchLoading}
               exhausted={searchExhausted}

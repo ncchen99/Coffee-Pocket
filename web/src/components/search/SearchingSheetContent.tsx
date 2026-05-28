@@ -22,6 +22,7 @@ interface Props {
   query: string;
   cafes: CafeCard[];
   sortKey: LocalSortKey;
+  onClickCafe?: () => void;
 }
 
 /**
@@ -39,6 +40,7 @@ export function SearchingSheetContent({
   query,
   cafes,
   sortKey,
+  onClickCafe,
 }: Props) {
   const navigate = useNavigate();
   const trimmedQuery = query.trim();
@@ -102,7 +104,7 @@ export function SearchingSheetContent({
               <ul className="mt-2 divide-y divide-base-content/10 w-full">
                 {cafes.map((c) => (
                   <li key={c.id}>
-                    <CafeListItem cafe={c} sortKey={sortKey} />
+                    <CafeListItem cafe={c} sortKey={sortKey} onClick={onClickCafe} />
                   </li>
                 ))}
               </ul>
