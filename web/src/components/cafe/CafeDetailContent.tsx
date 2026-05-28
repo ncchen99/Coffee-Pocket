@@ -447,6 +447,62 @@ export function CafeDetailContent({
 }
 
 /**
+ * 單張圖片元件 — 包含 Skeleton 載入與漸變動畫,以避免 Layout Shift
+ */
+interface GalleryImageProps {
+  src: string;
+  isLazy: boolean;
+  fetchPriority?: "high" | "low";
+  onLoad: () => void;
+}
+
+function GalleryImage({ src, isLazy, fetchPriority, onLoad }: GalleryImageProps) {
+  const [isLoaded, setIsLoaded] = useState(false);
+  const [hasError, setHasError] = useState(false);
+
+  return (
+    <div
+      className={`relative h-full shrink-0 select-none overflow-hidden rounded-lg bg-base-200 transition-all duration-300 ${
+        isLoaded ? "" : "w-64 sm:w-72 md:w-80"
+      }`}
+    >
+      {/* Skeleton 佔位與載入/錯誤狀態的 Fallback UI */}
+      {!isLoaded && (
+        <div className="absolute inset-0 flex items-center justify-center bg-base-300/40 skeleton">
+          {hasError ? (
+            <HugeiconsIcon icon={AlertCircleIcon} className="text-base-content/20" size={24} />
+          ) : (
+            <div className="w-full h-full bg-base-200 animate-pulse" />
+          )}
+        </div>
+      )}
+
+      {!hasError && (
+        <img
+          src={src}
+          alt=""
+          loading={isLazy ? "lazy" : undefined}
+          // @ts-ignore: 支援 React 18+ 版本的 fetchpriority 屬性
+          fetchpriority={fetchPriority}
+          draggable={false}
+          onLoad={() => {
+            setIsLoaded(true);
+            onLoad();
+          }}
+          onError={() => {
+            setHasError(true);
+            onLoad();
+          }}
+          className={`h-full w-auto object-cover transition-opacity duration-300 ${
+            isLoaded ? "opacity-100" : "opacity-0 absolute pointer-events-none w-0 h-0"
+          }`}
+        />
+      )}
+    </div>
+  );
+}
+
+/**
  * 圖片畫廊 — 像手機版 Google Maps:所有照片等高、水平接在一起,
  * 用 overflow-x-auto 處理觸控板/觸控手勢;桌面在 hover 時把滾輪 deltaY
  * 轉成水平捲動,並在還有未顯示內容的那一側畫一道漸層提示。
@@ -513,7 +569,7 @@ function PhotoGallery({
       // 在方向判定出來之前，一律阻斷冒泡，避免底層 Bottom Sheet 搶先捕捉並產生微小位移
       e.stopPropagation();
     } else if (gestureRef.current.direction === "horizontal") {
-      // 水平滑動時阻斷事件冒泡，防止底層 Bottom Sheet 被拖動或收縮
+      // 水平滑動時阻斷事件冒泡，防止底層 Bottom Sheet 被拖動 or 收縮
       e.stopPropagation();
     }
   };
@@ -567,29 +623,29 @@ function PhotoGallery({
     return () => el.removeEventListener("wheel", onWheel);
   }, [isDesktop]);
 
-  // 以「圖片中心對齊容器中心」為基準捲動:先找出目前最接近正中央的圖片,
+  // 以「圖片中心對齊容器中心」為基準捲動:先找出目前最接近正中央的區塊,
   // 點擊後改為將下一張(或上一張)置中。若已到最前/最後沒辦法置中,
   // scrollTo 會被瀏覽器自動 clamp 到邊界,維持自然的邊緣行為。
   const scrollByPage = (direction: 1 | -1) => {
     const el = scrollerRef.current;
     if (!el) return;
-    const imgs = Array.from(el.querySelectorAll("img")) as HTMLImageElement[];
-    if (imgs.length === 0) return;
+    const items = Array.from(el.children) as HTMLElement[];
+    if (items.length === 0) return;
     const viewportCenter = el.scrollLeft + el.clientWidth / 2;
-    // 找目前最接近中央的圖片 index
+    // 找目前最接近中央的圖片區塊 index
     let currentIdx = 0;
     let minDist = Infinity;
-    imgs.forEach((img, i) => {
-      const center = img.offsetLeft + img.offsetWidth / 2;
+    items.forEach((item, i) => {
+      const center = item.offsetLeft + item.offsetWidth / 2;
       const dist = Math.abs(center - viewportCenter);
       if (dist < minDist) {
         minDist = dist;
         currentIdx = i;
       }
     });
-    const targetIdx = Math.max(0, Math.min(imgs.length - 1, currentIdx + direction));
-    const targetImg = imgs[targetIdx];
-    const targetCenter = targetImg.offsetLeft + targetImg.offsetWidth / 2;
+    const targetIdx = Math.max(0, Math.min(items.length - 1, currentIdx + direction));
+    const targetItem = items[targetIdx];
+    const targetCenter = targetItem.offsetLeft + targetItem.offsetWidth / 2;
     el.scrollTo({ left: targetCenter - el.clientWidth / 2, behavior: "smooth" });
   };
 
@@ -611,14 +667,12 @@ function PhotoGallery({
         className="flex gap-2 overflow-x-auto h-48 sm:h-56 md:h-64 scroll-smooth [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
       >
         {photos.map((src, i) => (
-          <img
+          <GalleryImage
             key={i}
             src={src}
-            alt=""
-            loading={i === 0 ? undefined : "lazy"}
-            draggable={false}
+            isLazy={i > 0}
+            fetchPriority={i === 0 ? "high" : "low"}
             onLoad={recomputeEdges}
-            className="h-full w-auto shrink-0 object-cover bg-base-200 select-none"
           />
         ))}
       </div>
