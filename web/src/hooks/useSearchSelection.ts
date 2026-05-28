@@ -64,6 +64,7 @@ export function useSearchSelection(initial?: string[], initialRadiusM?: number |
     query,
     setQuery,
     scenario,
+    setScenario,
     pickScenario,
     openAt,
     setOpenAt,

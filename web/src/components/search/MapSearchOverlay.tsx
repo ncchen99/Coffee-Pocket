@@ -97,6 +97,7 @@ export function MapSearchOverlay({
         });
       return labels.join(", ");
     }
+    if (query.trim()) return query.trim();
     return "已套用篩選";
   })();
 

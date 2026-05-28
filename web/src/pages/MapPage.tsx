@@ -131,6 +131,7 @@ export default function MapPage() {
     query,
     setQuery,
     scenario,
+    setScenario,
     pickScenario,
     openAt,
     setOpenAt,
@@ -670,9 +671,13 @@ export default function MapPage() {
     setSearchExhausted(false);
     try {
       const parsed = await parsePrompt(q);
-      const hasAnyTag = parsed.tags.length > 0 || parsed.soft_tags.length > 0;
-      if (!hasAnyTag) {
-        // LLM 也找不到符合的標籤 — 停在 searching 模式顯示「找不到」訊息
+      const hasAnyFilter =
+        parsed.tags.length > 0 ||
+        parsed.soft_tags.length > 0 ||
+        parsed.open_at !== null ||
+        parsed.distance_km !== null;
+      if (!hasAnyFilter) {
+        // LLM 也找不到符合的標籤、時間或距離條件 — 停在 searching 模式顯示「找不到」訊息
         setSearchExhausted(true);
         return;
       }
@@ -932,12 +937,26 @@ export default function MapPage() {
             onQueryChange={(q) => {
               setQuery(q);
               if (searchExhausted) setSearchExhausted(false);
+              // 當使用者開始編輯/變動搜尋文字時，清除舊的過濾狀態，避免舊條件干擾即時搜尋與顯示
+              if (keyword) setKeyword(null);
+              if (submittedPrompt) setSubmittedPrompt(null);
+              if (scenario) setScenario(null);
+              if (selected.size > 0) setAll([]);
+              if (openAt) setOpenAt(null);
             }}
             selected={selected}
             onToggleTag={toggle}
             onFocusSearch={() => {
               if (isDetailMode) {
                 navigate("/");
+              }
+              // 如果有現成的搜尋條件，填入 query 供使用者編輯，避免點擊進去被清空
+              if (keyword) {
+                setQuery(keyword);
+              } else if (submittedPrompt) {
+                setQuery(submittedPrompt);
+              } else if (scenario && SCENARIO_BY_KEY[scenario]) {
+                setQuery(SCENARIO_BY_KEY[scenario].title);
               }
               setIsSearching(true);
             }}
