@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
+import { LocationGuideModal } from "@/components/primitives/LocationGuideModal";
 
 interface Coords {
   lng: number;
@@ -25,6 +26,7 @@ export function UserLocationProvider({ children }: { children: React.ReactNode }
     return "prompt";
   });
   const [isLoading, setIsLoading] = useState(false);
+  const [isGuideOpen, setIsGuideOpen] = useState(false);
 
   const requestLocation = (
     onSuccess?: (coords: Coords) => void,
@@ -52,9 +54,7 @@ export function UserLocationProvider({ children }: { children: React.ReactNode }
       console.warn(
         "Geolocation blocked: Insecure HTTP remote context. iOS/WebKit will silently block geolocation without prompting."
       );
-      alert(
-        "【定位失敗提示】\n偵測到目前為非安全的 HTTP 連線（非 https 且非 localhost）。\n\niOS 裝置在此環境下會直接阻擋定位請求且不會顯示任何提示。請在測試時改用 HTTPS 連線，或直接使用「手動指定」功能。"
-      );
+      setIsGuideOpen(true);
       setPermissionStatus("denied");
       localStorage.setItem(PERMISSION_KEY, "denied");
       setIsLoading(false);
@@ -111,10 +111,8 @@ export function UserLocationProvider({ children }: { children: React.ReactNode }
             setPermissionStatus("denied");
             localStorage.setItem(PERMISSION_KEY, "denied");
             
-            // 使用者點選定位且被系統/瀏覽器明確拒絕時，彈出友善提示指引如何開啟權限
-            alert(
-              "【定位權限遭拒】\n目前位置權限已被拒絕。\n\n請至您裝置的「設定」>「隱私權與安全性」>「定位服務」，確保已開啟定位功能。並在瀏覽器設定中允許此網頁讀取位置，以使用附近搜尋與導航功能。"
-            );
+            // 使用者點選定位且被系統/瀏覽器明確拒絕時，開啟精美的權限引導對話框
+            setIsGuideOpen(true);
           } else {
             // 自動觸發被阻擋時，不要強行寫死 denied，而是保持原本狀態（若原先為 prompt 或 granted 就維持原樣）
             // 也不要將 permissionStatus 改為 denied，這樣未來使用者點選定位按鈕時仍可觸發提示
@@ -189,6 +187,7 @@ export function UserLocationProvider({ children }: { children: React.ReactNode }
       }}
     >
       {children}
+      <LocationGuideModal isOpen={isGuideOpen} onClose={() => setIsGuideOpen(false)} />
     </UserLocationContext.Provider>
   );
 }
