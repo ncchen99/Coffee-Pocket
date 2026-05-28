@@ -10,7 +10,7 @@ import {
 } from "@hugeicons/core-free-icons";
 import { Topbar } from "@/components/layout/Topbar";
 import { useIsDesktop } from "@/components/layout/Responsive";
-import { searchPlaces, recommendCafe, type PlaceSearchResult, globalProgress } from "@/lib/api";
+import { searchPlaces, recommendCafe, type PlaceSearchResult } from "@/lib/api";
 
 /**
  * 「推薦咖啡廳」全螢幕頁。
@@ -40,6 +40,9 @@ export default function AddCafePage() {
   // 不持久化:重新整理頁面就重置,後端的 unique index 才是真正的去重來源。
   const [recommendedIds, setRecommendedIds] = useState<Set<string>>(() => new Set());
 
+  // 推薦送出失敗的訊息 —— 直接顯示在頁面內,不再走 globalProgress(會跑到 Topbar 上)。
+  const [submitError, setSubmitError] = useState<string | null>(null);
+
   const handleSearch = async () => {
     const q = query.trim();
     if (!q || isSearching) return;
@@ -61,28 +64,17 @@ export default function AddCafePage() {
     if (place.already_exists || recommendedIds.has(place.place_id)) return;
 
     setSubmittingId(place.place_id);
-    globalProgress.update({ progress: "送出推薦中...", success: null, error: null });
+    setSubmitError(null);
 
     try {
-      const r = await recommendCafe(place);
-      globalProgress.update({
-        progress: null,
-        success: r.recommend_existed
-          ? `已經推薦過「${place.name}」了，感謝！`
-          : `已收到「${place.name}」的推薦，感謝您的貢獻！`,
-        error: null,
-      });
+      await recommendCafe(place);
       setRecommendedIds((prev) => {
         const next = new Set(prev);
         next.add(place.place_id);
         return next;
       });
     } catch (e) {
-      globalProgress.update({
-        progress: null,
-        success: null,
-        error: e instanceof Error ? e.message : "送出失敗，請稍後再試",
-      });
+      setSubmitError(e instanceof Error ? e.message : "送出失敗，請稍後再試");
     } finally {
       setSubmittingId(null);
     }
@@ -187,6 +179,10 @@ export default function AddCafePage() {
         <div className="mt-3 flex-1 overflow-y-auto">
           {searchError && (
             <p className="py-6 text-center text-sm text-error">{searchError}</p>
+          )}
+
+          {submitError && (
+            <p className="pb-3 text-center text-sm text-error">{submitError}</p>
           )}
 
           {!searchError && results === null && !isSearching && (
