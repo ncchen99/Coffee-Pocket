@@ -32,7 +32,7 @@ export function LocationGuideModal({ isOpen, onClose }: LocationGuideModalProps)
 
       {/* Modal Box */}
       <div className="relative z-10 w-full max-w-md border border-base-content/15 bg-base-100 p-6 shadow-xl rounded-none cp-anim-slide-in">
-        
+
         {/* Close Button */}
         <button
           type="button"
@@ -50,8 +50,8 @@ export function LocationGuideModal({ isOpen, onClose }: LocationGuideModalProps)
           <div className="flex-1 min-w-0">
             <h3 className="text-base font-bold text-base-content leading-snug">如何啟用定位服務？</h3>
             <p className="mt-1 text-xs text-base-content/60">
-              {isHttpRemote 
-                ? "iOS 開發測試環境限制警告" 
+              {isHttpRemote
+                ? "iOS 開發測試環境限制警告"
                 : "位置讀取權限目前被拒絕，請依照下方指引設定以啟用。"}
             </p>
           </div>
@@ -69,7 +69,7 @@ export function LocationGuideModal({ isOpen, onClose }: LocationGuideModalProps)
                 因為您目前使用的是區網 HTTP（<code>{window.location.host}</code>），iOS Safari/Chrome 會<strong>直接且靜默地阻擋</strong>定位要求，而不彈出任何權限視窗。
               </p>
             </div>
-            
+
             <div className="bg-base-200/50 p-4 text-xs text-base-content/80 leading-relaxed space-y-2">
               <p className="font-semibold text-base-content">💡 建議的測試方式：</p>
               <div className="flex items-start gap-2">
@@ -90,22 +90,20 @@ export function LocationGuideModal({ isOpen, onClose }: LocationGuideModalProps)
               <button
                 type="button"
                 onClick={() => setActiveTab("safari")}
-                className={`flex-1 py-2 text-center text-xs font-semibold border-b-2 rounded-none transition-colors ${
-                  activeTab === "safari"
+                className={`flex-1 py-2 text-center text-xs font-semibold border-b-2 rounded-none transition-colors ${activeTab === "safari"
                     ? "border-primary text-primary animate-none"
                     : "border-transparent text-base-content/50 hover:text-base-content/85"
-                }`}
+                  }`}
               >
                 Safari 瀏覽器
               </button>
               <button
                 type="button"
                 onClick={() => setActiveTab("chrome")}
-                className={`flex-1 py-2 text-center text-xs font-semibold border-b-2 rounded-none transition-colors ${
-                  activeTab === "chrome"
+                className={`flex-1 py-2 text-center text-xs font-semibold border-b-2 rounded-none transition-colors ${activeTab === "chrome"
                     ? "border-primary text-primary animate-none"
                     : "border-transparent text-base-content/50 hover:text-base-content/85"
-                }`}
+                  }`}
               >
                 Google Chrome
               </button>
@@ -121,15 +119,15 @@ export function LocationGuideModal({ isOpen, onClose }: LocationGuideModalProps)
                   </div>
                   <div className="flex items-start gap-2">
                     <span className="flex h-5 w-5 shrink-0 items-center justify-center bg-base-content/10 font-mono text-[10px] font-bold rounded-none">2</span>
-                    <p>向下滾動並點選<strong>「Safari 瀏覽器」</strong>。</p>
+                    <p>點選<strong>「隱私權與安全性」</strong> &gt; <strong>「定位服務」</strong>，並確保最上方的「定位服務」主開關已開啟。</p>
                   </div>
                   <div className="flex items-start gap-2">
                     <span className="flex h-5 w-5 shrink-0 items-center justify-center bg-base-content/10 font-mono text-[10px] font-bold rounded-none">3</span>
-                    <p>滾動至下方的「網站設定」區塊，點選<strong>「位置」</strong>。</p>
+                    <p>接著在下方的 App 清單中，找到並點選<strong>「Safari 瀏覽器」</strong>。</p>
                   </div>
                   <div className="flex items-start gap-2">
                     <span className="flex h-5 w-5 shrink-0 items-center justify-center bg-base-content/10 font-mono text-[10px] font-bold rounded-none">4</span>
-                    <p>將權限更改為<strong>「詢問」</strong>或<strong>「允許」</strong>，然後回到此網頁重新整理。</p>
+                    <p>將位置權限調整為<strong>「使用 App 期間」</strong>或<strong>「詢問」</strong>，完成後返回此網頁重新整理。</p>
                   </div>
                 </>
               ) : (
@@ -140,15 +138,15 @@ export function LocationGuideModal({ isOpen, onClose }: LocationGuideModalProps)
                   </div>
                   <div className="flex items-start gap-2">
                     <span className="flex h-5 w-5 shrink-0 items-center justify-center bg-base-content/10 font-mono text-[10px] font-bold rounded-none">2</span>
-                    <p>向下滾動並點選<strong>「Chrome」</strong>。</p>
+                    <p>點選<strong>「隱私權與安全性」</strong> &gt; <strong>「定位服務」</strong>，並確保最上方的「定位服務」主開關已開啟。</p>
                   </div>
                   <div className="flex items-start gap-2">
                     <span className="flex h-5 w-5 shrink-0 items-center justify-center bg-base-content/10 font-mono text-[10px] font-bold rounded-none">3</span>
-                    <p>點選最上方的<strong>「位置」</strong>。</p>
+                    <p>接著在下方的 App 清單中，找到並點選<strong>「Chrome」</strong>。</p>
                   </div>
                   <div className="flex items-start gap-2">
                     <span className="flex h-5 w-5 shrink-0 items-center justify-center bg-base-content/10 font-mono text-[10px] font-bold rounded-none">4</span>
-                    <p>將權限更改為<strong>「使用 App 期間」</strong>，然後回到此網頁重新整理。</p>
+                    <p>將位置權限調整為<strong>「使用 App 期間」</strong>，完成後返回此網頁重新整理。</p>
                   </div>
                 </>
               )}
@@ -156,8 +154,7 @@ export function LocationGuideModal({ isOpen, onClose }: LocationGuideModalProps)
 
             {/* System settings guide fallback */}
             <div className="mt-3 border-l-2 border-warning bg-warning/5 p-3 text-[11px] text-base-content/75 leading-normal">
-              💡 <strong>若設定後仍無法正常讀取：</strong><br />
-              請確認「設定」&gt;「隱私權與安全性」&gt;「定位服務」之中的<strong>「定位服務」</strong>主開關是否處於開啟狀態。
+              <strong>小提示：</strong>完成設定後，回到此網頁重新整理，即可立即使用最精準的「現在營業」、「距離篩選」與導航功能！
             </div>
           </>
         )}
